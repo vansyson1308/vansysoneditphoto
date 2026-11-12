@@ -1,5 +1,5 @@
 [package]
-name = "photocraft-compose"
+name = "magicpic-compose"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,12 +8,12 @@ license.workspace = true
 workspace = true
 
 [dependencies]
-photocraft-geom = { workspace = true }
-photocraft-color = { workspace = true }
-photocraft-raster = { workspace = true }
-photocraft-doc = { workspace = true }
-photocraft-vector = { workspace = true }
-photocraft-cms = { workspace = true }
+magicpic-geom = { workspace = true }
+magicpic-color = { workspace = true }
+magicpic-raster = { workspace = true }
+magicpic-doc = { workspace = true }
+magicpic-vector = { workspace = true }
+magicpic-cms = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 rayon = { workspace = true }
@@ -21,7 +21,7 @@ rayon = { workspace = true }
 [dev-dependencies]
 proptest = { workspace = true }
 criterion = { workspace = true }
-photocraft-paint = { workspace = true }
+magicpic-paint = { workspace = true }
 
 [[bench]]
 name = "compose"

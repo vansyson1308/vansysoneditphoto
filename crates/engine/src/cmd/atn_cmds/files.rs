@@ -152,7 +152,7 @@ pub(super) fn save(s: &mut Session, p: &Value) -> Result<Value> {
     let mut out = json!({"set": set, "actions": names, "steps": steps, "bytes": bytes.len(), "skipped": skipped});
     match p.get("path") {
         None | Some(Value::Null) => {
-            out["data"] = json!(photocraft_paint::tile::b64_encode(&bytes));
+            out["data"] = json!(magicpic_paint::tile::b64_encode(&bytes));
         }
         Some(Value::String(path)) if !path.trim().is_empty() => {
             write_file(path, &bytes).map_err(|e| EngineError::Other(format!("{path}: {e}")))?;
@@ -166,7 +166,7 @@ pub(super) fn save(s: &mut Session, p: &Value) -> Result<Value> {
 #[cfg(not(target_arch = "wasm32"))]
 fn write_file(path: &str, bytes: &[u8]) -> std::io::Result<()> {
     // Atomic replacement (temporary file + rename): a failed write keeps the previous ATN (#7290).
-    photocraft_format::atomic_write(std::path::Path::new(path), bytes)
+    magicpic_format::atomic_write(std::path::Path::new(path), bytes)
 }
 
 #[cfg(target_arch = "wasm32")]

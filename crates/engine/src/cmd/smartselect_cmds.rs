@@ -1,13 +1,13 @@
 //! Smart selection commands: Quick Selection, Object Selection, Select Subject, Select and Mask
-//! (Refine Edge) and Focus Area. The algorithms live in `photocraft_algo::segment` and
-//! `photocraft_algo::matting`; these commands pick the pixels to analyse (active layer or
+//! (Refine Edge) and Focus Area. The algorithms live in `magicpic_algo::segment` and
+//! `magicpic_algo::matting`; these commands pick the pixels to analyse (active layer or
 //! composite), run them, and store the result as the selection (or a mask / new layer).
 
-use photocraft_algo::matting::{self, RefineParams};
-use photocraft_algo::segment::{Sampler, SurfaceSampler, focus, grabcut, quick, subject};
-use photocraft_algo::selection::{Region, SelectionMode, combine_region};
-use photocraft_doc::{Document, Layer, LayerContent, LayerId, LayerMask};
-use photocraft_geom::Rect;
+use magicpic_algo::matting::{self, RefineParams};
+use magicpic_algo::segment::{Sampler, SurfaceSampler, focus, grabcut, quick, subject};
+use magicpic_algo::selection::{Region, SelectionMode, combine_region};
+use magicpic_doc::{Document, Layer, LayerContent, LayerId, LayerMask};
+use magicpic_geom::Rect;
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;
@@ -49,7 +49,7 @@ struct CompositeSampler<'a>(&'a Document);
 
 impl Sampler for CompositeSampler<'_> {
     fn rgba(&self, r: Rect) -> Vec<[f32; 4]> {
-        photocraft_compose::render(self.0, r).into_px()
+        magicpic_compose::render(self.0, r).into_px()
     }
 }
 
@@ -121,14 +121,14 @@ fn quick_selection(s: &mut Session, p: &Value) -> Result<Value> {
     let Some(region) = region else { return apply(s, "Quick Selection", None, m) };
     let bounds = region.content_bounds();
     let selected = s.edit("Quick Selection", |doc, _| {
-        let empty = photocraft_raster::Surface::new(photocraft_color::PixelFormat::GRAY8);
+        let empty = magicpic_raster::Surface::new(magicpic_color::PixelFormat::GRAY8);
         let old = doc.selection.as_ref().unwrap_or(&empty);
         let area = old.content_bounds().union(&bounds).intersect(&doc.bounds());
         let out = match m {
             SelectionMode::Replace => region.clone(),
-            SelectionMode::Add => photocraft_algo::selection::combine_sparse(old, &region, area, f32::max),
-            SelectionMode::Subtract => photocraft_algo::selection::combine_sparse(old, &region, area, |a, b| (a - b).max(0.0)),
-            SelectionMode::Intersect => photocraft_algo::selection::combine_surfaces(old, &region, area, f32::min),
+            SelectionMode::Add => magicpic_algo::selection::combine_sparse(old, &region, area, f32::max),
+            SelectionMode::Subtract => magicpic_algo::selection::combine_sparse(old, &region, area, |a, b| (a - b).max(0.0)),
+            SelectionMode::Intersect => magicpic_algo::selection::combine_surfaces(old, &region, area, f32::min),
         };
         doc.selection = (!out.content_bounds().is_empty()).then_some(out);
         Ok(doc.selection.is_some())
@@ -176,7 +176,7 @@ pub const OBJECT_FINDER_ENTRIES: usize = 12;
 #[derive(Debug, Default)]
 pub struct ObjectFinderCache {
     doc: std::sync::Weak<Document>,
-    doc_id: Option<photocraft_doc::DocId>,
+    doc_id: Option<magicpic_doc::DocId>,
     target: Option<LayerId>,
     regions: Vec<std::sync::Arc<Region>>,
 }
@@ -221,7 +221,7 @@ impl ObjectFinderCache {
     }
 
     /// Forget the results if they were computed from the document `id` (it is closing).
-    pub(crate) fn forget_doc(&mut self, id: photocraft_doc::DocId) {
+    pub(crate) fn forget_doc(&mut self, id: magicpic_doc::DocId) {
         if self.doc_id == Some(id) {
             *self = Self::default();
         }
@@ -282,8 +282,8 @@ fn object_at_point(s: &mut Session, p: &Value, (x, y): (f32, f32)) -> Result<Val
 
 /// The reference application's Object Selection alert in the modes it refuses (#12867).
 /// Multichannel and Duotone weren't measured and keep selecting.
-pub fn object_mode_refusal(mode: photocraft_color::ColorMode) -> Option<&'static str> {
-    use photocraft_color::ColorMode;
+pub fn object_mode_refusal(mode: magicpic_color::ColorMode) -> Option<&'static str> {
+    use magicpic_color::ColorMode;
     match mode {
         ColorMode::Indexed => Some(
             "Could not complete your request because the tool does not work with Indexed Color images. Please convert the image to RGB or another supported mode before using..",
@@ -322,7 +322,7 @@ fn object_selection(s: &mut Session, p: &Value) -> Result<Value> {
 #[derive(Debug, Default)]
 pub struct SubjectCache {
     doc: std::sync::Weak<Document>,
-    doc_id: Option<photocraft_doc::DocId>,
+    doc_id: Option<magicpic_doc::DocId>,
     /// The sampled layer; `None` = the composite.
     target: Option<LayerId>,
     region: Option<std::sync::Arc<Region>>,
@@ -330,7 +330,7 @@ pub struct SubjectCache {
 
 impl SubjectCache {
     /// Forget the result if it was computed from the document `id` (it is closing).
-    pub(crate) fn forget_doc(&mut self, id: photocraft_doc::DocId) {
+    pub(crate) fn forget_doc(&mut self, id: magicpic_doc::DocId) {
         if self.doc_id == Some(id) {
             *self = Self::default();
         }
@@ -484,7 +484,7 @@ fn refine_edge(s: &mut Session, p: &Value) -> Result<Value> {
         "layerMask" => {
             let id = active.ok_or_else(|| EngineError::Other("no active layer".into()))?;
             s.edit("Select and Mask", |doc, _| {
-                let surface = region.clone().unwrap_or_else(|| photocraft_raster::Surface::new(photocraft_color::PixelFormat::GRAY8));
+                let surface = region.clone().unwrap_or_else(|| magicpic_raster::Surface::new(magicpic_color::PixelFormat::GRAY8));
                 crate::extra_cmds::background_to_layer_for_mask(doc, id);
                 let existing = doc.layer(id).and_then(|l| l.mask.as_ref()).cloned().unwrap_or_else(LayerMask::reveal_all);
                 doc.layer_mut(id).ok_or(EngineError::NoLayer(id))?.mask = Some(LayerMask { surface, ..existing });
@@ -500,7 +500,7 @@ fn refine_edge(s: &mut Session, p: &Value) -> Result<Value> {
                 EngineError::Other(format!("the active layer is {} {} layer without pixels", src_layer.content.article(), src_layer.content.kind_name()))
             })?;
             let name = d.doc.copy_name(&src_layer.name);
-            let empty = photocraft_raster::Surface::new(photocraft_color::PixelFormat::GRAY8);
+            let empty = magicpic_raster::Surface::new(magicpic_color::PixelFormat::GRAY8);
             let reg = region.as_ref().unwrap_or(&empty);
             let pixels = if decontaminate { matting::decontaminate_surface(src, reg, params.radius, amount) } else { src.clone() };
             let with_mask = matches!(output.as_str(), "newLayerWithMask" | "newDocumentWithMask");

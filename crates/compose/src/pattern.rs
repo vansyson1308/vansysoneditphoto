@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock, Weak};
 
-use photocraft_doc::{ColorMode, Pattern, PixelFormat, Rect, SampleType};
+use magicpic_doc::{ColorMode, Pattern, PixelFormat, Rect, SampleType};
 
 /// What one rendering call may keep of its patterns' working copies: every pattern it paints with
 /// stays converted for the call (four of the largest 8-bit ones on desktop), so none is converted
@@ -26,9 +26,9 @@ pub(crate) const PREPARED_PATTERN_BYTES: usize = 256 << 20;
 const MAX_PREPARED_PATTERNS: usize = 64;
 /// Absolute cap on a single pattern's working copy on the uncached path: the document's own cap
 /// on what paints (`Pattern::is_paintable`). A pattern above it is skipped, not converted.
-const MAX_UNCACHED_PATTERN_BYTES: usize = photocraft_doc::pattern::MAX_WORKING_BYTES as usize;
+const MAX_UNCACHED_PATTERN_BYTES: usize = magicpic_doc::pattern::MAX_WORKING_BYTES as usize;
 // A call keeps at least two of the largest, or a second large fill is converted for every tile.
-const _: () = assert!(2 * photocraft_doc::pattern::MAX_WORKING_BYTES <= PREPARED_PATTERN_BYTES as u64);
+const _: () = assert!(2 * magicpic_doc::pattern::MAX_WORKING_BYTES <= PREPARED_PATTERN_BYTES as u64);
 type PreparedSlot = Arc<OnceLock<Option<Arc<Tile>>>>;
 
 struct PreparedState {
@@ -77,7 +77,7 @@ impl<'a> PreparedPatterns<'a> {
     }
 
     pub(crate) fn get(&self, id: &str, name: &str) -> Option<Arc<Tile>> {
-        let p = photocraft_doc::pattern::find(self.patterns, id, name)?;
+        let p = magicpic_doc::pattern::find(self.patterns, id, name)?;
         if !p.is_paintable() {
             return None;
         }
@@ -131,7 +131,7 @@ impl<'a> PreparedPatterns<'a> {
                         use std::io::Write as _;
                         let _ = writeln!(
                             std::io::stderr(),
-                            "photocraft: pattern \"{}\" is past this render's pattern memory ({} MiB) and is converted again as tiles need it",
+                            "magicpic: pattern \"{}\" is past this render's pattern memory ({} MiB) and is converted again as tiles need it",
                             p.display_name(),
                             self.budget >> 20
                         );
@@ -166,7 +166,7 @@ pub fn pattern_rgba(p: &Pattern, mode: ColorMode) -> Vec<[f32; 4]> {
 /// memory for the rows cannot be had (on the web a failed allocation aborts the tab, so it is
 /// asked for, not assumed).
 pub fn pattern_rgba_rows(p: &Pattern, mode: ColorMode, top: u32, bottom: u32, out: &mut Vec<[f32; 4]>) -> Option<()> {
-    pattern_rgba_rows_in(p, mode, top, bottom, out, photocraft_doc::pattern::MAX_WORKING_BYTES)
+    pattern_rgba_rows_in(p, mode, top, bottom, out, magicpic_doc::pattern::MAX_WORKING_BYTES)
 }
 
 /// Stream straight-alpha RGBA rows using at most `max_band_bytes` of pixel scratch.
@@ -177,9 +177,9 @@ pub fn pattern_rgba_bands(p: &Pattern, mode: ColorMode, max_band_bytes: u64, mut
     if !p.is_paintable() {
         return None;
     }
-    let budget = max_band_bytes.min(photocraft_doc::pattern::MAX_WORKING_BYTES);
+    let budget = max_band_bytes.min(magicpic_doc::pattern::MAX_WORKING_BYTES);
     let row_bytes = u64::from(p.width).checked_mul(std::mem::size_of::<[f32; 4]>() as u64)?;
-    let rows = u32::try_from((budget / row_bytes).min(u64::from(photocraft_doc::pattern::BAND_ROWS))).ok()?;
+    let rows = u32::try_from((budget / row_bytes).min(u64::from(magicpic_doc::pattern::BAND_ROWS))).ok()?;
     if rows == 0 {
         return None;
     }
@@ -210,8 +210,8 @@ fn pattern_rgba_rows_in(p: &Pattern, mode: ColorMode, top: u32, bottom: u32, out
         let fmt = PixelFormat::new(mode, SampleType::F32, true);
         let mut v = [0.0f32; 5];
         for q in out.iter_mut() {
-            let n = photocraft_raster::from_rgba_into(&fmt, *q, &mut v);
-            *q = photocraft_raster::to_rgba(&fmt, v.get(..n).unwrap_or_default());
+            let n = magicpic_raster::from_rgba_into(&fmt, *q, &mut v);
+            *q = magicpic_raster::to_rgba(&fmt, v.get(..n).unwrap_or_default());
         }
     }
     Some(())
@@ -226,8 +226,8 @@ fn quantized_rgba<T>(p: &Pattern, mode: ColorMode, quantize: impl Fn(f32) -> T) 
     let mut out = Vec::new();
     out.try_reserve_exact((p.width as usize).checked_mul(p.height as usize)?).ok()?;
     let mut band = Vec::new();
-    for top in (0..p.height).step_by(photocraft_doc::pattern::BAND_ROWS as usize) {
-        pattern_rgba_rows(p, mode, top, top + photocraft_doc::pattern::BAND_ROWS, &mut band)?;
+    for top in (0..p.height).step_by(magicpic_doc::pattern::BAND_ROWS as usize) {
+        pattern_rgba_rows(p, mode, top, top + magicpic_doc::pattern::BAND_ROWS, &mut band)?;
         out.extend(band.iter().map(|c| [quantize(c[0]), quantize(c[1]), quantize(c[2]), quantize(c[3])]));
     }
     Some(out)
@@ -273,7 +273,7 @@ impl Tile {
         if !p.is_paintable() {
             return None;
         }
-        Tile::build(p, mode, p.pixel_count().saturating_mul(16) > photocraft_doc::pattern::MAX_WORKING_BYTES)
+        Tile::build(p, mode, p.pixel_count().saturating_mul(16) > magicpic_doc::pattern::MAX_WORKING_BYTES)
     }
 
     /// [`Tile::new_in`], held at the pattern's own depth when `compact` and it has a smaller form.
@@ -460,7 +460,7 @@ pub fn render(tile: &Tile, place: &Placement, rect: Rect) -> Vec<[f32; 4]> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_doc::{PixelFormat, Surface};
+    use magicpic_doc::{PixelFormat, Surface};
 
     #[test]
     fn paintable_patterns_stream_when_full_rgba_exceeds_the_scratch_budget() {
@@ -602,7 +602,7 @@ mod tests {
         drop((held, other));
         assert!(prepared.get("c", "").is_some(), "and it converts again after");
         // The real budget holds two of the largest paintable ones.
-        assert!(2 * photocraft_doc::pattern::MAX_WORKING_BYTES <= PREPARED_PATTERN_BYTES as u64);
+        assert!(2 * magicpic_doc::pattern::MAX_WORKING_BYTES <= PREPARED_PATTERN_BYTES as u64);
     }
 
     /// A large pattern's compact copy samples exactly as the expanded one: every 8-bit and 16-bit

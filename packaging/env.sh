@@ -3,10 +3,10 @@
 #
 # Exports:
 #   ROOT                    workspace root
-#   VERSION                 [workspace.package] version from Cargo.toml (override: PHOTOCRAFT_VERSION)
+#   VERSION                 [workspace.package] version from Cargo.toml (override: MAGICPIC_VERSION)
 #   DIST                    output directory for release artifacts (default: $ROOT/dist/release)
-#   PHOTOCRAFT_BUILD_SHA    git commit baked into the binaries (see crates/engine/src/build_info.rs)
-#   PHOTOCRAFT_BUILD_DATE   UTC build date, YYYY-MM-DD
+#   MAGICPIC_BUILD_SHA    git commit baked into the binaries (see crates/engine/src/build_info.rs)
+#   MAGICPIC_BUILD_DATE   UTC build date, YYYY-MM-DD
 #   CARGO_TARGET_DIR        cargo's target dir (default: $ROOT/target)
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -21,7 +21,7 @@ workspace_version() {
   ' "$ROOT/Cargo.toml"
 }
 
-VERSION="${PHOTOCRAFT_VERSION:-$(workspace_version)}"
+VERSION="${MAGICPIC_VERSION:-$(workspace_version)}"
 if [[ -z "$VERSION" ]]; then
   echo "error: could not read [workspace.package] version from $ROOT/Cargo.toml" >&2
   exit 1
@@ -32,11 +32,11 @@ DIST="${DIST:-$ROOT/dist/release}"
 mkdir -p "$DIST"
 export DIST
 
-if [[ -z "${PHOTOCRAFT_BUILD_SHA:-}" ]]; then
-  PHOTOCRAFT_BUILD_SHA="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || true)"
+if [[ -z "${MAGICPIC_BUILD_SHA:-}" ]]; then
+  MAGICPIC_BUILD_SHA="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || true)"
 fi
-export PHOTOCRAFT_BUILD_SHA
-export PHOTOCRAFT_BUILD_DATE="${PHOTOCRAFT_BUILD_DATE:-$(date -u +%Y-%m-%d)}"
+export MAGICPIC_BUILD_SHA
+export MAGICPIC_BUILD_DATE="${MAGICPIC_BUILD_DATE:-$(date -u +%Y-%m-%d)}"
 export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$ROOT/target}"
 
 # Emit a GitHub Actions warning (plain stderr outside Actions).

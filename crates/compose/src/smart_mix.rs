@@ -5,9 +5,9 @@
 
 use std::fmt;
 
-use photocraft_color::{BlendMode, ColorMode, SampleType};
-use photocraft_geom::Rect;
-use photocraft_raster::{AllocationError, Interrupt, Surface};
+use magicpic_color::{BlendMode, ColorMode, SampleType};
+use magicpic_geom::Rect;
+use magicpic_raster::{AllocationError, Interrupt, Surface};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Error {
@@ -132,12 +132,12 @@ pub fn mix(base: &Surface, filtered: &Surface, area: Rect, mode: BlendMode, opac
                 normal_native(bp, tp, op, fmt.alpha, opacity);
                 continue;
             }
-            let b = photocraft_raster::to_rgba(&fmt, bp);
-            let t = photocraft_raster::to_rgba(&fmt, tp);
+            let b = magicpic_raster::to_rgba(&fmt, bp);
+            let t = magicpic_raster::to_rgba(&fmt, tp);
             if composite_coverage {
                 let rgba =
-                    if fmt.sample == SampleType::F32 { composite_hdr(mode, b, t, opacity) } else { photocraft_color::blend::composite(mode, b, t, opacity) };
-                photocraft_raster::from_rgba_into(&fmt, rgba, op);
+                    if fmt.sample == SampleType::F32 { composite_hdr(mode, b, t, opacity) } else { magicpic_color::blend::composite(mode, b, t, opacity) };
+                magicpic_raster::from_rgba_into(&fmt, rgba, op);
                 if fmt.sample == SampleType::F32 && op.iter().any(|value| !value.is_finite()) {
                     return Err(Error::NonFiniteSample);
                 }
@@ -146,9 +146,9 @@ pub fn mix(base: &Surface, filtered: &Surface, area: Rect, mode: BlendMode, opac
             let cb = [b[0], b[1], b[2]];
             let ct = [t[0], t[1], t[2]];
             let color = if fmt.sample == SampleType::F32 {
-                photocraft_color::blend::blend_rgb_hdr(mode, cb, ct)
+                magicpic_color::blend::blend_rgb_hdr(mode, cb, ct)
             } else {
-                photocraft_color::blend::blend_rgb(mode, cb, ct)
+                magicpic_color::blend::blend_rgb(mode, cb, ct)
             };
             let mut alpha = b[3] + (t[3] - b[3]) * opacity;
             if fmt.sample == SampleType::F32 && !alpha.is_finite() {
@@ -171,7 +171,7 @@ pub fn mix(base: &Surface, filtered: &Surface, area: Rect, mode: BlendMode, opac
                     }
                 }
             }
-            photocraft_raster::from_rgba_into(&fmt, rgba, op);
+            magicpic_raster::from_rgba_into(&fmt, rgba, op);
             if fmt.sample == SampleType::F32 && op.iter().any(|value| !value.is_finite()) {
                 return Err(Error::NonFiniteSample);
             }
@@ -196,7 +196,7 @@ fn composite_hdr(mode: BlendMode, backdrop: [f32; 4], source: [f32; 4], opacity:
     if output_alpha <= 0. {
         return [0.; 4];
     }
-    let blend = photocraft_color::blend::blend_rgb_hdr(mode, [backdrop[0], backdrop[1], backdrop[2]], [source[0], source[1], source[2]]);
+    let blend = magicpic_color::blend::blend_rgb_hdr(mode, [backdrop[0], backdrop[1], backdrop[2]], [source[0], source[1], source[2]]);
     let mut output = [0.; 4];
     for c in 0..3 {
         let color = ((1. - alpha) * ab * f64::from(backdrop[c]) + (1. - ab) * alpha * f64::from(source[c]) + alpha * ab * f64::from(blend[c])) / output_alpha;
@@ -209,7 +209,7 @@ fn composite_hdr(mode: BlendMode, backdrop: [f32; 4], source: [f32; 4], opacity:
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_color::{ColorMode, PixelFormat};
+    use magicpic_color::{ColorMode, PixelFormat};
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     #[test]
@@ -269,7 +269,7 @@ mod tests {
     /// Create original native-format samples for direct premultiplied-mixing expectations.
     fn surface(format: PixelFormat, rgba: [f32; 4], rect: Rect) -> Surface {
         let mut surface = Surface::new(format);
-        surface.write_region(rect, &photocraft_raster::from_rgba(&format, rgba).repeat((rect.width() * rect.height()) as usize));
+        surface.write_region(rect, &magicpic_raster::from_rgba(&format, rgba).repeat((rect.width() * rect.height()) as usize));
         surface
     }
 
@@ -292,20 +292,20 @@ mod tests {
                 let base = surface(format, [0.25, 0.25, 0.25, 0.5], rect);
                 let filtered = surface(format, [0.75, 0.75, 0.75, 0.5], rect);
                 let mixed = mix(&base, &filtered, rect, BlendMode::Normal, 0.25, &Interrupt::NONE).unwrap();
-                let actual = photocraft_raster::to_rgba(&format, &mixed.pixel(0, 0));
+                let actual = magicpic_raster::to_rgba(&format, &mixed.pixel(0, 0));
                 assert!((actual[0] - 0.375).abs() <= tolerance(sample));
                 assert!((actual[3] - 0.5).abs() <= tolerance(sample));
                 assert_eq!(mix(&base, &filtered, rect, BlendMode::Normal, 0., &Interrupt::NONE).unwrap(), base);
                 let changed = surface(format, [0.75, 0.75, 0.75, 0.25], rect);
                 let mixed = mix(&base, &changed, rect, BlendMode::Normal, 0.5, &Interrupt::NONE).unwrap();
-                let actual = photocraft_raster::to_rgba(&format, &mixed.pixel(0, 0));
+                let actual = magicpic_raster::to_rgba(&format, &mixed.pixel(0, 0));
                 assert!((actual[0] - 5. / 12.).abs() <= tolerance(sample));
                 assert!((actual[3] - 0.375).abs() <= tolerance(sample));
                 for (base_alpha, top_alpha, expected_color, expected_alpha) in [(0.5, 0., 0.25, 0.25), (0., 0.5, 0.75, 0.25), (1., 1., 0.5, 1.)] {
                     let base = surface(format, [0.25, 0.25, 0.25, base_alpha], rect);
                     let filtered = surface(format, [0.75, 0.75, 0.75, top_alpha], rect);
                     let result = mix(&base, &filtered, rect, BlendMode::Normal, 0.5, &Interrupt::NONE).unwrap();
-                    let actual = photocraft_raster::to_rgba(&format, &result.pixel(0, 0));
+                    let actual = magicpic_raster::to_rgba(&format, &result.pixel(0, 0));
                     assert!((actual[0] - expected_color).abs() <= tolerance(sample));
                     assert!((actual[3] - expected_alpha).abs() <= tolerance(sample));
                 }
@@ -322,14 +322,14 @@ mod tests {
                 let format = PixelFormat::new(mode, sample, true);
                 let mut base = surface(format, [0.2, 0.4, 0.6, 0.5], Rect::new(0, 0, 1, 1));
                 let mut filtered = surface(format, [0.8, 0.6, 0.4, 0.5], Rect::new(0, 0, 1, 1));
-                base.write_pixel(256, 0, &photocraft_raster::from_rgba(&format, [0.2, 0.4, 0.6, 1.]));
-                filtered.write_pixel(256, 0, &photocraft_raster::from_rgba(&format, [0.8, 0.6, 0.4, 0.25]));
+                base.write_pixel(256, 0, &magicpic_raster::from_rgba(&format, [0.2, 0.4, 0.6, 1.]));
+                filtered.write_pixel(256, 0, &magicpic_raster::from_rgba(&format, [0.8, 0.6, 0.4, 0.25]));
                 for blend in [BlendMode::Multiply, BlendMode::Screen, BlendMode::Luminosity] {
                     let mixed = mix(&base, &filtered, area, blend, 0.5, &Interrupt::NONE).unwrap();
                     for x in [0, 256] {
-                        let b = photocraft_raster::to_rgba(&format, &base.pixel(x, 0));
-                        let t = photocraft_raster::to_rgba(&format, &filtered.pixel(x, 0));
-                        let expected = photocraft_color::blend::composite(blend, b, t, 0.5);
+                        let b = magicpic_raster::to_rgba(&format, &base.pixel(x, 0));
+                        let t = magicpic_raster::to_rgba(&format, &filtered.pixel(x, 0));
+                        let expected = magicpic_color::blend::composite(blend, b, t, 0.5);
                         let expected = surface(format, expected, Rect::new(x, 0, x + 1, 1));
                         for (got, want) in mixed.pixel(x, 0).into_iter().zip(expected.pixel(x, 0)) {
                             assert!((got - want).abs() <= tolerance(sample), "{mode:?}/{sample:?}/{blend:?}/x{x}: {got}/{want}");
@@ -375,9 +375,9 @@ mod tests {
             let format = PixelFormat::new(ColorMode::Rgb, SampleType::F32, alpha);
             let mut base = surface(format, [-0.5, 2., 0., 0.5], area);
             let filtered = surface(format, [1.5, 0.25, 3., 0.5], area);
-            base.write_pixel(4, 0, &photocraft_raster::from_rgba(&format, [0.2, 0.3, 0.4, 0.5]));
+            base.write_pixel(4, 0, &magicpic_raster::from_rgba(&format, [0.2, 0.3, 0.4, 0.5]));
             let mixed = mix(&base, &filtered, area, BlendMode::Normal, 0.25, &Interrupt::NONE).unwrap();
-            let rgba = photocraft_raster::to_rgba(&format, &mixed.pixel(0, 0));
+            let rgba = magicpic_raster::to_rgba(&format, &mixed.pixel(0, 0));
             assert_eq!(&rgba[..3], &[0., 1.5625, 0.75]);
             assert_eq!(rgba[3], if alpha { 0.5 } else { 1. });
             assert_eq!(mixed.pixel(4, 0), base.pixel(4, 0));
@@ -472,7 +472,7 @@ mod tests {
                 let filtered = surface(format, [4., 4., 4., filtered_alpha], area);
                 let before = (base.clone(), filtered.clone());
                 let output = mix(&base, &filtered, area, BlendMode::Normal, opacity, &Interrupt::NONE).unwrap();
-                let actual = photocraft_raster::to_rgba(&format, &output.pixel(0, 0));
+                let actual = magicpic_raster::to_rgba(&format, &output.pixel(0, 0));
                 assert!(actual.iter().all(|value| value.is_finite()), "{mode:?} {opacity}");
                 assert_eq!(actual[3], alpha);
                 for channel in actual.iter().take(3) {

@@ -2,10 +2,10 @@
 //! enabled in one. A warped smart object keeps them, and several layers, a link group and
 //! editable type still grey them.
 
-use photocraft_doc::{LayerContent, LayerId};
+use magicpic_doc::{LayerContent, LayerId};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 
 const SPLITS: [&str; 3] = ["edit.transform.splitWarpCrosswise", "edit.transform.splitWarpHorizontally", "edit.transform.splitWarpVertically"];
 const REMOVE: &str = "edit.transform.removeWarpSplit";
@@ -15,8 +15,8 @@ fn four() -> impl Iterator<Item = &'static str> {
 }
 
 /// A 100 × 100 document with a pixel layer "Paint" holding a red block, active.
-fn app() -> (PhotocraftApp, LayerId) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> (MagicpicApp, LayerId) {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 100, "height": 100, "background": "white"})).unwrap();
     app.sync_views();
     let paint = LayerId(app.run("layer.new.layer", json!({"name": "Paint"})).unwrap()["layer"].as_u64().unwrap());
@@ -27,22 +27,22 @@ fn app() -> (PhotocraftApp, LayerId) {
 }
 
 /// The Edit › Transform row's state as the menu builds it.
-fn enabled(app: &PhotocraftApp, id: &str) -> bool {
+fn enabled(app: &MagicpicApp, id: &str) -> bool {
     let row = crate::menus::menu_items(app).into_iter().find(|i| i.path == ["Edit", "Transform"] && i.id == id);
     row.unwrap_or_else(|| panic!("{id} is in Edit › Transform")).enabled
 }
 
-fn choose(app: &mut PhotocraftApp, id: &str) -> Result<serde_json::Value, String> {
+fn choose(app: &mut MagicpicApp, id: &str) -> Result<serde_json::Value, String> {
     crate::menus::invoke(app, &egui::Context::default(), id, json!({}))
 }
 
-fn warped_smart_object(app: &mut PhotocraftApp) {
+fn warped_smart_object(app: &mut MagicpicApp) {
     app.run("layer.smartObjects.convertToSmartObject", json!({})).unwrap();
     app.run("layer.smartObjects.warp", json!({"style": "arc", "bend": 30, "rect": [10, 10, 60, 40]})).unwrap();
     assert!(crate::transform_tool::warps_active_layer(app), "the smart object has a stored warp");
 }
 
-fn stored_warp(app: &PhotocraftApp) -> Option<photocraft_geom::warp::Warp> {
+fn stored_warp(app: &MagicpicApp) -> Option<magicpic_geom::warp::Warp> {
     let st = app.session.active().unwrap();
     match &st.doc.layer(st.active_layer.unwrap()).unwrap().content {
         LayerContent::Smart(sm) => sm.warp.clone(),

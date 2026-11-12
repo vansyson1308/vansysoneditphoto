@@ -1,12 +1,12 @@
 //! One integration-test process keeps its global mask cache isolated from parallel unit tests.
 use std::sync::Arc;
 
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_compose::masks;
-use photocraft_doc::{Layer, LayerMask};
-use photocraft_engine::Session;
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use magicpic_color::{ColorMode, PixelFormat, SampleType};
+use magicpic_compose::masks;
+use magicpic_doc::{Layer, LayerMask};
+use magicpic_engine::Session;
+use magicpic_geom::Rect;
+use magicpic_raster::Surface;
 use serde_json::json;
 
 #[test]

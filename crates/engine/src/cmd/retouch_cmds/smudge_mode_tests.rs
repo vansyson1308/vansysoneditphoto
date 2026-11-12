@@ -27,7 +27,7 @@ fn two_tone(depth: u64, mode: &str, left: [i32; 3], right: [i32; 3]) -> Session 
         for _y in b.y0..b.y1 {
             for x in b.x0..b.x1 {
                 let c = if x < 100 { left } else { right };
-                data.extend(photocraft_raster::from_rgba(&fmt, [c[0] as f32 / 255.0, c[1] as f32 / 255.0, c[2] as f32 / 255.0, 1.0]));
+                data.extend(magicpic_raster::from_rgba(&fmt, [c[0] as f32 / 255.0, c[1] as f32 / 255.0, c[2] as f32 / 255.0, 1.0]));
             }
         }
         surf.write_region(b, &data);

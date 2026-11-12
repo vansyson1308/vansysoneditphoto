@@ -1,8 +1,8 @@
-//! Checked replay of PhotoCraft's native local HDR adaptation. No format-specific controls.
+//! Checked replay of MagicPic's native local HDR adaptation. No format-specific controls.
 use super::{HdrToning, curve_eval, luma};
 use crate::fxutil::gauss_box_radii;
-use photocraft_geom::Rect;
-use photocraft_raster::{Interrupt, Surface, from_rgba_into, to_rgba};
+use magicpic_geom::Rect;
+use magicpic_raster::{Interrupt, Surface, from_rgba_into, to_rgba};
 
 pub const MAX_PIXELS: usize = 64 * 1024 * 1024;
 pub const MAX_WORKSPACE_BYTES: usize = 1_500_000_000;
@@ -35,7 +35,7 @@ impl std::error::Error for Error {}
 fn check(ctl: &Interrupt<'_>) -> Result<(), Error> {
     ctl.check().map_err(|_| Error::Cancelled)
 }
-// Independent pixel phases use PhotoCraft's normal native rayon scheduling. No parallel
+// Independent pixel phases use MagicPic's normal native rayon scheduling. No parallel
 // reduction: the visibility-weighted mean retains its original deterministic serial order.
 /// Process disjoint chunks in parallel only on sufficiently large native workloads; preserve chunk offsets and the
 /// serial wasm path.
@@ -274,7 +274,7 @@ pub fn apply_with(surface: &Surface, p: &HdrToning, area: Rect, domain: Rect, se
     let h = usize::try_from(i64::from(domain.y1) - i64::from(domain.y0)).map_err(|_| Error::InvalidGeometry)?;
     let count = geometry(w, h)?;
     let area = area.intersect(&domain);
-    let ts = i64::from(photocraft_geom::TILE_SIZE);
+    let ts = i64::from(magicpic_geom::TILE_SIZE);
     let tile_count = |lo: i32, hi: i32| -> Option<usize> {
         if hi <= lo { Some(0) } else { usize::try_from((i64::from(hi) - 1).div_euclid(ts) - i64::from(lo).div_euclid(ts) + 1).ok() }
     };
@@ -348,7 +348,7 @@ pub(crate) fn run_image(src: &crate::Image, out: Rect, ctx: &crate::Ctx, p: &Hdr
         let w = usize::try_from(i64::from(src.rect.x1) - i64::from(src.rect.x0)).map_err(|_| Error::InvalidGeometry)?;
         let h = usize::try_from(i64::from(src.rect.y1) - i64::from(src.rect.y0)).map_err(|_| Error::InvalidGeometry)?;
         let n = geometry(w, h)?;
-        let fmt = photocraft_color::PixelFormat::new(ctx.mode, photocraft_color::SampleType::F32, ctx.alpha);
+        let fmt = magicpic_color::PixelFormat::new(ctx.mode, magicpic_color::SampleType::F32, ctx.alpha);
         if src.ch != fmt.channels() || n.checked_mul(src.ch) != Some(src.data.len()) || out.intersect(&src.rect) != out {
             return Err(Error::InvalidGeometry);
         }
@@ -385,7 +385,7 @@ mod tests {
     #[test]
     /// Preserve skipped transparent CMYK and Lab samples bit for bit, with and without selection mixing.
     fn skipped_transparent_native_samples_survive_toning_and_selection_bit_for_bit() {
-        use photocraft_color::{ColorMode, PixelFormat, SampleType};
+        use magicpic_color::{ColorMode, PixelFormat, SampleType};
         let area = Rect::new(-1, 0, 1, 1);
         for mode in [ColorMode::Cmyk, ColorMode::Lab] {
             for depth in SampleType::ALL {
@@ -461,7 +461,7 @@ mod tests {
     /// Verify offset native surfaces at every supported depth against separately processed pixels, including selection
     /// publication.
     fn native_depth_models_offsets_and_selection_match_native_counterpart() {
-        use photocraft_color::{ColorMode, PixelFormat, SampleType};
+        use magicpic_color::{ColorMode, PixelFormat, SampleType};
         let bounds = Rect::new(-3, 5, 2, 8);
         for mode in [ColorMode::Rgb, ColorMode::Grayscale, ColorMode::Cmyk, ColorMode::Lab] {
             for depth in [SampleType::U8, SampleType::U16, SampleType::F32] {
@@ -470,7 +470,7 @@ mod tests {
                 let mut samples = Vec::new();
                 for i in 0..15 {
                     let c = [i as f32 / 9., 0.3, 0.6, if i % 3 == 0 { 0. } else { 0.7 }];
-                    samples.extend(photocraft_raster::from_rgba(&format, c));
+                    samples.extend(magicpic_raster::from_rgba(&format, c));
                 }
                 source.write_region(bounds, &samples);
                 let before = source.read_region(bounds);
@@ -480,7 +480,7 @@ mod tests {
                 let expected: Vec<_> = expected
                     .iter()
                     .zip(before.chunks_exact(format.channels()))
-                    .flat_map(|(q, original)| if q[3] <= 0. { original.to_vec() } else { photocraft_raster::from_rgba(&format, *q) })
+                    .flat_map(|(q, original)| if q[3] <= 0. { original.to_vec() } else { magicpic_raster::from_rgba(&format, *q) })
                     .collect();
                 let mut oracle = Surface::new(format);
                 oracle.write_region(bounds, &expected);
@@ -499,10 +499,10 @@ mod tests {
     /// Require cancelled or oversized surface work to preserve the source and the raw adapter's valid identity
     /// fallback.
     fn cancelled_surface_never_publishes_and_workspace_is_bounded() {
-        use photocraft_color::{PixelFormat, SampleType};
+        use magicpic_color::{PixelFormat, SampleType};
         use std::sync::atomic::{AtomicUsize, Ordering};
         let bounds = Rect::new(0, 0, 64, 64);
-        let mut source = Surface::new(PixelFormat::new(photocraft_color::ColorMode::Rgb, SampleType::F32, true));
+        let mut source = Surface::new(PixelFormat::new(magicpic_color::ColorMode::Rgb, SampleType::F32, true));
         source.write_region(bounds, &vec![0.5; 64 * 64 * 4]);
         let before = source.read_region(bounds);
         let calls = AtomicUsize::new(0);
@@ -513,7 +513,7 @@ mod tests {
             apply_with(&source, &HdrToning::default(), Rect::new(0, 0, 65_536, 65_536), Rect::new(0, 0, 65_536, 65_536), None, &Interrupt::NONE),
             Err(Error::WorkspaceLimit)
         ));
-        let ctx = crate::Ctx { bounds, mode: photocraft_color::ColorMode::Rgb, alpha: true };
+        let ctx = crate::Ctx { bounds, mode: magicpic_color::ColorMode::Rgb, alpha: true };
         let raw = crate::Image { rect: bounds, ch: 4, data: before.clone() };
         let p = HdrToning { radius: 0., ..Default::default() };
         assert_eq!(run_image(&raw, bounds, &ctx, &p), before);

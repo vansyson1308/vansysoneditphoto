@@ -1,11 +1,11 @@
 use super::shortcuts::shortcut_items;
-use super::{BTreeMap, DialogKind, Map, PhotocraftApp, RichText, SECTIONS, Tokens, Value, json, prefs};
+use super::{BTreeMap, DialogKind, Map, MagicpicApp, RichText, SECTIONS, Tokens, Value, json, prefs};
 
 // ------------------------------------------------------------------ menu routing
 
 /// Shell front ends for Edit-menu commands invoked without parameters (dialogs, pickers).
 /// `None` when `id` isn't handled here.
-pub fn invoke(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, params: &Value) -> Option<Result<Value, String>> {
+pub fn invoke(app: &mut MagicpicApp, ctx: &egui::Context, id: &str, params: &Value) -> Option<Result<Value, String>> {
     let empty = params.as_object().is_none_or(|o| o.is_empty());
     if !empty {
         return None;
@@ -37,7 +37,7 @@ pub fn invoke(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, params: &V
         }
         "edit.fade" | "edit.findAndReplaceText" | "edit.defineBrushPreset" | "edit.defineCustomShape" | "edit.autoAlignLayers" | "edit.autoBlendLayers" => {
             if !app.session.is_enabled(id) {
-                return Some(Err(photocraft_engine::commands::find(id)
+                return Some(Err(magicpic_engine::commands::find(id)
                     .map_or("not available".into(), |c| format!("{} is not available right now", c.label.trim_end_matches('…')))));
             }
             let d = crate::filter_dialog::open(app, id);
@@ -64,7 +64,7 @@ pub fn invoke(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, params: &V
     }
 }
 
-fn open_kind(app: &mut PhotocraftApp, kind: &str, label: &str, fields: Value) -> u64 {
+fn open_kind(app: &mut MagicpicApp, kind: &str, label: &str, fields: Value) -> u64 {
     let mut f = Map::new();
     f.insert("__prefsui".into(), json!(kind));
     f.insert("__label".into(), json!(label));
@@ -91,7 +91,7 @@ pub(super) fn preference_values(p: &prefs::Preferences) -> Map<String, Value> {
 
 /// Would OK or Apply change the editable sections? Settings managed outside Preferences, and
 /// settings changed elsewhere while the dialog is open, don't count.
-pub fn preferences_changed(app: &PhotocraftApp, fields: &Map<String, Value>) -> bool {
+pub fn preferences_changed(app: &MagicpicApp, fields: &Map<String, Value>) -> bool {
     is_preferences(fields)
         && fields.get("values").is_some_and(Value::is_object)
         && committed_values(app, fields) != Value::Object(preference_values(app.session.prefs()))
@@ -102,7 +102,7 @@ pub fn preferences_changed(app: &PhotocraftApp, fields: &Map<String, Value>) -> 
 /// them, so a change made elsewhere while it is open, such as a live theme switch, survives an
 /// Apply of an unrelated setting (#11120). A setting edited both here and elsewhere takes the
 /// dialog's value. Without a `__base` the draft is committed as it is.
-fn committed_values(app: &PhotocraftApp, f: &Map<String, Value>) -> Value {
+fn committed_values(app: &MagicpicApp, f: &Map<String, Value>) -> Value {
     let Some(draft) = f.get("values") else { return Value::Null };
     let Some(base) = f.get("__base") else { return draft.clone() };
     let mut live = Value::Object(preference_values(app.session.prefs()));
@@ -111,7 +111,7 @@ fn committed_values(app: &PhotocraftApp, f: &Map<String, Value>) -> Value {
 }
 
 /// Commit the working copy and keep the current section open. Failure leaves the draft intact.
-pub fn apply(app: &mut PhotocraftApp, id: u64) -> Result<Value, String> {
+pub fn apply(app: &mut MagicpicApp, id: u64) -> Result<Value, String> {
     let d = app.ui.dialogs.iter().find(|d| d.id == id).ok_or_else(|| format!("no dialog {id}"))?;
     if d.kind != DialogKind::Command || !is_preferences(&d.fields) {
         return Err("Apply is only available for Preferences".into());
@@ -152,7 +152,7 @@ pub fn width(fields: &Map<String, Value>, available: f32) -> Option<f32> {
 }
 
 /// Open Edit › Preferences on `section`.
-pub fn open_preferences(app: &mut PhotocraftApp, section: &str) -> u64 {
+pub fn open_preferences(app: &mut MagicpicApp, section: &str) -> u64 {
     let section = if SECTIONS.iter().any(|(id, _)| *id == section) { section } else { "general" };
     let working = preference_values(app.session.prefs());
     let order = field_order(app.session.prefs(), &working);
@@ -179,7 +179,7 @@ fn field_order(p: &prefs::Preferences, sections: &Map<String, Value>) -> Value {
 }
 
 /// Open Keyboard Shortcuts and Menus on a tab (0 shortcuts, 1 menus, 2 toolbar).
-pub fn open_shortcuts(app: &mut PhotocraftApp, tab: u64) -> u64 {
+pub fn open_shortcuts(app: &mut MagicpicApp, tab: u64) -> u64 {
     let p = app.session.prefs();
     let fields = json!({
         "tab": tab,
@@ -203,7 +203,7 @@ pub fn open_shortcuts(app: &mut PhotocraftApp, tab: u64) -> u64 {
 /// Cancel back to `open_prompt`.
 /// `names` carries the embedded and working profile names and the Color Settings policy a
 /// remembered choice is saved to (`policyKey`, null for a mode without one).
-pub fn open_mismatch(app: &mut PhotocraftApp, message: &str, action: &str, missing: bool, marker: &str, names: Value) -> u64 {
+pub fn open_mismatch(app: &mut MagicpicApp, message: &str, action: &str, missing: bool, marker: &str, names: Value) -> u64 {
     let mut fields = json!({"message": message, "action": action, "missing": missing, "remember": false});
     if let (Some(f), Value::Object(n)) = (fields.as_object_mut(), names) {
         f.extend(n);
@@ -237,7 +237,7 @@ pub(super) fn toolbar_tab(ui: &mut egui::Ui, f: &mut Map<String, Value>) {
     f.insert("toolbarHidden".into(), json!(hidden));
 }
 
-pub(super) fn presets_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
+pub(super) fn presets_body(app: &mut MagicpicApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
     let t = Tokens::get(ui.ctx());
     let mut kind = f.get("kind").and_then(Value::as_str).unwrap_or("brushes").to_string();
     ui.horizontal(|ui| {
@@ -338,7 +338,7 @@ pub(super) fn mismatch_body(ui: &mut egui::Ui, f: &mut Map<String, Value>) {
 // ------------------------------------------------------------------ confirm
 
 /// OK on one of our dialogs.
-pub fn confirm(app: &mut PhotocraftApp, f: &Map<String, Value>) -> Result<Value, String> {
+pub fn confirm(app: &mut MagicpicApp, f: &Map<String, Value>) -> Result<Value, String> {
     match f.get("__prefsui").and_then(Value::as_str).unwrap_or("") {
         "prefs" => {
             let values = committed_values(app, f);

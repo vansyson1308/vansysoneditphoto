@@ -6,13 +6,13 @@ use super::*;
 use egui::PointerButton;
 use egui_kittest::kittest::Queryable;
 
-type Harness = egui_kittest::Harness<'static, PhotocraftApp>;
+type Harness = egui_kittest::Harness<'static, MagicpicApp>;
 
 /// A 400 × 300 layer in Warp with the Default grid.
 fn warping() -> Harness {
-    let app = app_with_square(512, photocraft_geom::Rect::new(56, 56, 456, 356));
+    let app = app_with_square(512, magicpic_geom::Rect::new(56, 56, 456, 356));
     let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(1200.0, 800.0)).with_max_steps(64).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+        MagicpicApp::setup_context(&cc.egui_ctx, Default::default());
         app
     });
     run(&mut h, "edit.transform.warp", json!({}));

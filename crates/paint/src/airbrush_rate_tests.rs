@@ -3,8 +3,8 @@
 //! 10 %, black on white: the dab centre reads 205 after a click and 26 after a 2 s hold, and 229
 //! with Airbrush off however long the button is held.
 
-use photocraft_color::PixelFormat;
-use photocraft_raster::Surface;
+use magicpic_color::PixelFormat;
+use magicpic_raster::Surface;
 
 use crate::{BrushSettings, StrokePoint, render_stroke};
 

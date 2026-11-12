@@ -1,5 +1,5 @@
 [package]
-name = "photocraft-engine"
+name = "magicpic-engine"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -12,35 +12,35 @@ workspace = true
 corpus = []
 
 [dependencies]
-photocraft-geom = { workspace = true }
-photocraft-color = { workspace = true }
-photocraft-cms = { workspace = true }
-photocraft-raster = { workspace = true }
-photocraft-doc = { workspace = true }
-photocraft-ops = { workspace = true }
-photocraft-compose = { workspace = true }
+magicpic-geom = { workspace = true }
+magicpic-color = { workspace = true }
+magicpic-cms = { workspace = true }
+magicpic-raster = { workspace = true }
+magicpic-doc = { workspace = true }
+magicpic-ops = { workspace = true }
+magicpic-compose = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 rayon = { workspace = true }
 chrono = { workspace = true }
 web-time = { workspace = true }
-photocraft-paint = { workspace = true }
-photocraft-algo = { workspace = true }
-photocraft-text = { workspace = true }
-photocraft-vector = { workspace = true }
-photocraft-io = { workspace = true }
-photocraft-psd = { workspace = true }
-photocraft-format = { workspace = true }
-photocraft-plugins = { workspace = true }
+magicpic-paint = { workspace = true }
+magicpic-algo = { workspace = true }
+magicpic-text = { workspace = true }
+magicpic-vector = { workspace = true }
+magicpic-io = { workspace = true }
+magicpic-psd = { workspace = true }
+magicpic-format = { workspace = true }
+magicpic-plugins = { workspace = true }
 base64 = "0.22"
 blake3 = { version = "1.8", default-features = false, features = ["pure"] }
-photocraft-codecs = { workspace = true }
+magicpic-codecs = { workspace = true }
 flate2 = { workspace = true }
 craft-print = { workspace = true }
 
 # Photoshop `.kys` shortcut sets (`edit.keyboardShortcuts` `importKys`); already in the tree
-# through photocraft-ui-egui and usvg.
+# through magicpic-ui-egui and usvg.
 roxmltree = "0.21"
 # Release tags use the same semantic versions as Cargo.
 semver = "1"
@@ -61,14 +61,14 @@ winsafe = { version = "=0.0.29", default-features = false, features = ["kernel"]
 
 # Printing on Unix: an IPP client for CUPS (pure Rust); the web build cannot print.
 [target.'cfg(all(not(target_arch = "wasm32"), not(target_os = "windows")))'.dependencies]
-photocraft-ipp = { workspace = true }
+magicpic-ipp = { workspace = true }
 
 [dev-dependencies]
-photocraft-affinity = { workspace = true, features = ["synth"] }
-photocraft-io = { workspace = true, features = ["testgen"] }
+magicpic-affinity = { workspace = true, features = ["synth"] }
+magicpic-io = { workspace = true, features = ["testgen"] }
 # Synthetic camera raw files for the open tests.
-photocraft-raw = { workspace = true, features = ["testgen"] }
-photocraft-testkit = { workspace = true }
+magicpic-raw = { workspace = true, features = ["testgen"] }
+magicpic-testkit = { workspace = true }
 # WebAssembly text -> binary for plug-in test modules (Apache-2.0 WITH LLVM-exception).
 wat = "1.228"
 # Synthetic multi-part EXR fixtures for the parts-commands tests.

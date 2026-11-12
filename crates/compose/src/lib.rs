@@ -37,10 +37,10 @@ pub mod smart_mix;
 mod uniform;
 pub mod viewport;
 
-use photocraft_color::blend::BlendMode;
-use photocraft_doc::{Document, Fill, Layer, LayerContent, Pattern};
-use photocraft_geom::Rect;
-use photocraft_raster::{Rgba8Image, Surface};
+use magicpic_color::blend::BlendMode;
+use magicpic_doc::{Document, Fill, Layer, LayerContent, Pattern};
+use magicpic_geom::Rect;
+use magicpic_raster::{Rgba8Image, Surface};
 use psblend as blend;
 
 pub use advanced::advanced_active;
@@ -101,7 +101,7 @@ pub struct Buffer {
 
 impl Clone for Buffer {
     fn clone(&self) -> Self {
-        let mut px = photocraft_raster::scratch::take(self.px.len(), [0.0; 4]);
+        let mut px = magicpic_raster::scratch::take(self.px.len(), [0.0; 4]);
         px.copy_from_slice(&self.px);
         Self { rect: self.rect, px }
     }
@@ -109,7 +109,7 @@ impl Clone for Buffer {
 
 impl Drop for Buffer {
     fn drop(&mut self) {
-        photocraft_raster::scratch::give(std::mem::take(&mut self.px));
+        magicpic_raster::scratch::give(std::mem::take(&mut self.px));
     }
 }
 
@@ -118,7 +118,7 @@ impl Buffer {
         Self::filled(rect, [0.0; 4])
     }
     pub fn filled(rect: Rect, c: [f32; 4]) -> Self {
-        Self { rect, px: photocraft_raster::scratch::take(rect.width() as usize * rect.height() as usize, c) }
+        Self { rect, px: magicpic_raster::scratch::take(rect.width() as usize * rect.height() as usize, c) }
     }
     /// The pixels, taken out of the buffer (it can't be destructured: it returns them to the
     /// pool on drop).

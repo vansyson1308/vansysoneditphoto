@@ -5,7 +5,7 @@
 //! Buffers are straight RGBA in 0..=1, row-major. Median cut follows Heckbert (1982); k-means
 //! refinement is Lloyd's algorithm; error diffusion is Floyd & Steinberg (1976).
 
-use photocraft_color::convert::srgb_to_lab;
+use magicpic_color::convert::srgb_to_lab;
 use serde::{Deserialize, Serialize};
 
 mod nearest;
@@ -369,7 +369,7 @@ fn kmeans(pts: &[([f32; 3], u32)], centers: &mut [[f32; 3]], iters: usize) {
 }
 
 fn lab_to_rgb8(lab: [f32; 3]) -> Rgb8 {
-    photocraft_color::convert::lab_to_srgb(lab).map(to8)
+    magicpic_color::convert::lab_to_srgb(lab).map(to8)
 }
 
 /// Histogram colours as CIE Lab points with their counts. Each point depends only on its own
@@ -806,11 +806,11 @@ fn pass_down(errs: &[f32], below: &mut [f32]) {
 /// (measured: a 2x2 pattern of 32/96/160/224, a 3x1 of 50/128/200 and a 7x1 ramp all give
 /// exactly those levels).
 /// Reject oversized workspace or allocation failure rather than aborting the process.
-pub fn custom_pattern_thresholds(lightness: &[f32]) -> Result<Vec<f32>, photocraft_raster::AllocationError> {
+pub fn custom_pattern_thresholds(lightness: &[f32]) -> Result<Vec<f32>, magicpic_raster::AllocationError> {
     let n = lightness.len();
     let bytes = custom_pattern_working_bytes(n)?;
     let key = |i: usize| lightness.get(i).copied().filter(|v| v.is_finite()).unwrap_or(0.0);
-    let allocation = || photocraft_raster::AllocationError::NotEnoughMemory { bytes };
+    let allocation = || magicpic_raster::AllocationError::NotEnoughMemory { bytes };
     let mut order = Vec::new();
     order.try_reserve_exact(n).map_err(|_| allocation())?;
     order.extend((0..n).map(|i| i as u32));
@@ -838,10 +838,10 @@ pub fn custom_pattern_thresholds(lightness: &[f32]) -> Result<Vec<f32>, photocra
 }
 
 /// Admit input lightness, fixed-width order and output thresholds before reading any pattern pixels.
-pub fn custom_pattern_working_bytes(count: usize) -> Result<usize, photocraft_raster::AllocationError> {
-    let bytes = count.checked_mul(12).ok_or(photocraft_raster::AllocationError::SizeOverflow)?;
+pub fn custom_pattern_working_bytes(count: usize) -> Result<usize, magicpic_raster::AllocationError> {
+    let bytes = count.checked_mul(12).ok_or(magicpic_raster::AllocationError::SizeOverflow)?;
     if bytes > 256 << 20 {
-        return Err(photocraft_raster::AllocationError::SizeOverflow);
+        return Err(magicpic_raster::AllocationError::SizeOverflow);
     }
     Ok(bytes)
 }

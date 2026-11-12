@@ -7,13 +7,13 @@
 
 use egui::Modifiers;
 use egui_kittest::Harness;
-use photocraft_doc::LayerId;
+use magicpic_doc::LayerId;
 use serde_json::json;
 
 use super::super::mask_replace_selection_tests::{click, new_app, selection};
 use super::super::{commit, current_text, insert};
 use super::{hit_layer, hit_offset};
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::state::{DialogKind, Tool};
 
 const MASKS: [Tool; 2] = [Tool::HorizontalTypeMask, Tool::VerticalTypeMask];
@@ -22,7 +22,7 @@ const OFF_TEXT: (f64, f64) = (500.0, 100.0);
 
 /// A committed type layer "TXT" made with `type_tool` and, active above it, an empty layer, with
 /// no selection and `tool` in hand.
-fn typed(type_tool: Tool, tool: Tool) -> (PhotocraftApp, LayerId) {
+fn typed(type_tool: Tool, tool: Tool) -> (MagicpicApp, LayerId) {
     let mut app = new_app();
     app.run("select.deselect", json!({})).unwrap();
     app.ui.tool = type_tool;
@@ -36,7 +36,7 @@ fn typed(type_tool: Tool, tool: Tool) -> (PhotocraftApp, LayerId) {
 }
 
 /// [`typed`] horizontal text, and the point on its glyphs between "T" and "X".
-fn txt(tool: Tool) -> (PhotocraftApp, LayerId, (f64, f64)) {
+fn txt(tool: Tool) -> (MagicpicApp, LayerId, (f64, f64)) {
     let (mut app, id) = typed(Tool::Type, tool);
     let y = 185.0;
     let x = (100..200)
@@ -48,9 +48,9 @@ fn txt(tool: Tool) -> (PhotocraftApp, LayerId, (f64, f64)) {
 
 /// Frames of the app's own logic, each frame as the app runs it: the commit when the tool in hand
 /// no longer matches the edit, then the shortcuts and typing; one of `events` per frame.
-fn frames(app: PhotocraftApp, events: Vec<egui::Event>) -> PhotocraftApp {
+fn frames(app: MagicpicApp, events: Vec<egui::Event>) -> MagicpicApp {
     let mut h = Harness::builder().build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut MagicpicApp| {
             let ctx = ui.ctx().clone();
             app.logic_frame(&ctx, &mut eframe::Frame::_new_kittest());
             // As `canvas_tests`' harness: the shortcuts wait for the app's fonts.
@@ -68,19 +68,19 @@ fn frames(app: PhotocraftApp, events: Vec<egui::Event>) -> PhotocraftApp {
     h.into_state()
 }
 
-fn active_layer(app: &PhotocraftApp) -> Option<LayerId> {
+fn active_layer(app: &MagicpicApp) -> Option<LayerId> {
     app.session.active().and_then(|st| st.active_layer)
 }
 
-fn history(app: &PhotocraftApp) -> Vec<String> {
+fn history(app: &MagicpicApp) -> Vec<String> {
     app.session.active().unwrap().history.entries()
 }
 
-fn layers(app: &PhotocraftApp) -> usize {
+fn layers(app: &MagicpicApp) -> usize {
     app.session.active().unwrap().doc.layers.len()
 }
 
-fn alerts(app: &PhotocraftApp) -> Vec<&str> {
+fn alerts(app: &MagicpicApp) -> Vec<&str> {
     app.ui.dialogs.iter().filter(|d| d.kind == DialogKind::Error).filter_map(|d| d.fields.get("message")?.as_str()).collect()
 }
 

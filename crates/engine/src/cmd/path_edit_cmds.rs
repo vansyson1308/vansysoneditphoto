@@ -1,7 +1,7 @@
 //! Point-level path edits, what Photoshop's Direct Selection (A), Convert Point and Add / Delete
 //! Anchor Point tools do on the canvas: move anchors, drag direction handles, bend segments,
 //! convert points, and insert or remove anchors. The
-//! geometry is `photocraft_vector::edit`; the canvas previews a drag with it and commits the
+//! geometry is `magicpic_vector::edit`; the canvas previews a drag with it and commits the
 //! whole drag as one command (one history step).
 //!
 //! Every command targets a path like `path.transform`: `"name":"work"` (default), a saved path's
@@ -10,9 +10,9 @@
 //! type layer also has a vector mask). Knots are addressed by `subpath` and `knot` index, as
 //! listed by `path.info`, and the result is `{name, path}` in the compact JSON form.
 
-use photocraft_doc::{LayerContent, Path, PathOp};
-use photocraft_geom::Point;
-use photocraft_vector::edit::{self, Handle};
+use magicpic_doc::{LayerContent, Path, PathOp};
+use magicpic_geom::Point;
+use magicpic_vector::edit::{self, Handle};
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;
@@ -331,7 +331,7 @@ pub fn specs() -> Vec<CommandSpec> {
 
 #[cfg(test)]
 mod tests {
-    use photocraft_doc::{LayerId, PathOp, ShapeLayer};
+    use magicpic_doc::{LayerId, PathOp, ShapeLayer};
     use serde_json::json;
 
     use crate::Session;
@@ -350,7 +350,7 @@ mod tests {
         serde_json::from_value(v["path"]["subpaths"][0]["knots"][k]["anchor"].clone()).unwrap()
     }
 
-    fn work(s: &Session) -> photocraft_doc::Path {
+    fn work(s: &Session) -> magicpic_doc::Path {
         s.active().unwrap().doc.work_path.clone().unwrap()
     }
 
@@ -375,7 +375,7 @@ mod tests {
         s.execute("path.moveAnchors", json!({"anchors": [[0, 1]], "move": [0, 60], "curvature": true})).unwrap();
         let p = work(&s);
         let pts = [[0.0, 50.0], [100.0, 60.0], [200.0, 50.0], [100.0, 100.0]];
-        let want = photocraft_vector::edit::curvature_knots(&pts, &[false; 4], true);
+        let want = magicpic_vector::edit::curvature_knots(&pts, &[false; 4], true);
         for (k, w) in p.subpaths[0].knots.iter().zip(want) {
             assert_eq!([[k.anchor.x, k.anchor.y], [k.in_ctrl.x, k.in_ctrl.y], [k.out_ctrl.x, k.out_ctrl.y]], w);
         }
@@ -436,7 +436,7 @@ mod tests {
             let r = s.execute("path.moveAnchors", json!({"name": "layer", "layer": id, "anchors": [[0, 1], [0, 2]], "move": [30, 0]})).unwrap();
             assert_eq!(anchor(&r, 1), [80.0, 10.0]);
             let st = s.active().unwrap();
-            let photocraft_doc::LayerContent::Shape(ShapeLayer { live, cache, .. }) = &st.doc.layer(LayerId(id)).unwrap().content else { panic!("shape") };
+            let magicpic_doc::LayerContent::Shape(ShapeLayer { live, cache, .. }) = &st.doc.layer(LayerId(id)).unwrap().content else { panic!("shape") };
             assert!(live.is_none(), "an edited rectangle is a plain path now");
             assert_eq!(cache.as_ref().unwrap().content_bounds().x1, 80, "depth {depth}: re-rendered");
         }
@@ -445,7 +445,7 @@ mod tests {
         s.execute("layer.vectorMask.add", json!({"layer": id, "path": square()})).unwrap();
         s.execute("path.moveAnchors", json!({"name": "layer", "layer": id, "anchors": [[0, 0]], "move": [-5, -5]})).unwrap();
         let vm = s.active().unwrap().doc.layer(LayerId(id)).unwrap().vector_mask.clone().unwrap();
-        assert_eq!(vm.path.subpaths[0].knots[0].anchor, photocraft_geom::Point::new(5.0, 5.0));
+        assert_eq!(vm.path.subpaths[0].knots[0].anchor, magicpic_geom::Point::new(5.0, 5.0));
     }
 
     fn curve() -> serde_json::Value {
@@ -518,19 +518,19 @@ mod tests {
             assert_eq!(anchor(&r, 1), [30.0, 10.0]);
             s.execute("path.moveAnchors", json!({"name": "layer", "layer": id, "anchors": [[0, 1]], "move": [0, -8]})).unwrap();
             let st = s.active().unwrap();
-            let photocraft_doc::LayerContent::Shape(ShapeLayer { live, cache, .. }) = &st.doc.layer(LayerId(id)).unwrap().content else { panic!("shape") };
+            let magicpic_doc::LayerContent::Shape(ShapeLayer { live, cache, .. }) = &st.doc.layer(LayerId(id)).unwrap().content else { panic!("shape") };
             assert!(live.is_none());
             assert_eq!(cache.as_ref().unwrap().content_bounds().y0, 2, "depth {depth}: re-rendered");
             s.execute("path.deleteAnchor", json!({"name": "layer", "layer": id, "subpath": 0, "knot": 1})).unwrap();
             let st = s.active().unwrap();
-            let photocraft_doc::LayerContent::Shape(ShapeLayer { cache, path, .. }) = &st.doc.layer(LayerId(id)).unwrap().content else { panic!("shape") };
+            let magicpic_doc::LayerContent::Shape(ShapeLayer { cache, path, .. }) = &st.doc.layer(LayerId(id)).unwrap().content else { panic!("shape") };
             assert_eq!((path.subpaths[0].knots.len(), cache.as_ref().unwrap().content_bounds().y0), (4, 10), "depth {depth}");
         }
         let id = s.active().unwrap().active_layer.unwrap().0;
         s.execute("layer.vectorMask.add", json!({"layer": id, "path": square()})).unwrap();
         s.execute("path.addAnchor", json!({"name": "layer", "layer": id, "subpath": 0, "knot": 3, "t": 0.5})).unwrap();
         let vm = s.active().unwrap().doc.layer(LayerId(id)).unwrap().vector_mask.clone().unwrap();
-        assert_eq!(vm.path.subpaths[0].knots[4].anchor, photocraft_geom::Point::new(10.0, 35.0), "the closing segment's midpoint");
+        assert_eq!(vm.path.subpaths[0].knots[4].anchor, magicpic_geom::Point::new(10.0, 35.0), "the closing segment's midpoint");
     }
 
     #[test]
@@ -546,8 +546,8 @@ mod tests {
     }
 
     /// Coverage of `path` at the pixel `(x, y)`.
-    fn covered(path: &photocraft_doc::Path, x: i32, y: i32) -> f32 {
-        photocraft_vector::fill_rasterizer(path, photocraft_vector::DEFAULT_TOLERANCE).render(photocraft_geom::Rect::from_xywh(x, y, 1, 1))[0]
+    fn covered(path: &magicpic_doc::Path, x: i32, y: i32) -> f32 {
+        magicpic_vector::fill_rasterizer(path, magicpic_vector::DEFAULT_TOLERANCE).render(magicpic_geom::Rect::from_xywh(x, y, 1, 1))[0]
     }
 
     /// A 10..60 square with a front 25..45 square cut out of it (Subtract Front Shape), then
@@ -588,7 +588,7 @@ mod tests {
         s.execute("shape.create", json!({"kind": "rect", "rect": [25, 25, 20, 20], "addTo": id, "op": "subtract"})).unwrap();
         s.execute("path.mergeShapeComponents", json!({"name": "layer", "layer": id})).unwrap();
         let st = s.active().unwrap();
-        let photocraft_doc::LayerContent::Shape(ShapeLayer { path, cache, .. }) = &st.doc.layer(LayerId(id)).unwrap().content else { panic!("shape") };
+        let magicpic_doc::LayerContent::Shape(ShapeLayer { path, cache, .. }) = &st.doc.layer(LayerId(id)).unwrap().content else { panic!("shape") };
         assert_eq!(covered(path, 35, 35), 0.0);
         assert!(cache.is_some());
     }
@@ -605,7 +605,7 @@ mod tests {
             cancelled["inverted"] = json!(inverted);
             s.execute("layer.vectorMask.add", json!({"layer": id, "path": cancelled})).unwrap();
             let mask = |s: &Session| s.active().unwrap().doc.layer(LayerId(id)).unwrap().vector_mask.clone().unwrap();
-            let shown = |s: &Session| photocraft_vector::vector_mask_values(&mask(s), photocraft_geom::Rect::from_xywh(0, 0, 120, 100));
+            let shown = |s: &Session| magicpic_vector::vector_mask_values(&mask(s), magicpic_geom::Rect::from_xywh(0, 0, 120, 100));
             let before = shown(&s);
             assert!(before.iter().all(|v| *v == if inverted { 1.0 } else { 0.0 }), "inverted {inverted}");
             s.execute("path.mergeShapeComponents", json!({"name": "layer", "layer": id})).unwrap();
@@ -634,7 +634,7 @@ mod tests {
         s.execute("shape.create", json!({"kind": "rect", "rect": [25, 25, 20, 20], "addTo": id, "op": "combine"})).unwrap();
         s.execute("path.setOperation", json!({"name": "layer", "layer": id, "subpaths": [1], "op": "subtract"})).unwrap();
         let st = s.active().unwrap();
-        let photocraft_doc::LayerContent::Shape(ShapeLayer { path, cache, .. }) = &st.doc.layer(LayerId(id)).unwrap().content else { panic!("shape") };
+        let magicpic_doc::LayerContent::Shape(ShapeLayer { path, cache, .. }) = &st.doc.layer(LayerId(id)).unwrap().content else { panic!("shape") };
         assert_eq!(covered(path, 35, 35), 0.0);
         assert!(cache.is_some());
     }
@@ -737,7 +737,7 @@ mod tests {
             s.execute("shape.edit", json!({"layer": id, "path": mixed})).unwrap();
             let state = |s: &Session| {
                 let d = s.active().unwrap();
-                let photocraft_doc::LayerContent::Shape(sh) = &d.doc.layer(LayerId(id)).unwrap().content else { panic!("shape") };
+                let magicpic_doc::LayerContent::Shape(sh) = &d.doc.layer(LayerId(id)).unwrap().content else { panic!("shape") };
                 (d.doc.work_path.clone(), sh.path.clone(), d.history.entries().len())
             };
             let before = state(&s);

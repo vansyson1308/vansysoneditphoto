@@ -7,7 +7,7 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::brush_resize::{readout_label, resized};
 use crate::state::Tool;
 
@@ -36,14 +36,14 @@ fn labels_get_a_space_before_the_colon() {
 
 #[test]
 fn the_readout_shows_diameter_hardness_and_opacity() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     app.run("tools.setBrush", json!({"brush": {"size": 13, "hardness": 0.0, "opacity": 1.0}})).unwrap();
     app.ui.tool = Tool::Brush;
     app.sync_views();
     let mut h = Harness::builder().with_size(vec2(1200.0, 800.0)).with_step_dt(1.0 / 60.0).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut MagicpicApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
@@ -52,7 +52,7 @@ fn the_readout_shows_diameter_hardness_and_opacity() {
         },
         app,
     );
-    crate::PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    crate::MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     let c = h.state().last_canvas_rect.center();
     let alt = Modifiers::ALT;

@@ -1,5 +1,5 @@
 use super::*;
-use photocraft_color::SampleType;
+use magicpic_color::SampleType;
 
 fn session_depth(depth: u32) -> Session {
     let mut s = Session::new();
@@ -905,7 +905,7 @@ fn split_and_merge_cmyk_keep_ink_dark() {
     let mut s = Session::new();
     s.execute("file.new", json!({"width": 40, "height": 20, "mode": "cmyk", "background": "white"})).unwrap();
     // Rich black (#8359): its inks don't survive a trip through RGB, so the old path fails here.
-    let rgb = photocraft_color::convert::cmyk_to_rgb([1.0, 1.0, 1.0, 0.0]).map(|c| c.clamp(0.0, 1.0));
+    let rgb = magicpic_color::convert::cmyk_to_rgb([1.0, 1.0, 1.0, 0.0]).map(|c| c.clamp(0.0, 1.0));
     s.execute("tools.setColors", json!({"foreground": rgb, "foregroundCmyk": [1.0, 1.0, 1.0, 0.0]})).unwrap();
     s.execute("select.rect", json!({"x": 0, "y": 0, "width": 20, "height": 20})).unwrap();
     s.execute("edit.fillForeground", json!({})).unwrap();
@@ -1147,7 +1147,7 @@ fn thumbnail_selection_shape_without_pixel_cache_uses_its_transparency() {
         s.execute("file.new", json!({"width":100,"height":80,"depth":depth,"background":"transparent"})).unwrap();
         let id = s.execute("shape.create", json!({"kind":"rect","rect":[20,10,40,30],"fill":"#cc3333"})).unwrap()["layer"].as_u64().unwrap();
         s.edit("Drop render cache", |doc, _| {
-            let l = doc.layer_mut(photocraft_doc::LayerId(id)).unwrap();
+            let l = doc.layer_mut(magicpic_doc::LayerId(id)).unwrap();
             if let LayerContent::Shape(shape) = &mut l.content {
                 shape.cache = None;
             }
@@ -1216,12 +1216,12 @@ fn layers_panel_mask_target_isolates_the_curve_channel() {
 /// hides its alpha channels; a Multichannel document's inks are its composite, so their eyes stay off.
 #[test]
 fn opened_documents_show_their_spot_channels() {
-    use photocraft_color::{Color, ColorMode, PixelFormat};
+    use magicpic_color::{Color, ColorMode, PixelFormat};
     for mode in [ColorMode::Rgb, ColorMode::Cmyk, ColorMode::Multichannel] {
-        let mut d = Document::new("spots", photocraft_doc::Size::new(4, 4), mode, SampleType::U8);
+        let mut d = Document::new("spots", magicpic_doc::Size::new(4, 4), mode, SampleType::U8);
         let fmt = PixelFormat::new(ColorMode::Grayscale, SampleType::U8, false);
-        d.channels.push(AlphaChannel::new("Alpha 1", photocraft_raster::Surface::new(fmt)));
-        d.channels.push(AlphaChannel { spot: Some((Color::rgb(0.0, 0.6, 0.65), 0.0)), ..AlphaChannel::new("teal", photocraft_raster::Surface::new(fmt)) });
+        d.channels.push(AlphaChannel::new("Alpha 1", magicpic_raster::Surface::new(fmt)));
+        d.channels.push(AlphaChannel { spot: Some((Color::rgb(0.0, 0.6, 0.65), 0.0)), ..AlphaChannel::new("teal", magicpic_raster::Surface::new(fmt)) });
         let mut s = Session::new();
         s.open_document(d, None);
         let v = &s.active().unwrap().channel_view;

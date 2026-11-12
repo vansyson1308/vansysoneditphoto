@@ -1,7 +1,7 @@
 //! Bounded alpha-weighted averaging and Photoshop's coverage-preserving Average.
 pub use crate::coverage::Error;
-use photocraft_geom::Rect;
-use photocraft_raster::{Interrupt, Surface, from_rgba_into, to_rgba};
+use magicpic_geom::Rect;
+use magicpic_raster::{Interrupt, Surface, from_rgba_into, to_rgba};
 
 /// Accumulation order and F32 products preserve the original Raster Average policy.
 #[derive(Default)]
@@ -87,7 +87,7 @@ fn apply_policy(surface: &Surface, area: Rect, bounds: Rect, selection: Option<&
     if w.checked_mul(h).is_none_or(|n| n > crate::coverage::MAX_PIXELS) {
         return Err(Error::InvalidGeometry);
     }
-    let tile = i64::from(photocraft_geom::TILE_SIZE);
+    let tile = i64::from(magicpic_geom::TILE_SIZE);
     let axes = |a: i32, b: i32| -> Result<usize, Error> {
         usize::try_from((i64::from(b) - 1).div_euclid(tile) - i64::from(a).div_euclid(tile) + 1).map_err(|_| Error::WorkspaceLimit)
     };
@@ -201,7 +201,7 @@ pub(crate) fn kernel(src: &crate::image::Image, out: Rect, ctx: &crate::Ctx) -> 
 
 /// Raw native images remain bounded and retain identity fallback on rejected work.
 fn run_image_policy(src: &crate::image::Image, out: Rect, ctx: &crate::Ctx, preserve_alpha: bool) -> Vec<f32> {
-    let format = photocraft_color::PixelFormat::new(ctx.mode, photocraft_color::SampleType::F32, ctx.alpha);
+    let format = magicpic_color::PixelFormat::new(ctx.mode, magicpic_color::SampleType::F32, ctx.alpha);
     let valid = [src.rect, out].into_iter().all(|r| (r.width() as usize).checked_mul(r.height() as usize).is_some_and(|n| n <= crate::coverage::MAX_PIXELS));
     if !valid
         || src.ch != format.channels()
@@ -209,7 +209,7 @@ fn run_image_policy(src: &crate::image::Image, out: Rect, ctx: &crate::Ctx, pres
     {
         return Vec::new();
     }
-    let tile = photocraft_geom::TILE_SIZE as u64;
+    let tile = magicpic_geom::TILE_SIZE as u64;
     let tiles = |r: Rect| (u64::from(r.width()).div_ceil(tile) + 1) * (u64::from(r.height()).div_ceil(tile) + 1);
     if (tiles(src.rect) + tiles(out)).saturating_mul(tile * tile * format.bytes_per_pixel() as u64) > crate::coverage::MAX_WORKSPACE_BYTES as u64 {
         return Vec::new();
@@ -241,7 +241,7 @@ fn run_image_policy(src: &crate::image::Image, out: Rect, ctx: &crate::Ctx, pres
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_color::{ColorMode, PixelFormat, SampleType};
+    use magicpic_color::{ColorMode, PixelFormat, SampleType};
 
     /// Canvas size and output tiling must not dilute a small offset image's color or alpha mean.
     #[test]

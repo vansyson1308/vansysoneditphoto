@@ -3,13 +3,13 @@
 
 use std::sync::Arc;
 
-use photocraft_color::{PixelFormat, SampleType};
-use photocraft_doc::{
+use magicpic_color::{PixelFormat, SampleType};
+use magicpic_doc::{
     AlphaChannel, CompAppearance, CompLayerState, DocId, Document, Effects, FillCache, Group, Layer, LayerComp, LayerContent, LayerId, LayerMask, Metadata,
     NamedPath, Pattern, ShapeLayer, SmartContentsId, SmartObject, SmartSource, TextLayer,
 };
-use photocraft_geom::{TILE_SIZE, TileCoord};
-use photocraft_raster::{Surface, Tile, decode_pixel, encode_pixel};
+use magicpic_geom::{TILE_SIZE, TileCoord};
+use magicpic_raster::{Surface, Tile, decode_pixel, encode_pixel};
 
 use crate::manifest::{
     ChannelM, CompAppearanceM, CompStateM, ContentM, DocM, EffectsM, FillCacheM, Hash, LayerCompM, LayerM, MaskM, MetadataM, NamedPathM, PatternM,
@@ -18,8 +18,8 @@ use crate::manifest::{
 use crate::{FormatError, Result};
 
 /// Deepest group nesting a bundle may hold — the one nesting limit every consumer of the layer
-/// tree shares; see [`photocraft_doc::MAX_GROUP_DEPTH`].
-pub use photocraft_doc::MAX_GROUP_DEPTH;
+/// tree shares; see [`magicpic_doc::MAX_GROUP_DEPTH`].
+pub use magicpic_doc::MAX_GROUP_DEPTH;
 
 fn too_deep() -> FormatError {
     FormatError::LimitExceeded(format!("layer groups nested deeper than {MAX_GROUP_DEPTH}"))
@@ -115,7 +115,7 @@ fn opt_blob(b: &Option<Arc<Vec<u8>>>, sink: &mut dyn Sink) -> Option<Hash> {
     b.as_ref().map(|b| sink.blob(b))
 }
 
-fn video_m(v: &photocraft_doc::VideoData, sink: &mut dyn Sink) -> crate::manifest::VideoDataM {
+fn video_m(v: &magicpic_doc::VideoData, sink: &mut dyn Sink) -> crate::manifest::VideoDataM {
     crate::manifest::VideoDataM {
         frames: v.frames.iter().map(|f| surface_m(f, sink)).collect(),
         original_frames: v.original_frames.as_ref().map(|frames| frames.iter().map(|f| surface_m(f, sink)).collect()),
@@ -157,14 +157,14 @@ fn layer_m(l: &Layer, sink: &mut dyn Sink) -> LayerM {
             psd_raw: opt_blob(&s.psd_raw, sink),
             path: s.path.clone(),
             stroke: s.stroke.clone(),
-            // Older PhotoCraft versions cannot deserialize ArrowLine.
+            // Older MagicPic versions cannot deserialize ArrowLine.
             // The saved path preserves the arrow's visual appearance.
             live: match &s.live {
-                Some(photocraft_doc::LiveShape::ArrowLine { .. }) => None,
+                Some(magicpic_doc::LiveShape::ArrowLine { .. }) => None,
                 other => other.clone(),
             },
             arrow_live: match &s.live {
-                Some(arrow @ photocraft_doc::LiveShape::ArrowLine { .. }) => Some(arrow.clone()),
+                Some(arrow @ magicpic_doc::LiveShape::ArrowLine { .. }) => Some(arrow.clone()),
                 _ => None,
             },
             density: s.density,
@@ -340,13 +340,13 @@ pub(crate) struct Loader<'a> {
 }
 
 impl Loader<'_> {
-    fn video(&mut self, m: &crate::manifest::VideoDataM) -> Result<photocraft_doc::VideoData> {
+    fn video(&mut self, m: &crate::manifest::VideoDataM) -> Result<magicpic_doc::VideoData> {
         let frames = m.frames.iter().map(|f| self.surface(f)).collect::<Result<Vec<_>>>()?;
         if m.original_frames.as_ref().is_some_and(|o| o.len() != frames.len()) {
             return Err(FormatError::corrupt("video original frame count differs from edited frame count"));
         }
         let original_frames = m.original_frames.as_ref().map(|source| source.iter().map(|f| self.surface(f)).collect::<Result<Vec<_>>>()).transpose()?;
-        Ok(photocraft_doc::VideoData { frames, original_frames, source: m.source.clone(), fps: m.fps, show_altered: m.show_altered })
+        Ok(magicpic_doc::VideoData { frames, original_frames, source: m.source.clone(), fps: m.fps, show_altered: m.show_altered })
     }
 
     fn surface(&mut self, m: &SurfaceM) -> Result<Surface> {
@@ -499,7 +499,7 @@ impl Loader<'_> {
                 path: path.clone(),
                 fill: fill.clone(),
                 stroke: stroke.clone(),
-                live: arrow_live.as_ref().filter(|shape| matches!(shape, photocraft_doc::LiveShape::ArrowLine { .. })).cloned().or_else(|| live.clone()),
+                live: arrow_live.as_ref().filter(|shape| matches!(shape, magicpic_doc::LiveShape::ArrowLine { .. })).cloned().or_else(|| live.clone()),
                 cache: self.opt_surface(cache)?,
                 psd_raw: self.opt_blob(psd_raw)?,
                 density: *density,
@@ -528,7 +528,7 @@ impl Loader<'_> {
                     // A display-only preview must not prevent recovery of the native source
                     // and cached pixels if its optional blob is missing or damaged.
                     Some(preview) => {
-                        self.fetch.blob_bounded(&preview.svg, 16 << 20).ok().map(|svg| photocraft_doc::VectorPreview { source_hash: preview.source_hash, svg })
+                        self.fetch.blob_bounded(&preview.svg, 16 << 20).ok().map(|svg| magicpic_doc::VectorPreview { source_hash: preview.source_hash, svg })
                     }
                     None => None,
                 },
@@ -650,7 +650,7 @@ impl Loader<'_> {
         for p in &m.patterns {
             // Sizes come from the file: a pattern with no tiles can claim any size, and renderers
             // allocate per pixel.
-            let max = photocraft_doc::pattern::MAX_EDGE;
+            let max = magicpic_doc::pattern::MAX_EDGE;
             if p.width == 0 || p.height == 0 {
                 return Err(FormatError::corrupt(format!("pattern `{}` is {}×{} px", p.name, p.width, p.height)));
             }
@@ -667,8 +667,8 @@ impl Loader<'_> {
         for sl in &mut slices.list {
             if let Some(l) = sl.layer {
                 sl.layer = self.id_map.get(&l.0).copied();
-                if sl.layer.is_none() && sl.origin == photocraft_doc::SliceOrigin::Layer {
-                    sl.origin = photocraft_doc::SliceOrigin::User;
+                if sl.layer.is_none() && sl.origin == magicpic_doc::SliceOrigin::Layer {
+                    sl.origin = magicpic_doc::SliceOrigin::User;
                 }
             }
         }
@@ -734,7 +734,7 @@ pub(crate) fn reserve_ids_through(max: u64) -> bool {
     if max - probe > 10_000_000 {
         return false;
     }
-    photocraft_doc::ensure_ids_above(max);
+    magicpic_doc::ensure_ids_above(max);
     true
 }
 

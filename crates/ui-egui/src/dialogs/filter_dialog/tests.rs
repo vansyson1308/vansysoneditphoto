@@ -17,7 +17,7 @@ fn a_unit_after_a_range_bound_does_not_reset_the_range_to_its_fallback() {
     // A bound that is no number at all still takes the old fallback rather than failing.
     assert_eq!(range(r#"{"x":0..many}"#), (0.0, 100.0, 0.0));
     // The documented specs of the real commands read their full ranges.
-    let spec = photocraft_engine::commands::find("paint.pencil").expect("paint.pencil is registered");
+    let spec = magicpic_engine::commands::find("paint.pencil").expect("paint.pencil is registered");
     let size = parse_spec(spec.params).into_iter().find(|p| p.key == "size");
     assert!(matches!(size.map(|p| p.kind), Some(Kind::Range { max, .. }) if max == 5000.0));
 }
@@ -26,7 +26,7 @@ fn a_unit_after_a_range_bound_does_not_reset_the_range_to_its_fallback() {
 fn lens_flare_dialog_centre_is_a_slider_from_0_to_1_defaulting_to_the_middle() {
     // `"centerX":number=0.5` read as an integer field defaulting to 0: the menu's Lens Flare
     // landed in the top-left corner and an imported 0.4 centre rounded to 0.
-    let spec = photocraft_engine::commands::find("filter.render.lensFlare").expect("filter.render.lensFlare is registered");
+    let spec = magicpic_engine::commands::find("filter.render.lensFlare").expect("filter.render.lensFlare is registered");
     let params = parse_spec(spec.params);
     for key in ["centerX", "centerY"] {
         let kind = params.iter().find(|p| p.key == key).map(|p| p.kind.clone());
@@ -38,7 +38,7 @@ fn lens_flare_dialog_centre_is_a_slider_from_0_to_1_defaulting_to_the_middle() {
 fn color_settings_working_spaces_list_installed_profiles_of_their_space() {
     // #6323: a press condition installed in the system can be the CMYK working space, as in
     // Photoshop's Color Settings; each working-space menu lists only profiles of its space.
-    use photocraft_cms::{ColorSpace, ProfileClass};
+    use magicpic_cms::{ColorSpace, ProfileClass};
     let p = |path: &str, class, color_space| InstalledProfile { path: path.into(), description: path.to_uppercase(), class, color_space };
     let installed = [
         p("gracol.icc", ProfileClass::Output, ColorSpace::Cmyk),
@@ -72,7 +72,7 @@ fn random_seeds_stay_in_range_and_change() {
     assert!(seen.len() > 100, "seeds spread out: {}", seen.len());
     assert_ne!(random_seed(1, 30_000), 30_000);
     // Every seed dialog shows the button: Clouds, Add Noise and the like carry a `seed` param.
-    let specs = photocraft_engine::command_specs();
+    let specs = magicpic_engine::command_specs();
     assert!(
         specs
             .iter()
@@ -92,20 +92,20 @@ fn display_names_are_not_split_like_camel_case_keys() {
 
 #[test]
 fn indexed_matte_tool_seeds_use_document_encoded_rgb() {
-    use photocraft_cms::Transform;
+    use magicpic_cms::Transform;
 
-    let mut session = photocraft_engine::Session::new();
+    let mut session = magicpic_engine::Session::new();
     session.color.settings.working_rgb = "display-p3".into();
     session.execute("file.new", json!({"width": 2, "height": 2, "background": "transparent"})).unwrap();
     session.execute("edit.assignProfile", json!({"profile": "adobe-rgb-compat"})).unwrap();
     session.execute("tools.setColors", json!({"foreground": "#3366cc", "background": "#cc6633"})).unwrap();
-    let app = PhotocraftApp::new(session, crate::Services::default());
+    let app = MagicpicApp::new(session, crate::Services::default());
     let mut fields = Map::new();
     indexed_matte_defaults(&app, &mut fields);
 
     let doc = app.session.active().unwrap().doc.clone();
     let source = app.session.color.working(ColorMode::Rgb);
-    let destination = photocraft_engine::color_cmds::document_profile(&doc);
+    let destination = magicpic_engine::color_cmds::document_profile(&doc);
     let transform = Transform::new(&source, &destination, app.session.color.settings.intent(), app.session.color.settings.bpc).unwrap();
     for (key, input) in [(INDEXED_MATTE_FOREGROUND, [0.2, 0.4, 0.8]), (INDEXED_MATTE_BACKGROUND, [0.8, 0.4, 0.2])] {
         let mut output = [0.0; 16];
@@ -126,11 +126,11 @@ fn black_point_compensation_is_spelled_out() {
 
 fn key() -> FilterPreviewKey {
     FilterPreviewKey {
-        doc: photocraft_doc::DocId(7),
+        doc: magicpic_doc::DocId(7),
         revision: 11,
         sources: Vec::new(),
         dialog: 3,
-        active: Some(photocraft_doc::LayerId(2)),
+        active: Some(magicpic_doc::LayerId(2)),
         target: Default::default(),
         command: "filter.blur.gaussianBlur".into(),
         params: json!({"radius": 4.0}),
@@ -143,7 +143,7 @@ fn key() -> FilterPreviewKey {
 fn same_target_ignores_parameters_but_nothing_else() {
     // A drag only changes the parameters, and that must not hide the finished frame.
     let mut base = key();
-    base.sources = vec![(photocraft_doc::DocId(9), 1)];
+    base.sources = vec![(magicpic_doc::DocId(9), 1)];
     let mut moved = base.clone();
     moved.params = json!({"radius": 40.0});
     assert!(base.same_target(&moved));
@@ -151,15 +151,15 @@ fn same_target_ignores_parameters_but_nothing_else() {
 
     // Anything else names a different preview and must not be shown.
     for break_it in [
-        |k: &mut FilterPreviewKey| k.doc = photocraft_doc::DocId(8),
+        |k: &mut FilterPreviewKey| k.doc = magicpic_doc::DocId(8),
         |k: &mut FilterPreviewKey| k.revision = 12,
-        |k: &mut FilterPreviewKey| k.sources[0].0 = photocraft_doc::DocId(10),
+        |k: &mut FilterPreviewKey| k.sources[0].0 = magicpic_doc::DocId(10),
         |k: &mut FilterPreviewKey| k.sources[0].1 = 2,
         |k: &mut FilterPreviewKey| k.sources.clear(),
         |k: &mut FilterPreviewKey| k.dialog = 4,
-        |k: &mut FilterPreviewKey| k.active = Some(photocraft_doc::LayerId(5)),
+        |k: &mut FilterPreviewKey| k.active = Some(magicpic_doc::LayerId(5)),
         |k: &mut FilterPreviewKey| k.active = None,
-        |k: &mut FilterPreviewKey| k.target = photocraft_engine::channel_cmds::ChannelTarget::LayerMask,
+        |k: &mut FilterPreviewKey| k.target = magicpic_engine::channel_cmds::ChannelTarget::LayerMask,
         |k: &mut FilterPreviewKey| k.command = "filter.blur.motionBlur".into(),
         |k: &mut FilterPreviewKey| k.k = 2,
         |k: &mut FilterPreviewKey| k.tool_colors.0 = [0.2, 0.4, 0.8, 1.0],
@@ -178,7 +178,7 @@ fn same_target_ignores_parameters_but_nothing_else() {
 fn only_direction_angles_get_the_dial() {
     // Every listed command still has a degree `angle` range, so the list cannot go stale.
     for cmd in ANGLE_DIAL {
-        let spec = photocraft_engine::commands::find(cmd).unwrap_or_else(|| panic!("{cmd} is not a command")).params;
+        let spec = magicpic_engine::commands::find(cmd).unwrap_or_else(|| panic!("{cmd} is not a command")).params;
         assert!(
             parse_spec(spec).iter().any(|p| p.key == "angle" && matches!(p.kind, Kind::Range { min, max, .. } if min >= -360.0 && max <= 360.0)),
             "{cmd} has no angle range"
@@ -196,7 +196,7 @@ fn only_direction_angles_get_the_dial() {
 
 #[test]
 fn restores_only_valid_previous_filter_choices() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), Default::default());
     app.session.prefs.edit(|prefs| {
         prefs.dialogs.insert("filter.blur.gaussianBlur".into(), json!({"radius": 11.0, "bogus": 42}));
     });
@@ -214,7 +214,7 @@ fn restores_only_valid_previous_filter_choices() {
 
 #[test]
 fn alt_reset_restores_schema_defaults_not_remembered() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), Default::default());
     app.session.prefs.edit(|prefs| {
         prefs.dialogs.insert("filter.blur.gaussianBlur".into(), json!({"radius": 11.0}));
     });
@@ -234,15 +234,15 @@ fn alt_reset_restores_schema_defaults_not_remembered() {
 /// with the chosen file; Cancel in the picker applies nothing; a map already given runs at once.
 #[test]
 fn displace_asks_for_its_map_after_ok() {
-    let dir = std::env::temp_dir().join(format!("photocraft-displace-map-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("magicpic-displace-map-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let map = dir.join("map.png");
-    let mut m = photocraft_engine::Session::new();
+    let mut m = magicpic_engine::Session::new();
     m.execute("file.new", json!({"width": 16, "height": 16, "background": "white"})).unwrap();
-    std::fs::write(&map, photocraft_io::export(&m.active().unwrap().doc, "map.png", &Default::default()).unwrap().bytes).unwrap();
+    std::fs::write(&map, magicpic_io::export(&m.active().unwrap().doc, "map.png", &Default::default()).unwrap().bytes).unwrap();
     let answers = vec![Some(crate::file_dialog::FileDialogAnswer::Paths(vec![map.to_string_lossy().into_owned()])), None];
     let (show, asked) = crate::file_dialog::fake(answers);
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services { file_dialog: Some(show), ..Default::default() });
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services { file_dialog: Some(show), ..Default::default() });
     app.run("file.new", json!({"width": 16, "height": 16, "background": "white"})).unwrap();
     app.run("select.rect", json!({"x": 0, "y": 0, "width": 8, "height": 16})).unwrap();
     app.run("edit.fill", json!({"color": "#000000"})).unwrap();
@@ -277,7 +277,7 @@ fn displace_asks_for_its_map_after_ok() {
 
 #[test]
 fn remembering_dialogs_never_persists_paths_or_document_indices() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), Default::default());
     let mut fields = Map::new();
     fields.insert("__filter".into(), json!(true));
     fields.insert("radius".into(), json!(7.0));
@@ -325,7 +325,7 @@ fn layer_id_params_stay_out_of_the_dialog() {
 /// document unchanged on Cancel.
 #[test]
 fn global_light_dialog_reflects_active_document_light() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), Default::default());
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     let doc1_id = app.session.active().unwrap().doc.id;
@@ -414,7 +414,7 @@ fn global_light_dialog_reflects_active_document_light() {
 /// tracking document switching, applying edits, and leaving the document unchanged on Cancel.
 #[test]
 fn proof_setup_dialog_reflects_active_document_proof_condition() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), Default::default());
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     let doc1_id = app.session.active().unwrap().doc.id;
@@ -497,7 +497,7 @@ fn proof_setup_dialog_reflects_active_document_proof_condition() {
 
 #[test]
 fn indexed_counts_are_integer_json_while_dither_amounts_keep_their_decimals() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), Default::default());
     open(&mut app, "image.mode.indexedColor").unwrap();
     let mut defaults = app.ui.dialogs.first().unwrap().fields.clone();
     let before = params_of(&defaults)["colors"].clone();
@@ -531,14 +531,14 @@ fn color_lookup_dialog_defaults_run_a_3dl_file() {
         }
     }
     std::fs::write(&path, lut).unwrap();
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 4, "height": 4, "background": "#000000"})).unwrap();
     let id = open(&mut app, COLOR_LOOKUP).unwrap();
     let mut f = app.ui.dialog_mut(id).unwrap().fields.clone();
     app.run(COLOR_LOOKUP, params_of(&f)).unwrap();
     f.insert("file".into(), json!(path.to_str().unwrap()));
     app.run(COLOR_LOOKUP, params_of(&f)).unwrap();
-    let px = app.session.active().unwrap().doc.layers[0].surface().unwrap().read_region(photocraft_geom::Rect::new(0, 0, 1, 1));
+    let px = app.session.active().unwrap().doc.layers[0].surface().unwrap().read_region(magicpic_geom::Rect::new(0, 0, 1, 1));
     assert!(px[0] > 0.99 && px[1] > 0.99 && px[2] > 0.99, "black through the inverse .3dl is white: {px:?}");
 }
 
@@ -551,7 +551,7 @@ fn color_lookup_dialog_lists_and_applies_lut_folder_files() {
     std::fs::write(&path, "LUT_3D_SIZE 2\n0 0 0\n1 0 0\n0 1 0\n1 1 0\n0 0 1\n1 0 1\n0 1 1\n1 1 1\n").unwrap();
     let path = path.to_str().unwrap().to_string();
     let key = format!("{}{path}", crate::adjust_ui::FOLDER_LUT);
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("prefs.set", json!({"path": "fileHandling.lutFolder", "value": tmp.path().to_str().unwrap()})).unwrap();
     app.run("file.new", json!({"width": 16, "height": 12})).unwrap();
     let id = open(&mut app, COLOR_LOOKUP).unwrap();
@@ -599,10 +599,10 @@ fn color_lookup_dialog_lists_and_applies_lut_folder_files() {
 /// like the other references it isn't remembered, so a remembered `channel` source opens as None.
 #[test]
 fn lens_blur_source_lists_the_alpha_channels() {
-    let spec = photocraft_engine::commands::find(LENS_BLUR).unwrap().params;
+    let spec = magicpic_engine::commands::find(LENS_BLUR).unwrap().params;
     let params = parse_spec(spec);
     assert!(params.iter().any(|p| p.key == "depthChannel" && p.kind == Kind::Json), "depthChannel is no dialog field");
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 20, "height": 10})).unwrap();
     app.run("channel.new", json!({"name": "Depth Map", "fill": "white"})).unwrap();
     let id = open(&mut app, LENS_BLUR).unwrap();
@@ -656,7 +656,7 @@ fn new_filters_have_dialogs_or_run_directly() {
 
 #[test]
 fn every_filter_command_spec_parses() {
-    for c in photocraft_engine::command_specs().iter().filter(|c| c.id.starts_with("filter.")) {
+    for c in magicpic_engine::command_specs().iter().filter(|c| c.id.starts_with("filter.")) {
         let _ = parse_spec(c.params);
     }
     assert!(has_dialog("filter.blur.gaussianBlur"));
@@ -667,12 +667,12 @@ fn every_filter_command_spec_parses() {
 /// Settings was on when it was last OKed; turning it off forgets the settings again.
 #[test]
 fn select_and_mask_remembers_settings_only_when_asked() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 64, "height": 64})).unwrap();
     app.run("select.all", json!({})).unwrap();
     let cmd = crate::select_mask_view::COMMAND;
-    let fields = |app: &PhotocraftApp, id: u64| app.ui.dialogs.iter().find(|d| d.id == id).unwrap().fields.clone();
-    let opened = |app: &mut PhotocraftApp| {
+    let fields = |app: &MagicpicApp, id: u64| app.ui.dialogs.iter().find(|d| d.id == id).unwrap().fields.clone();
+    let opened = |app: &mut MagicpicApp| {
         let id = open(app, cmd).unwrap();
         let f = fields(app, id);
         app.ui.dialogs.retain(|d| d.id != id);
@@ -705,7 +705,7 @@ fn select_and_mask_remembers_settings_only_when_asked() {
 /// Select and Mask's Output To lists all six output targets.
 #[test]
 fn select_and_mask_output_lists_all_six_targets() {
-    let spec = photocraft_engine::commands::find("select.refineEdge").unwrap().params;
+    let spec = magicpic_engine::commands::find("select.refineEdge").unwrap().params;
     let p = parse_spec(spec).into_iter().find(|p| p.key == "output").unwrap();
     let Kind::Choice { options: choices, .. } = p.kind else { panic!("output is not a choice") };
     let labels: Vec<String> = choices.iter().map(|c| source_label(c)).collect();
@@ -716,13 +716,13 @@ fn select_and_mask_output_lists_all_six_targets() {
 fn preview_runs_engine_command_on_proxy() {
     let mut doc = Document::with_background(
         "p",
-        photocraft_doc::Size::new(64, 64),
-        photocraft_doc::ColorMode::Rgb,
-        photocraft_doc::SampleType::U8,
-        photocraft_doc::Color::WHITE,
+        magicpic_doc::Size::new(64, 64),
+        magicpic_doc::ColorMode::Rgb,
+        magicpic_doc::SampleType::U8,
+        magicpic_doc::Color::WHITE,
     );
     let bg = doc.layers[0].id;
-    doc.layers[0].surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(0, 0, 32, 64), &[0.0, 0.0, 0.0, 1.0]);
+    doc.layers[0].surface_mut().unwrap().fill_rect(magicpic_geom::Rect::new(0, 0, 32, 64), &[0.0, 0.0, 0.0, 1.0]);
     let out = preview_document(&doc, Some(bg), "filter.blur.gaussianBlur", &json!({"radius": 4.0}), 1).unwrap();
     let p = out.layers[0].surface().unwrap().pixel(32, 32);
     assert!(p[0] > 0.2 && p[0] < 0.8, "edge blurred: {p:?}");
@@ -734,7 +734,7 @@ fn preview_runs_engine_command_on_proxy() {
 /// only the edited document, and the map's `mapDocument` sits inside the filter's `params`.
 #[test]
 fn smart_displace_preview_uses_the_map_document() {
-    let mut s = photocraft_engine::Session::new();
+    let mut s = magicpic_engine::Session::new();
     // Documents 0 and 1: a white and a black map, opened before the edited one.
     s.execute("file.new", json!({"width": 8, "height": 8, "background": "white"})).unwrap();
     s.execute("file.new", json!({"width": 8, "height": 8, "background": "black"})).unwrap();
@@ -742,7 +742,7 @@ fn smart_displace_preview_uses_the_map_document() {
     s.edit("square", |doc, active| {
         let fmt = doc.pixel_format();
         let surf = doc.layer_mut(active.unwrap()).unwrap().surface_mut().unwrap();
-        surf.fill_rect(photocraft_geom::Rect::new(10, 10, 20, 12), &photocraft_raster::from_rgba(&fmt, [1.0, 0.0, 0.0, 1.0]));
+        surf.fill_rect(magicpic_geom::Rect::new(10, 10, 20, 12), &magicpic_raster::from_rgba(&fmt, [1.0, 0.0, 0.0, 1.0]));
         Ok(())
     })
     .unwrap();
@@ -753,12 +753,12 @@ fn smart_displace_preview_uses_the_map_document() {
     let documents: Vec<_> = s.documents().iter().map(|d| d.doc.clone()).collect();
     for map in [1, 0] {
         let p = json!({"index": 0, "params": {"mapDocument": map}});
-        let mut applied = photocraft_engine::Session::new();
+        let mut applied = magicpic_engine::Session::new();
         for d in &documents {
             applied.add_document((**d).clone(), None);
         }
         applied.execute(SMART_FILTER_SET_PARAMS, p.clone()).unwrap();
-        let want = photocraft_compose::render(&applied.active().unwrap().doc, doc.bounds()).into_px();
+        let want = magicpic_compose::render(&applied.active().unwrap().doc, doc.bounds()).into_px();
         let preview = preview_document_for_target(
             &doc,
             layer,
@@ -766,13 +766,13 @@ fn smart_displace_preview_uses_the_map_document() {
             &p,
             1,
             None,
-            photocraft_engine::channel_cmds::ChannelTarget::Composite,
+            magicpic_engine::channel_cmds::ChannelTarget::Composite,
             &documents,
             &ColorSettings::default(),
             None,
         )
         .unwrap_or_else(|| panic!("map {map}: no preview"));
-        assert!(photocraft_compose::render(&preview, doc.bounds()).px == want, "map {map}: the preview differs from what OK applies");
+        assert!(magicpic_compose::render(&preview, doc.bounds()).px == want, "map {map}: the preview differs from what OK applies");
     }
 }
 
@@ -781,7 +781,7 @@ fn smart_displace_preview_uses_the_map_document() {
 fn match_color_source_layer_picker_keeps_references_with_the_source() {
     use egui_kittest::Harness;
     use egui_kittest::kittest::{NodeT, Queryable};
-    use photocraft_doc::{Color, ColorMode, Layer, SampleType, Size};
+    use magicpic_doc::{Color, ColorMode, Layer, SampleType, Size};
 
     let mut source = Document::with_background("reference", Size::new(16, 16), ColorMode::Rgb, SampleType::U8, Color::WHITE);
     source.layers[0].name = "Sample".into();
@@ -791,15 +791,15 @@ fn match_color_source_layer_picker_keeps_references_with_the_source() {
     // A different document can contain copied layer IDs. Changing Source must still reset Layer.
     let mut other = Document::with_background("other reference", source.size, source.mode, source.depth, Color::WHITE);
     other.layers = source.layers.clone();
-    let mut session = photocraft_engine::Session::new();
+    let mut session = magicpic_engine::Session::new();
     session.add_document(source, None);
     session.add_document(other, None);
     session.execute("file.new", json!({"width": 16, "height": 16})).unwrap();
-    let mut app = PhotocraftApp::new(session, Default::default());
+    let mut app = MagicpicApp::new(session, Default::default());
     let id = open(&mut app, "image.adjustments.matchColor").unwrap();
     let fields = app.ui.dialog_mut(id).unwrap().fields.clone();
     let mut h = Harness::builder().with_size(egui::vec2(700.0, 700.0)).build_ui_state(body, fields);
-    PhotocraftApp::setup_context(&h.ctx, Default::default());
+    MagicpicApp::setup_context(&h.ctx, Default::default());
     h.run_steps(2);
     assert!(h.get_by_role_and_label(egui::accesskit::Role::ComboBox, "Source Layer").accesskit_node().is_disabled());
     assert!(!h.state().contains_key("sourceLayer"), "None starts with no layer reference");
@@ -859,8 +859,8 @@ fn match_color_source_layer_picker_keeps_references_with_the_source() {
 /// without editing the reference document; Cancel, Undo and invalid IDs preserve the target.
 #[test]
 fn match_color_source_layer_preview_and_ok_edit_only_the_target() {
-    use photocraft_doc::{Color, ColorMode, Layer, SampleType, Size};
-    use photocraft_geom::Rect;
+    use magicpic_doc::{Color, ColorMode, Layer, SampleType, Size};
+    use magicpic_geom::Rect;
     let command = "image.adjustments.matchColor";
     for depth in [SampleType::U8, SampleType::U16, SampleType::F32] {
         let area = Rect::new(0, 0, 32, 32);
@@ -876,11 +876,11 @@ fn match_color_source_layer_preview_and_ok_edit_only_the_target() {
         let mut same_document_reference = Layer::raster("same-document reference", target.pixel_format());
         same_document_reference.surface_mut().unwrap().fill_rect(area, &[0.1, 0.3, 0.9, 1.0]);
         target.layers.push(same_document_reference);
-        let mut session = photocraft_engine::Session::new();
+        let mut session = magicpic_engine::Session::new();
         session.add_document(source.clone(), None);
         session.add_document(target.clone(), None);
         session.select_layer(target.layers[0].id).unwrap();
-        let mut app = PhotocraftApp::new(session, Default::default());
+        let mut app = MagicpicApp::new(session, Default::default());
         let documents: Vec<_> = app.session.documents().iter().map(|d| d.doc.clone()).collect();
         let original = target.layers[0].surface().unwrap().read_region(area);
         for (source_index, layer, blue) in [(0, Some(source_layer), true), (0, None, false), (1, Some(target.layers[0].id), false), (1, None, true)] {
@@ -898,7 +898,7 @@ fn match_color_source_layer_preview_and_ok_edit_only_the_target() {
                 &params,
                 2,
                 None,
-                photocraft_engine::channel_cmds::ChannelTarget::Composite,
+                magicpic_engine::channel_cmds::ChannelTarget::Composite,
                 &documents,
                 &ColorSettings::default(),
                 None,
@@ -934,7 +934,7 @@ fn match_color_source_layer_preview_and_ok_edit_only_the_target() {
 }
 
 /// Send an actual control-protocol request and require its synchronous reply.
-fn match_color_control(app: &mut PhotocraftApp, ctx: &egui::Context, method: &str, params: Value) -> Value {
+fn match_color_control(app: &mut MagicpicApp, ctx: &egui::Context, method: &str, params: Value) -> Value {
     let (request, _) = crate::control::ControlRequest::new(method, params);
     let crate::control::Outcome::Done(reply) = crate::control::handle(app, ctx, &request) else { panic!("{method} should finish immediately") };
     reply
@@ -942,7 +942,7 @@ fn match_color_control(app: &mut PhotocraftApp, ctx: &egui::Context, method: &st
 
 #[test]
 fn match_color_refuses_a_changed_destination_without_closing() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), Default::default());
     for _ in 0..2 {
         app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     }
@@ -956,7 +956,7 @@ fn match_color_refuses_a_changed_destination_without_closing() {
     let forged = json!((app.session.documents()[0].doc.id, app.session.documents()[0].active_layer));
     assert_eq!(match_color_control(&mut app, &ctx, "ui.dialog.set", json!({"dialog": id, "field": MATCH_COLOR_DESTINATION, "value": forged}))["ok"], false);
 
-    let refuse = |app: &mut PhotocraftApp, index| {
+    let refuse = |app: &mut MagicpicApp, index| {
         assert!(crate::canvas::ensure_filter_preview(app, index, &ctx).is_none());
         assert!(crate::dialogs::confirm(app, id).unwrap_err().contains("destination changed"));
         assert!(app.ui.dialog_mut(id).is_some(), "refusal leaves the dialog open");
@@ -979,12 +979,12 @@ fn match_color_refuses_a_changed_destination_without_closing() {
 #[test]
 fn match_color_explicit_unavailable_source_layer_is_refused_with_or_without_a_frame() {
     for render in [false, true] {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+        let mut app = MagicpicApp::new(magicpic_engine::Session::new(), Default::default());
         for _ in 0..2 {
             app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
         }
         let ctx = egui::Context::default();
-        PhotocraftApp::setup_context(&ctx, Default::default());
+        MagicpicApp::setup_context(&ctx, Default::default());
         let id = open(&mut app, MATCH_COLOR).unwrap();
         let missing = u64::MAX;
         for (field, value) in [("source", json!(0)), ("sourceLayer", json!(missing))] {
@@ -1007,8 +1007,8 @@ fn match_color_explicit_unavailable_source_layer_is_refused_with_or_without_a_fr
 
 /// Exercise actual nested command dialogs, rather than mutating the source behind the UI's gates.
 fn match_color_after_source_change(change: &str) {
-    use photocraft_doc::{Color, ColorMode, Layer, SampleType, Size};
-    use photocraft_geom::Rect;
+    use magicpic_doc::{Color, ColorMode, Layer, SampleType, Size};
+    use magicpic_geom::Rect;
     let area = Rect::new(0, 0, 8, 8);
     let make = |name| Document::with_background(name, Size::new(8, 8), ColorMode::Rgb, SampleType::U8, Color::WHITE);
     let mut source = make("reference");
@@ -1022,15 +1022,15 @@ fn match_color_after_source_change(change: &str) {
     // A copied layer ID must never make a shifted source index identify the target document.
     target.layers[0].id = reference_id;
     let target_id = target.id;
-    let mut session = photocraft_engine::Session::new();
+    let mut session = magicpic_engine::Session::new();
     session.add_document(make("earlier"), None);
     session.add_document(source, None);
     session.select_layer(reference_id).unwrap();
     session.add_document(target, None);
-    let mut app = PhotocraftApp::new(session, Default::default());
+    let mut app = MagicpicApp::new(session, Default::default());
     app.sync_views();
     let ctx = egui::Context::default();
-    PhotocraftApp::setup_context(&ctx, Default::default());
+    MagicpicApp::setup_context(&ctx, Default::default());
     let root = open(&mut app, "image.adjustments.matchColor").unwrap();
     if !change.starts_with("select-") {
         for (field, value) in [("source", json!(1)), ("sourceLayer", json!(reference_id))] {
@@ -1123,15 +1123,15 @@ fn match_color_explicit_source_selection_does_not_depend_on_a_frame() {
 /// preview session held only the edited document, so a Source showed no change (#4851).
 #[test]
 fn match_color_preview_uses_the_source_document() {
-    use photocraft_doc::{Color, ColorMode, SampleType, Size};
+    use magicpic_doc::{Color, ColorMode, SampleType, Size};
     let solid = |name: &str, c: [f32; 4]| {
         let mut d = Document::with_background(name, Size::new(32, 32), ColorMode::Rgb, SampleType::U8, Color::WHITE);
-        d.layers[0].surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(0, 0, 32, 32), &c);
-        d.layers[0].surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(0, 0, 16, 32), &[c[0] * 0.5, c[1] * 0.5, c[2] * 0.5, 1.0]);
+        d.layers[0].surface_mut().unwrap().fill_rect(magicpic_geom::Rect::new(0, 0, 32, 32), &c);
+        d.layers[0].surface_mut().unwrap().fill_rect(magicpic_geom::Rect::new(0, 0, 16, 32), &[c[0] * 0.5, c[1] * 0.5, c[2] * 0.5, 1.0]);
         d
     };
     // The source document is open before the edited one, so indices differ between sessions.
-    let mut s = photocraft_engine::Session::new();
+    let mut s = magicpic_engine::Session::new();
     s.add_document(solid("reference", [0.1, 0.3, 0.9, 1.0]), None);
     s.add_document(solid("texture", [0.9, 0.5, 0.2, 1.0]), None);
     let doc = s.active().unwrap().doc.clone();
@@ -1147,7 +1147,7 @@ fn match_color_preview_uses_the_source_document() {
         if let Some(layer) = source_layer {
             p["sourceLayer"] = json!(layer);
         }
-        let mut applied = photocraft_engine::Session::new();
+        let mut applied = magicpic_engine::Session::new();
         for d in &documents {
             applied.add_document((**d).clone(), None);
         }
@@ -1160,7 +1160,7 @@ fn match_color_preview_uses_the_source_document() {
             &p,
             1,
             None,
-            photocraft_engine::channel_cmds::ChannelTarget::Composite,
+            magicpic_engine::channel_cmds::ChannelTarget::Composite,
             &documents,
             &ColorSettings::default(),
             None,
@@ -1177,7 +1177,7 @@ fn match_color_preview_uses_the_source_document() {
         &json!({"source": 0}),
         2,
         None,
-        photocraft_engine::channel_cmds::ChannelTarget::Composite,
+        magicpic_engine::channel_cmds::ChannelTarget::Composite,
         &documents,
         &ColorSettings::default(),
         None,
@@ -1189,8 +1189,8 @@ fn match_color_preview_uses_the_source_document() {
 
 #[test]
 fn core_filter_previews_keep_minimum_settings_after_downsampling() {
-    use photocraft_doc::{Color, ColorMode, SampleType, Size};
-    use photocraft_geom::Rect;
+    use magicpic_doc::{Color, ColorMode, SampleType, Size};
+    use magicpic_geom::Rect;
 
     for depth in [SampleType::U8, SampleType::U16, SampleType::F32] {
         let mut doc = Document::with_background("preview", Size::new(32, 32), ColorMode::Rgb, depth, Color::WHITE);
@@ -1234,11 +1234,11 @@ fn float_type_error(e: &str) -> bool {
 /// (OK) and its live preview without a type error from integer fields sent as floats.
 #[test]
 fn every_dialog_default_runs_without_float_type_errors() {
-    let ids: Vec<&str> = photocraft_engine::command_specs().iter().map(|c| c.id).filter(|id| has_dialog(id)).collect();
+    let ids: Vec<&str> = magicpic_engine::command_specs().iter().map(|c| c.id).filter(|id| has_dialog(id)).collect();
     assert!(ids.len() > 100, "{} dialogs", ids.len());
     let mut failures = Vec::new();
     for id in ids {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 24, "height": 24})).unwrap();
         app.run("layer.new.layer", json!({})).unwrap();
         let Some(dialog) = open(&mut app, id) else { continue };
@@ -1255,7 +1255,7 @@ fn every_dialog_default_runs_without_float_type_errors() {
         }
         // The preview swallows the error; rerun its params at full size to see it.
         if preview_document(&doc, active, id, &params, 1).is_none() {
-            let mut s = photocraft_engine::Session::new();
+            let mut s = magicpic_engine::Session::new();
             s.add_document(doc, None);
             if let Some(a) = active {
                 s.select_layer(a).unwrap();
@@ -1283,7 +1283,7 @@ fn colour_params_parse_with_and_without_a_default() {
 #[test]
 fn color_to_alpha_dialog_defaults_draw_and_preview() {
     const ID: &str = "filter.other.colorToAlpha";
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
     let id = open(&mut app, ID).unwrap();
     let mut f = app.ui.dialogs.iter().find(|d| d.id == id).unwrap().fields.clone();
@@ -1295,13 +1295,13 @@ fn color_to_alpha_dialog_defaults_draw_and_preview() {
 
     let mut doc = Document::with_background(
         "p",
-        photocraft_doc::Size::new(32, 32),
-        photocraft_doc::ColorMode::Rgb,
-        photocraft_doc::SampleType::U16,
-        photocraft_doc::Color::WHITE,
+        magicpic_doc::Size::new(32, 32),
+        magicpic_doc::ColorMode::Rgb,
+        magicpic_doc::SampleType::U16,
+        magicpic_doc::Color::WHITE,
     );
     let bg = doc.layers[0].id;
-    doc.layers[0].surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(0, 0, 8, 32), &[0.0, 0.0, 0.0, 1.0]);
+    doc.layers[0].surface_mut().unwrap().fill_rect(magicpic_geom::Rect::new(0, 0, 8, 32), &[0.0, 0.0, 0.0, 1.0]);
     for k in [1, 2] {
         let out = preview_document(&doc, Some(bg), ID, &want, k).unwrap();
         let s = out.layers[0].surface().unwrap();
@@ -1313,13 +1313,13 @@ fn color_to_alpha_dialog_defaults_draw_and_preview() {
 
 #[test]
 fn preview_stays_inside_the_selection_at_every_proxy_factor() {
-    use photocraft_doc::SampleType;
+    use magicpic_doc::SampleType;
     for depth in [SampleType::U8, SampleType::U16, SampleType::F32] {
         let mut doc =
-            Document::with_background("p", photocraft_doc::Size::new(64, 64), photocraft_doc::ColorMode::Rgb, depth, photocraft_doc::Color::gray(0.5));
+            Document::with_background("p", magicpic_doc::Size::new(64, 64), magicpic_doc::ColorMode::Rgb, depth, magicpic_doc::Color::gray(0.5));
         let bg = doc.layers[0].id;
-        let mut sel = photocraft_raster::Surface::new(photocraft_doc::PixelFormat::GRAY8);
-        sel.fill_rect(photocraft_geom::Rect::new(0, 0, 32, 64), &[1.0]);
+        let mut sel = magicpic_raster::Surface::new(magicpic_doc::PixelFormat::GRAY8);
+        sel.fill_rect(magicpic_geom::Rect::new(0, 0, 32, 64), &[1.0]);
         doc.selection = Some(sel);
         for k in [1, 2, 4] {
             let out = preview_document(&doc, Some(bg), "filter.noise.addNoise", &json!({"amount": 100.0}), k).unwrap();
@@ -1336,12 +1336,12 @@ fn preview_stays_inside_the_selection_at_every_proxy_factor() {
 fn define_pattern_asks_for_a_name() {
     // Edit › Define Pattern… named the pattern after the document without asking ("ask", then
     // "ask 2"). Photoshop's Pattern Name dialog starts from that name and lets you change it.
-    let spec = photocraft_engine::commands::find("edit.definePattern").unwrap();
+    let spec = magicpic_engine::commands::find("edit.definePattern").unwrap();
     assert_eq!(parse_spec(spec.params), vec![Param { key: "name".into(), kind: Kind::Text }, Param { key: "rect".into(), kind: Kind::Json }]);
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 8, "height": 8, "name": "ask.jpg"})).unwrap();
     let ctx = egui::Context::default();
-    let define = |app: &mut PhotocraftApp, name: Option<&str>| {
+    let define = |app: &mut MagicpicApp, name: Option<&str>| {
         crate::menus::invoke(app, &ctx, "edit.definePattern", Value::Null).unwrap();
         let d = app.ui.dialogs.last().expect("Define Pattern opens a dialog").clone();
         let shown = d.fields["name"].as_str().unwrap().to_string();
@@ -1368,7 +1368,7 @@ fn notes_after_a_spec_are_not_parameters() {
     let p = parse_spec(r#"{"a":0..10=1,"b":json} (notes [x,y,z] here, and more) → {"c":id}"#);
     assert_eq!(p, vec![Param { key: "a".into(), kind: Kind::Range { min: 0.0, max: 10.0, default: 1.0 } }, Param { key: "b".into(), kind: Kind::Json }]);
     // Every command with a schema dialog has plain parameter keys.
-    for c in photocraft_engine::command_specs().iter().filter(|c| has_dialog(c.id)) {
+    for c in magicpic_engine::command_specs().iter().filter(|c| has_dialog(c.id)) {
         for p in parse_spec(c.params) {
             assert!(p.key.chars().all(|ch| ch.is_ascii_alphanumeric() || ch == '_'), "{}: junk parameter {:?}", c.id, p.key);
         }
@@ -1379,16 +1379,16 @@ fn notes_after_a_spec_are_not_parameters() {
 fn waves(n: u32) -> Document {
     let mut doc = Document::with_background(
         "w",
-        photocraft_doc::Size::new(n, n),
-        photocraft_doc::ColorMode::Rgb,
-        photocraft_doc::SampleType::U8,
-        photocraft_doc::Color::WHITE,
+        magicpic_doc::Size::new(n, n),
+        magicpic_doc::ColorMode::Rgb,
+        magicpic_doc::SampleType::U8,
+        magicpic_doc::Color::WHITE,
     );
     let s = doc.layers[0].surface_mut().unwrap();
     for y in 0..n as i32 {
         for x in 0..n as i32 {
             let v = 0.5 + 0.4 * (x as f32 / 23.0).sin() * (y as f32 / 31.0).cos();
-            s.fill_rect(photocraft_geom::Rect::new(x, y, x + 1, y + 1), &[v, 1.0 - v, x as f32 / n as f32, 1.0]);
+            s.fill_rect(magicpic_geom::Rect::new(x, y, x + 1, y + 1), &[v, 1.0 - v, x as f32 / n as f32, 1.0]);
         }
     }
     doc
@@ -1396,7 +1396,7 @@ fn waves(n: u32) -> Document {
 
 /// Mean absolute RGB difference of two documents, compared at 1/4 scale.
 fn diff_at_quarter(a: &Document, b: &Document) -> f32 {
-    let quarter = |d: &Document| photocraft_compose::flatten(&crate::proxy::proxy_document(d, (d.size.width / 64).max(1)));
+    let quarter = |d: &Document| magicpic_compose::flatten(&crate::proxy::proxy_document(d, (d.size.width / 64).max(1)));
     let (a, b) = (quarter(a), quarter(b));
     assert_eq!(a.px.len(), b.px.len());
     a.px.iter().zip(&b.px).map(|(p, q)| (0..3).map(|c| (p[c] - q[c]).abs()).sum::<f32>() / 3.0).sum::<f32>() / a.px.len() as f32
@@ -1538,7 +1538,7 @@ fn proxy_previews_scale_only_lengths() {
 /// scale: the preview showed the text k times too large. It is the full-size result, reduced.
 #[test]
 fn warp_text_preview_matches_the_full_size_result_on_a_reduced_proxy() {
-    let mut s = photocraft_engine::Session::new();
+    let mut s = magicpic_engine::Session::new();
     s.execute("file.new", json!({"width": 4000, "height": 3000})).unwrap();
     s.execute("type.create", json!({"x": 300, "y": 1600, "text": "Warp", "size": 400})).unwrap();
     let st = s.active().unwrap();
@@ -1547,14 +1547,14 @@ fn warp_text_preview_matches_the_full_size_result_on_a_reduced_proxy() {
     let k = preview_factor("type.warpText", &p, crate::proxy::preview_factor(&doc, true));
     assert!(k > 1, "the preview runs on a reduced proxy");
     let cache = |d: &Document| match &d.layer(layer).unwrap().content {
-        photocraft_doc::LayerContent::Text(t) => t.cache.clone().unwrap(),
+        magicpic_doc::LayerContent::Text(t) => t.cache.clone().unwrap(),
         _ => panic!("a type layer"),
     };
     let full = crate::proxy::proxy_document(&preview_document(&doc, Some(layer), "type.warpText", &p, 1).unwrap(), k);
     let shown = preview_document(&doc, Some(layer), "type.warpText", &p, k).unwrap();
     assert_eq!(shown.size, full.size);
     assert_eq!(cache(&shown).content_bounds(), cache(&full).content_bounds());
-    assert_eq!(photocraft_compose::flatten(&shown).px, photocraft_compose::flatten(&full).px);
+    assert_eq!(magicpic_compose::flatten(&shown).px, magicpic_compose::flatten(&full).px);
 }
 
 /// #5766: Curves on a smart object adds a smart filter, which re-renders the source through
@@ -1562,7 +1562,7 @@ fn warp_text_preview_matches_the_full_size_result_on_a_reduced_proxy() {
 /// coordinates, so the preview showed the object `k` times too large until OK.
 #[test]
 fn smart_object_curves_preview_keeps_its_size_on_a_reduced_proxy() {
-    let mut s = photocraft_engine::Session::new();
+    let mut s = magicpic_engine::Session::new();
     s.execute("file.new", json!({"width": 64, "height": 64})).unwrap();
     s.execute("layer.new.layer", json!({})).unwrap();
     s.execute("select.rect", json!({"x": 16, "y": 16, "width": 16, "height": 16})).unwrap();
@@ -1572,16 +1572,16 @@ fn smart_object_curves_preview_keeps_its_size_on_a_reduced_proxy() {
     let st = s.active().unwrap();
     let (doc, layer) = ((*st.doc).clone(), st.active_layer.unwrap());
     let alpha = |d: &Document, x: i32, y: i32| match &d.layer(layer).unwrap().content {
-        photocraft_doc::LayerContent::Smart(sm) => sm.cache.as_ref().unwrap().pixel(x, y).last().copied().unwrap(),
+        magicpic_doc::LayerContent::Smart(sm) => sm.cache.as_ref().unwrap().pixel(x, y).last().copied().unwrap(),
         _ => panic!("a smart object"),
     };
     let k = 4;
     let params = json!({"points": [[0, 20], [90, 150], [255, 230]]});
     let shown = preview_document(&doc, Some(layer), "image.adjustments.curves", &params, k).unwrap();
     let full = preview_document(&doc, Some(layer), "image.adjustments.curves", &params, 1).unwrap();
-    let photocraft_doc::LayerContent::Smart(full_sm) = &full.layer(layer).unwrap().content else { panic!("a smart object") };
-    let reference = photocraft_algo::resample::resize_surface(full_sm.cache.as_ref().unwrap(), 0.25, 0.25, photocraft_algo::resample::Resample::Bicubic);
-    let photocraft_doc::LayerContent::Smart(sm) = &shown.layer(layer).unwrap().content else { panic!("a smart object") };
+    let magicpic_doc::LayerContent::Smart(full_sm) = &full.layer(layer).unwrap().content else { panic!("a smart object") };
+    let reference = magicpic_algo::resample::resize_surface(full_sm.cache.as_ref().unwrap(), 0.25, 0.25, magicpic_algo::resample::Resample::Bicubic);
+    let magicpic_doc::LayerContent::Smart(sm) = &shown.layer(layer).unwrap().content else { panic!("a smart object") };
     assert_eq!(sm.smart_filters.len(), 1, "the preview adds the Curves smart filter");
     assert_eq!(shown.size, crate::proxy::proxy_document(&doc, k).size);
     // The 16 px square at (16, 16) is a 4 px square at (4, 4) on the proxy, not 16 px at (16, 16).
@@ -1621,7 +1621,7 @@ fn proxy_previews_never_clamp_pixel_sized_params() {
     assert_eq!(preview_factor("no.such.command", &json!({"cellSize": 1.0}), 4), 4);
     assert_eq!(preview_factor("filter.pixelate.pointillize", &json!({"cellSize": 5.0}), 0), 1);
     // Every previewed command, at each pixel-sized param's minimum, default and in between.
-    let previewed = photocraft_engine::command_specs().iter().filter(|c| has_dialog(c.id) && (c.id.starts_with("filter.") || PREVIEWED.contains(&c.id)));
+    let previewed = magicpic_engine::command_specs().iter().filter(|c| has_dialog(c.id) && (c.id.starts_with("filter.") || PREVIEWED.contains(&c.id)));
     for c in previewed {
         for p in parse_spec(c.params) {
             let Kind::Range { min, default, .. } = p.kind else { continue };
@@ -1645,7 +1645,7 @@ fn sharp(n: u32) -> Document {
     for (i, size) in [2, 3, 4, 6, 8, 12, 16, 24, 32].into_iter().enumerate() {
         for y0 in (4..n as i32 * 3 / 4 - size).step_by((size * 3) as usize) {
             let v = if (i + y0 as usize / 7).is_multiple_of(2) { 0.05 } else { 0.95 };
-            s.fill_rect(photocraft_geom::Rect::new(x0, y0, x0 + size, y0 + size), &[v, v * 0.8, 1.0 - v, 1.0]);
+            s.fill_rect(magicpic_geom::Rect::new(x0, y0, x0 + size, y0 + size), &[v, v * 0.8, 1.0 - v, 1.0]);
         }
         x0 += size + 6;
     }
@@ -1658,7 +1658,7 @@ fn sharp(n: u32) -> Document {
             if y >= n as i32 * 3 / 4 && y % 2 == 1 {
                 px[0] = 1.0 - px[0];
             }
-            s.fill_rect(photocraft_geom::Rect::new(x, y, x + 1, y + 1), &px);
+            s.fill_rect(magicpic_geom::Rect::new(x, y, x + 1, y + 1), &px);
         }
     }
     doc
@@ -1675,7 +1675,7 @@ fn noisy(n: u32) -> Document {
             for (c, v) in px.iter_mut().take(3).enumerate() {
                 *v = (*v + (hash(x * 3 + c as i32, y) as f32 / (1u32 << 24) as f32 - 0.5) * 0.3).clamp(0.0, 1.0);
             }
-            s.fill_rect(photocraft_geom::Rect::new(x, y, x + 1, y + 1), &px);
+            s.fill_rect(magicpic_geom::Rect::new(x, y, x + 1, y + 1), &px);
         }
     }
     doc
@@ -1696,7 +1696,7 @@ struct PreviewError {
 
 /// Mean absolute difference of neighbouring pixels at the document's own resolution.
 fn detail(d: &Document) -> f32 {
-    let b = photocraft_compose::flatten(d);
+    let b = magicpic_compose::flatten(d);
     let w = b.rect.width() as usize;
     let mut sum = 0.0;
     for (i, p) in b.px.iter().enumerate() {
@@ -1710,7 +1710,7 @@ fn detail(d: &Document) -> f32 {
 /// Pixels of `d` at every `k`-th row and column: the document pixels a factor-`k` proxy
 /// samples, so a preview at `k` compares with them one to one.
 fn every_kth(d: &Document, k: u32) -> Vec<[f32; 4]> {
-    let b = photocraft_compose::flatten(d);
+    let b = magicpic_compose::flatten(d);
     let w = b.rect.width() as usize;
     let k = k as usize;
     let h = b.px.len() / w.max(1);
@@ -1742,11 +1742,11 @@ fn preview_error(doc: &Document, command: &str, p: &Value, k: u32) -> Option<Pre
 /// The parameter sets to preview `command` with: the dialog's defaults, and each pixel-sized
 /// value at its minimum and at a large value (whole numbers as integers: Tree and Picture
 /// Frame read some ranges as `u32`).
-fn sweep_params(app: &mut PhotocraftApp, command: &str) -> Vec<(String, Value)> {
+fn sweep_params(app: &mut MagicpicApp, command: &str) -> Vec<(String, Value)> {
     let Some(id) = open(app, command) else { return Vec::new() };
     let base = params_of(&app.ui.dialog_mut(id).unwrap().fields);
     let mut out = vec![("default".to_string(), base.clone())];
-    for p in parse_spec(photocraft_engine::commands::find(command).unwrap().params) {
+    for p in parse_spec(magicpic_engine::commands::find(command).unwrap().params) {
         if !is_pixel_param_of(command, &p.key) {
             continue;
         }
@@ -1773,14 +1773,14 @@ fn sweep_params(app: &mut PhotocraftApp, command: &str) -> Vec<(String, Value)> 
 
 /// Every previewed command with its parameter sets.
 fn previewed_cases() -> Vec<(&'static str, String, Value)> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), Default::default());
     let ids: Vec<&'static str> =
-        photocraft_engine::command_specs().iter().map(|c| c.id).filter(|id| has_dialog(id) && (id.starts_with("filter.") || PREVIEWED.contains(id))).collect();
+        magicpic_engine::command_specs().iter().map(|c| c.id).filter(|id| has_dialog(id) && (id.starts_with("filter.") || PREVIEWED.contains(id))).collect();
     ids.into_iter().flat_map(|id| sweep_params(&mut app, id).into_iter().map(move |(label, p)| (id, label, p))).collect()
 }
 
 fn grayscale(d: &Document) -> Document {
-    let mut s = photocraft_engine::Session::new();
+    let mut s = magicpic_engine::Session::new();
     s.add_document(d.clone(), None);
     s.execute("image.mode.grayscale", json!({})).unwrap();
     s.active().map(|d| (*d.doc).clone()).unwrap()
@@ -1851,7 +1851,7 @@ fn every_preview_shows_what_ok_applies() {
 
 /// The table behind [`every_preview_shows_what_ok_applies`]: every previewed command at a
 /// plain 1/4 proxy and at its chosen factor, on each test image.
-/// `cargo test -p photocraft-ui-egui --lib filter_dialog::tests::sweep_all_previews -- --ignored --nocapture`
+/// `cargo test -p magicpic-ui-egui --lib filter_dialog::tests::sweep_all_previews -- --ignored --nocapture`
 #[test]
 #[ignore]
 fn sweep_all_previews() {
@@ -1875,7 +1875,7 @@ fn sweep_all_previews() {
 /// The profiles Assign Profile offers for a new document converted with `mode` (if any),
 /// and which of the command's built-in profiles the command itself accepts for it.
 fn assign_profile_offers(mode: Option<&str>) -> (Vec<String>, Vec<String>) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     if let Some(mode) = mode {
         app.run(mode, json!({})).unwrap();
@@ -1883,7 +1883,7 @@ fn assign_profile_offers(mode: Option<&str>) -> (Vec<String>, Vec<String>) {
     open(&mut app, "edit.assignProfile").unwrap();
     let offered: Vec<String> =
         app.ui.dialogs.last().unwrap().fields["__profiles"].as_array().unwrap().iter().filter_map(|v| v.as_str().map(str::to_owned)).collect();
-    let spec = photocraft_engine::commands::find("edit.assignProfile").unwrap();
+    let spec = magicpic_engine::commands::find("edit.assignProfile").unwrap();
     let builtin = parse_spec(spec.params).into_iter().find(|p| p.key == "profile").unwrap();
     let Kind::Choice { options, .. } = builtin.kind else { panic!("profile is a menu") };
     let accepted = options.into_iter().filter(|name| app.session.execute("edit.assignProfile", json!({"profile": name})).is_ok()).collect();
@@ -1914,7 +1914,7 @@ fn assign_profile_offers_only_profiles_of_the_documents_colour_mode() {
 /// in the reference application, never at a size remembered from other layers.
 #[test]
 fn artboard_from_layers_opens_at_the_selected_layers_size() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 100, "height": 80})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     app.run("select.rect", json!({"x": 10, "y": 5, "width": 20, "height": 30})).unwrap();
@@ -1931,13 +1931,13 @@ fn artboard_from_layers_opens_at_the_selected_layers_size() {
     let doc = &app.session.active().unwrap().doc;
     let boards = doc.artboards();
     assert_eq!(boards.len(), 1);
-    assert_eq!((boards[0].1, boards[0].2.rect), ("Artboard 1", photocraft_geom::Rect::new(10, 5, 30, 35)));
+    assert_eq!((boards[0].1, boards[0].2.rect), ("Artboard 1", magicpic_geom::Rect::new(10, 5, 30, 35)));
 }
 
 /// #4951: a profile remembered from a document of another colour mode isn't preselected.
 #[test]
 fn assign_profile_drops_a_remembered_profile_that_does_not_fit() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     app.session.prefs.edit(|prefs| {
         prefs.dialogs.insert("edit.assignProfile".into(), json!({"profile": "coated-cmyk"}));
@@ -1953,7 +1953,7 @@ fn assign_profile_drops_a_remembered_profile_that_does_not_fit() {
 
 #[test]
 fn schema_dialogs_respect_explicit_dropdown_defaults() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), Default::default());
 
     // 1. Radial Blur has explicit default "good", not the first option ("draft").
     open(&mut app, "filter.blur.radialBlur").unwrap();
@@ -1978,7 +1978,7 @@ fn schema_dialogs_respect_explicit_dropdown_defaults() {
     assert_eq!(params["intent"], json!("relative"));
 
     // 4. Remembered values still override initial defaults.
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), Default::default());
     app.session.prefs.edit(|prefs| {
         prefs.dialogs.insert("filter.blur.radialBlur".into(), json!({"quality": "best"}));
     });
@@ -1987,7 +1987,7 @@ fn schema_dialogs_respect_explicit_dropdown_defaults() {
     assert_eq!(fields["quality"], json!("best"), "Remembered choice must override explicit default");
 
     // 5. Explicit default that is the first option (e.g. "cw" in arbitrary rotation).
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), Default::default());
     open(&mut app, "image.rotation.arbitrary").unwrap();
     let fields = &app.ui.dialogs.last().unwrap().fields;
     assert_eq!(fields["direction"], json!("cw"), "Explicit default matching first option is preserved");
@@ -1997,9 +1997,9 @@ fn schema_dialogs_respect_explicit_dropdown_defaults() {
 /// eyedropper samples the merged image into the dialog.
 #[test]
 fn replace_color_eyedropper_samples_the_image() {
-    let mut s = photocraft_engine::Session::new();
+    let mut s = magicpic_engine::Session::new();
     s.execute("file.new", json!({"width": 16, "height": 16, "background": "#00ff00"})).unwrap();
-    let mut app = PhotocraftApp::new(s, crate::Services::default());
+    let mut app = MagicpicApp::new(s, crate::Services::default());
     app.run("tools.setColors", json!({"foreground": "#ff0000"})).unwrap();
     let id = open(&mut app, REPLACE_COLOR).unwrap();
     assert_eq!(app.ui.dialogs.last().unwrap().fields["color"], json!("#ff0000"), "the dialog starts from the foreground colour");
@@ -2023,11 +2023,11 @@ fn replace_color_eyedropper_samples_the_image() {
 /// in click order, as in Photoshop; a plain click starts over from the clicked colour.
 #[test]
 fn replace_color_shift_and_alt_clicks_add_and_subtract_samples() {
-    let mut s = photocraft_engine::Session::new();
+    let mut s = magicpic_engine::Session::new();
     s.execute("file.new", json!({"width": 16, "height": 16, "background": "#00ff00"})).unwrap();
-    let mut app = PhotocraftApp::new(s, crate::Services::default());
+    let mut app = MagicpicApp::new(s, crate::Services::default());
     open(&mut app, REPLACE_COLOR).unwrap();
-    let field = |app: &PhotocraftApp, k: &str| app.ui.dialogs.last().unwrap().fields.get(k).cloned().unwrap_or(Value::Null);
+    let field = |app: &MagicpicApp, k: &str| app.ui.dialogs.last().unwrap().fields.get(k).cloned().unwrap_or(Value::Null);
     assert!(color_eyedropper_sample(&mut app, 2.0, 2.0, egui::Modifiers::NONE));
     assert!(color_eyedropper_sample(&mut app, 5.0, 5.0, egui::Modifiers::SHIFT));
     assert!(color_eyedropper_sample(&mut app, 9.0, 9.0, egui::Modifiers::ALT));
@@ -2051,11 +2051,11 @@ fn replace_color_shift_and_alt_clicks_add_and_subtract_samples() {
 /// range at the first added colour.
 #[test]
 fn replace_color_first_add_to_sample_click_sets_the_from_colour() {
-    let mut s = photocraft_engine::Session::new();
+    let mut s = magicpic_engine::Session::new();
     s.execute("file.new", json!({"width": 16, "height": 16, "background": "#00ff00"})).unwrap();
-    let mut app = PhotocraftApp::new(s, crate::Services::default());
+    let mut app = MagicpicApp::new(s, crate::Services::default());
     let id = open(&mut app, REPLACE_COLOR).unwrap();
-    let field = |app: &PhotocraftApp, k: &str| app.ui.dialogs.last().unwrap().fields.get(k).cloned().unwrap_or(Value::Null);
+    let field = |app: &MagicpicApp, k: &str| app.ui.dialogs.last().unwrap().fields.get(k).cloned().unwrap_or(Value::Null);
     assert_ne!(field(&app, "color"), json!("#00ff00"), "the dialog starts from the foreground colour");
     for (tool, mods) in [("sample", egui::Modifiers::SHIFT), ("add", egui::Modifiers::NONE)] {
         let mut fields = app.ui.dialogs.last().unwrap().fields.clone();
@@ -2076,9 +2076,9 @@ fn replace_color_first_add_to_sample_click_sets_the_from_colour() {
 /// carry an order that fits them and the command takes it (CodeRabbit review on #10443).
 #[test]
 fn replace_color_reset_forgets_the_click_order() {
-    let mut s = photocraft_engine::Session::new();
+    let mut s = magicpic_engine::Session::new();
     s.execute("file.new", json!({"width": 16, "height": 16, "background": "#00ff00"})).unwrap();
-    let mut app = PhotocraftApp::new(s, crate::Services::default());
+    let mut app = MagicpicApp::new(s, crate::Services::default());
     let id = open(&mut app, REPLACE_COLOR).unwrap();
     assert!(color_eyedropper_sample(&mut app, 2.0, 2.0, egui::Modifiers::NONE));
     assert!(color_eyedropper_sample(&mut app, 9.0, 9.0, egui::Modifiers::ALT));
@@ -2099,11 +2099,11 @@ fn replace_color_dialog_arms_the_eyedropper_button() {
     use egui_kittest::Harness;
     use egui_kittest::kittest::Queryable;
 
-    let mut s = photocraft_engine::Session::new();
+    let mut s = magicpic_engine::Session::new();
     s.execute("file.new", json!({"width": 16, "height": 16})).unwrap();
-    let mut app = PhotocraftApp::new(s, crate::Services::default());
+    let mut app = MagicpicApp::new(s, crate::Services::default());
     let mut h = Harness::builder().with_size(egui::vec2(900.0, 700.0)).build_ui_state(|ui, app| crate::dialogs::show(app, ui.ctx()), &mut app);
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     open(h.state_mut(), REPLACE_COLOR).unwrap();
     h.run_steps(3);
     assert!(color_eyedropper_armed(h.state()), "armed as the dialog opens");
@@ -2122,12 +2122,12 @@ fn replace_color_result_swatch_sets_the_sliders() {
     use egui_kittest::Harness;
     use egui_kittest::kittest::Queryable;
 
-    let mut s = photocraft_engine::Session::new();
+    let mut s = magicpic_engine::Session::new();
     s.execute("file.new", json!({"width": 16, "height": 16})).unwrap();
-    let mut app = PhotocraftApp::new(s, crate::Services::default());
+    let mut app = MagicpicApp::new(s, crate::Services::default());
     app.run("tools.setColors", json!({"foreground": "#cc3333"})).unwrap();
     let mut h = Harness::builder().with_size(egui::vec2(900.0, 900.0)).build_ui_state(|ui, app| crate::dialogs::show(app, ui.ctx()), &mut app);
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     let id = open(h.state_mut(), REPLACE_COLOR).unwrap();
     h.run_steps(3);
     // No shift yet: the Result is the sampled colour.
@@ -2144,7 +2144,7 @@ fn replace_color_result_swatch_sets_the_sliders() {
     h.run_steps(3);
     let f = h.state_mut().ui.dialog_mut(id).unwrap().fields.clone();
     let n = |k: &str| f[k].as_f64().unwrap() as f32;
-    let got = photocraft_algo::tone::replace_color_result([0.8, 0.2, 0.2], n("hue"), n("saturation"), n("lightness"));
+    let got = magicpic_algo::tone::replace_color_result([0.8, 0.2, 0.2], n("hue"), n("saturation"), n("lightness"));
     let want = crate::color_picker_ui::parse_hex("#3355cc").unwrap();
     assert!(got.iter().zip(want).all(|(a, b)| (a - b).abs() < 0.02), "the sliders turn the sampled colour into the pick: {got:?}");
     assert!(n("hue") != 0.0, "the hue moved");
@@ -2162,11 +2162,11 @@ fn replace_color_localized_color_clusters() {
     use egui_kittest::kittest::Queryable;
 
     // Left half red, right half red too: localized on the left point, the right half stays.
-    let mut s = photocraft_engine::Session::new();
+    let mut s = magicpic_engine::Session::new();
     s.execute("file.new", json!({"width": 40, "height": 10, "background": "#ff0000"})).unwrap();
-    let mut app = PhotocraftApp::new(s, crate::Services::default());
+    let mut app = MagicpicApp::new(s, crate::Services::default());
     let mut h = Harness::builder().with_size(egui::vec2(900.0, 800.0)).build_ui_state(|ui, app| crate::dialogs::show(app, ui.ctx()), &mut app);
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     let id = open(h.state_mut(), REPLACE_COLOR).unwrap();
     h.run_steps(3);
     let _ = h.get_by_label("Localized Color Clusters");
@@ -2182,7 +2182,7 @@ fn replace_color_localized_color_clusters() {
     p.insert("hue".into(), json!(120));
     h.state_mut().run(REPLACE_COLOR, Value::Object(p)).unwrap();
     let doc = &h.state().session.active().unwrap().doc;
-    let px = |x: i32| doc.layers[0].surface().unwrap().read_region(photocraft_geom::Rect::new(x, 5, x + 1, 6));
+    let px = |x: i32| doc.layers[0].surface().unwrap().read_region(magicpic_geom::Rect::new(x, 5, x + 1, 6));
     assert!(px(2)[1] > 0.5, "near the point: shifted to green {:?}", px(2));
     assert!(px(38)[0] > 0.9 && px(38)[1] < 0.1, "far away: still red {:?}", px(38));
 }
@@ -2200,11 +2200,11 @@ fn color_lookup_folder_menu_click_applies_pixels_and_undoes() {
     for name in ["listed.3dl", "listed.look"] {
         std::fs::write(tmp.path().join(name), "listing-only fixture").unwrap();
     }
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("prefs.set", json!({"path": "fileHandling.lutFolder", "value": tmp.path().to_str().unwrap()})).unwrap();
     app.run("file.new", json!({"width": 4, "height": 4, "background": "#ff0000"})).unwrap();
     let mut h = Harness::builder().with_size(egui::vec2(900.0, 800.0)).build_ui_state(|ui, app| crate::dialogs::show(app, ui.ctx()), &mut app);
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     let id = open(h.state_mut(), "image.adjustments.colorLookup").unwrap();
     h.run_steps(3);
     for _ in 0..500 {
@@ -2226,7 +2226,7 @@ fn color_lookup_folder_menu_click_applies_pixels_and_undoes() {
     let submitted = params_of(&f);
     assert!(!submitted.as_object().unwrap().keys().any(|key| key.starts_with("__")));
     crate::dialogs::confirm(h.state_mut(), id).unwrap();
-    let pixel = |app: &PhotocraftApp| app.session.active().unwrap().doc.layers[0].surface().unwrap().read_region(photocraft_geom::Rect::new(0, 0, 1, 1));
+    let pixel = |app: &MagicpicApp| app.session.active().unwrap().doc.layers[0].surface().unwrap().read_region(magicpic_geom::Rect::new(0, 0, 1, 1));
     let cyan = pixel(h.state());
     assert!(cyan[0] < 0.01 && cyan[1] > 0.99 && cyan[2] > 0.99, "selected nonidentity LUT applied: {cyan:?}");
     h.state_mut().run("edit.undo", json!({})).unwrap();
@@ -2238,8 +2238,8 @@ fn color_lookup_folder_menu_click_applies_pixels_and_undoes() {
 
 #[test]
 fn match_color_control_source_changes_reset_layer_even_with_copied_ids() {
-    use photocraft_doc::{Color, ColorMode, Layer, SampleType, Size};
-    use photocraft_geom::Rect;
+    use magicpic_doc::{Color, ColorMode, Layer, SampleType, Size};
+    use magicpic_geom::Rect;
     let area = Rect::new(0, 0, 8, 8);
     let mut source = Document::with_background("first", Size::new(8, 8), ColorMode::Rgb, SampleType::U8, Color::WHITE);
     let bottom = source.layers[0].id;
@@ -2251,14 +2251,14 @@ fn match_color_control_source_changes_reset_layer_even_with_copied_ids() {
     other.name = "second".into();
     other.layers[0].surface_mut().unwrap().fill_rect(area, &[0.1, 0.8, 0.2, 1.0]);
     for frame in [false, true] {
-        let mut session = photocraft_engine::Session::new();
+        let mut session = magicpic_engine::Session::new();
         session.add_document(source.clone(), None);
         session.add_document(other.clone(), None);
         session.execute("file.new", json!({"width":8,"height":8,"background":"white"})).unwrap();
-        let mut app = PhotocraftApp::new(session, Default::default());
+        let mut app = MagicpicApp::new(session, Default::default());
         app.sync_views();
         let ctx = egui::Context::default();
-        PhotocraftApp::setup_context(&ctx, Default::default());
+        MagicpicApp::setup_context(&ctx, Default::default());
         for explicit_layer in [false, true] {
             let id = open(&mut app, "image.adjustments.matchColor").unwrap();
             for (field, value) in [("source", json!(0)), ("sourceLayer", json!(bottom)), ("source", json!(0))] {
@@ -2286,16 +2286,16 @@ fn match_color_control_source_changes_reset_layer_even_with_copied_ids() {
 #[cfg(not(target_arch = "wasm32"))]
 #[test]
 fn match_color_preview_refreshes_when_a_source_job_lands() {
-    use photocraft_doc::{Color, ColorMode, SampleType, Size};
-    use photocraft_geom::Rect;
+    use magicpic_doc::{Color, ColorMode, SampleType, Size};
+    use magicpic_geom::Rect;
     let area = Rect::new(0, 0, 8, 8);
     {
         let mut source = Document::with_background("reference", Size::new(8, 8), ColorMode::Rgb, SampleType::U8, Color::WHITE);
         source.layers[0].surface_mut().unwrap().fill_rect(area, &[0.1, 0.3, 0.9, 1.0]);
-        let mut session = photocraft_engine::Session::new();
+        let mut session = magicpic_engine::Session::new();
         session.add_document(source, None);
         // Start before opening the dialog; applying a completed source job is a normal producer.
-        let photocraft_engine::jobs::Started::Job(job) = session
+        let magicpic_engine::jobs::Started::Job(job) = session
             .start_job(
                 "test.source",
                 json!({}),
@@ -2315,7 +2315,7 @@ fn match_color_preview_refreshes_when_a_source_job_lands() {
             panic!("native source job");
         };
         session.execute("file.new", json!({"width":8,"height":8,"background":"white"})).unwrap();
-        let mut app = PhotocraftApp::new(session, Default::default());
+        let mut app = MagicpicApp::new(session, Default::default());
         app.sync_views();
         app.background_jobs = false;
         let target = app.session.active().unwrap().doc.clone();
@@ -2323,7 +2323,7 @@ fn match_color_preview_refreshes_when_a_source_job_lands() {
         let ctx = egui::Context::default();
         let id = open(&mut app, "image.adjustments.matchColor").unwrap();
         assert_eq!(match_color_control(&mut app, &ctx, "ui.dialog.set", json!({"dialog":id,"field":"source","value":0}))["ok"], true);
-        let preview = |app: &mut PhotocraftApp, blue: bool| {
+        let preview = |app: &mut MagicpicApp, blue: bool| {
             crate::canvas::ensure_filter_preview(app, 1, &ctx).expect("inline preview");
             let pixel = app.filter_preview.as_ref().unwrap().result.as_ref().unwrap().layers[0].surface().unwrap().rgba(4, 4);
             assert_eq!(pixel[2] > pixel[0], blue, "preview follows current source pixels: {pixel:?}");
@@ -2351,7 +2351,7 @@ fn match_color_preview_refreshes_when_a_source_job_lands() {
 
 #[test]
 fn preview_source_revisions_follow_only_referenced_documents() {
-    let mut session = photocraft_engine::Session::new();
+    let mut session = magicpic_engine::Session::new();
     for _ in 0..2 {
         session.execute("file.new", json!({"width":1,"height":1})).unwrap();
     }
@@ -2376,7 +2376,7 @@ fn indexed_matte_dropdown_and_picker_change_the_applied_edge_color() {
 
     for (choice, matte) in [("Black", [0.0, 0.0, 0.0]), ("50% Gray", [128.0 / 255.0; 3]), ("Netscape Gray", [192.0 / 255.0; 3]), ("Other…", [0.0, 0.0, 1.0])]
     {
-        let mut session = photocraft_engine::Session::new();
+        let mut session = magicpic_engine::Session::new();
         session.execute("file.new", json!({"width": 2, "height": 1, "depth": 32, "background": "transparent"})).unwrap();
         session
             .edit("fixture", |doc, active| {
@@ -2385,9 +2385,9 @@ fn indexed_matte_dropdown_and_picker_change_the_applied_edge_color() {
                 Ok(())
             })
             .unwrap();
-        let mut app = PhotocraftApp::new(session, crate::Services::default());
+        let mut app = MagicpicApp::new(session, crate::Services::default());
         let mut harness = Harness::builder().with_size(egui::vec2(900.0, 1000.0)).build_ui_state(|ui, app| crate::dialogs::show(app, ui.ctx()), &mut app);
-        PhotocraftApp::setup_context(&harness.ctx, crate::theme::ThemeKind::ALL[0]);
+        MagicpicApp::setup_context(&harness.ctx, crate::theme::ThemeKind::ALL[0]);
         let id = open(harness.state_mut(), "image.mode.indexedColor").unwrap();
         harness.state_mut().ui.dialog_mut(id).unwrap().fields.insert("palette".into(), json!("exact"));
         harness.run_steps(3);
@@ -2406,7 +2406,7 @@ fn indexed_matte_dropdown_and_picker_change_the_applied_edge_color() {
         harness.get_by_label("OK").click();
         harness.run_steps(3);
         let doc = &harness.state().session.active().unwrap().doc;
-        assert_eq!(doc.mode, photocraft_color::ColorMode::Indexed);
+        assert_eq!(doc.mode, magicpic_color::ColorMode::Indexed);
         let surface = doc.layers[0].surface().unwrap();
         let edge = surface.rgba(0, 0);
         let expected = [0.75 + 0.25 * matte[0], 0.25 * matte[1], 0.25 * matte[2]];
@@ -2421,11 +2421,11 @@ fn indexed_matte_cancel_keeps_the_previous_choice() {
     use egui::accesskit::Role;
     use egui_kittest::{Harness, kittest::Queryable};
 
-    let mut session = photocraft_engine::Session::new();
+    let mut session = magicpic_engine::Session::new();
     session.execute("file.new", json!({"width": 2, "height": 1, "depth": 32, "background": "transparent"})).unwrap();
-    let mut app = PhotocraftApp::new(session, crate::Services::default());
+    let mut app = MagicpicApp::new(session, crate::Services::default());
     let mut harness = Harness::builder().with_size(egui::vec2(900.0, 1000.0)).build_ui_state(|ui, app| crate::dialogs::show(app, ui.ctx()), &mut app);
-    PhotocraftApp::setup_context(&harness.ctx, crate::theme::ThemeKind::ALL[0]);
+    MagicpicApp::setup_context(&harness.ctx, crate::theme::ThemeKind::ALL[0]);
     let id = open(harness.state_mut(), "image.mode.indexedColor").unwrap();
     harness.run_steps(3);
     harness.query_all_by_role(Role::ComboBox).find(|node| node.value().as_deref() == Some("None")).expect("Matte dropdown").click();

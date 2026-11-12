@@ -1,5 +1,5 @@
-use photocraft_doc::LayerMask;
-use photocraft_engine::Session;
+use magicpic_doc::LayerMask;
+use magicpic_engine::Session;
 use serde_json::json;
 
 const COMMANDS: [&str; 7] = [

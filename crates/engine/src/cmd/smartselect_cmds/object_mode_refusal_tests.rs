@@ -2,8 +2,8 @@
 //! application's alert, selecting nothing and adding no history, for a rectangle and a point.
 //! RGB, Grayscale, CMYK and Lab at every depth, Multichannel and Duotone keep selecting.
 
-use photocraft_color::{Color, ColorMode, SampleType};
-use photocraft_doc::Size;
+use magicpic_color::{Color, ColorMode, SampleType};
+use magicpic_doc::Size;
 
 use super::*;
 
@@ -15,7 +15,7 @@ const BITMAP: &str = "Could not complete your request because the tool does not 
 fn session(mode: ColorMode, depth: SampleType) -> Session {
     let mut doc = Document::with_background("t", Size::new(64, 64), mode, depth, Color::rgb(0.1, 0.1, 0.1));
     let bg = doc.layers[0].surface_mut().unwrap();
-    let light = photocraft_raster::from_rgba(&bg.format(), [0.9, 0.9, 0.9, 1.0]);
+    let light = magicpic_raster::from_rgba(&bg.format(), [0.9, 0.9, 0.9, 1.0]);
     bg.fill_rect(Rect::new(20, 20, 44, 44), &light);
     let mut s = Session::new();
     s.add_document(doc, None);

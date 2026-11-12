@@ -12,7 +12,7 @@
 //! pairs: the same curve for each pair, and Smoothness doesn't change it). The curve fits no simple
 //! formula, so it is kept as the measured table [`SMOOTH_EASE`].
 
-use photocraft_color::{Color, ColorMode};
+use magicpic_color::{Color, ColorMode};
 
 /// Photoshop's gradient interpolation methods.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -153,7 +153,7 @@ fn eval(stops: &[(f32, [f32; 3])], mids: &[f32], smooth: f32, t: f32, m: Method)
 }
 
 impl Method {
-    /// Its name in a [`photocraft_doc::adjust::GradientSource`] and in commands.
+    /// Its name in a [`magicpic_doc::adjust::GradientSource`] and in commands.
     pub fn name(self) -> &'static str {
         match self {
             Method::Classic => "classic",
@@ -177,7 +177,7 @@ impl Method {
 /// A Gradient Map's kept Photoshop gradient (#8351) baked into the dense linear sRGB stops the
 /// compositors render. Hostile values (from a file or a command) are clamped: locations and
 /// Smoothness to 0..1, midpoints to 0.05..0.95, a missing midpoint is the middle.
-pub fn bake_source(src: &photocraft_doc::adjust::GradientSource) -> Vec<(f32, [f32; 3])> {
+pub fn bake_source(src: &magicpic_doc::adjust::GradientSource) -> Vec<(f32, [f32; 3])> {
     let unit = |v: f32| if v.is_finite() { v.clamp(0.0, 1.0) } else { 0.0 };
     let mut stops: Vec<(f32, Color)> = src.stops.iter().map(|(t, c)| (unit(*t), Color::rgba(unit(c[0]), unit(c[1]), unit(c[2]), 1.0))).collect();
     stops.sort_by(|a, b| a.0.total_cmp(&b.0));

@@ -2,8 +2,8 @@ use super::fields::{FieldOpts, value_field_in};
 use super::{Response, Ui};
 
 /// A size dialog's unit key (`px`, `in`, `cm`, `mm`, `pt`, `pica`, `percent`) as a unit.
-pub fn unit_of_key(key: &str) -> photocraft_engine::prefs::Unit {
-    use photocraft_engine::prefs::Unit;
+pub fn unit_of_key(key: &str) -> magicpic_engine::prefs::Unit {
+    use magicpic_engine::prefs::Unit;
     match key {
         "in" => Unit::Inches,
         "cm" => Unit::Centimeters,
@@ -16,7 +16,7 @@ pub fn unit_of_key(key: &str) -> photocraft_engine::prefs::Unit {
 }
 
 /// Decimal places for a size dialog's unit key (`px`, `in`, `cm`, `mm`, `pt`, `pica`, `percent`).
-/// The places themselves live on [`photocraft_engine::prefs::Unit`], so the dialogs, the Info
+/// The places themselves live on [`magicpic_engine::prefs::Unit`], so the dialogs, the Info
 /// panel and the rulers agree (#2434).
 pub fn unit_decimals(key: &str) -> u32 {
     unit_of_key(key).decimals() as u32
@@ -43,7 +43,7 @@ pub fn value_field_prec_blank(ui: &mut Ui, value: &mut f32, range: std::ops::Ran
 /// A field's unit and the resolution a typed unit converts at (`1in` in a px field).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct FieldUnits {
-    pub unit: photocraft_engine::prefs::Unit,
+    pub unit: magicpic_engine::prefs::Unit,
     /// Pixels per inch.
     pub dpi: f64,
     /// Points per inch (72 PostScript, 72.27 traditional).
@@ -101,8 +101,8 @@ pub fn set_field_resolution(ctx: &egui::Context, dpi: f64, ppi: f64) {
 }
 
 /// The unit a field's suffix names (`px`, `in`, `cm`, `mm`, `pt`, `pica`/`pc`, `%`), if any.
-pub(super) fn unit_of_suffix(suffix: &str) -> Option<photocraft_engine::prefs::Unit> {
-    use photocraft_engine::prefs::Unit;
+pub(super) fn unit_of_suffix(suffix: &str) -> Option<magicpic_engine::prefs::Unit> {
+    use magicpic_engine::prefs::Unit;
     Some(match suffix {
         "px" => Unit::Pixels,
         "in" => Unit::Inches,
@@ -122,9 +122,9 @@ pub fn fmt_num(v: f64) -> String {
 
 /// Rounds `v` to `decimals` places (half away from zero) and drops trailing zeros, so a value is
 /// never shown with more precision than it has: `0.7995` at three places is `0.8`, `2.0` is `2`
-/// (#2434). [`photocraft_engine::prefs::Unit::decimals`] gives each ruler unit's places.
+/// (#2434). [`magicpic_engine::prefs::Unit::decimals`] gives each ruler unit's places.
 pub fn fmt_num_prec(v: f64, decimals: u32) -> String {
-    photocraft_engine::prefs::fmt_decimals(v, decimals as usize)
+    magicpic_engine::prefs::fmt_decimals(v, decimals as usize)
 }
 
 /// [`fmt_num_prec`] keeping its trailing zeros: `50.0` at one place.

@@ -7,17 +7,17 @@
 use egui::accesskit::{Role, Toggled};
 use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
-use photocraft_doc::{LayerContent, LayerId, text::TextAlign};
+use magicpic_doc::{LayerContent, LayerId, text::TextAlign};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::state::Tool;
 
 pub(super) const HORIZONTAL: [&str; 3] = ["Left align text", "Center text", "Right align text"];
 pub(super) const VERTICAL: [&str; 3] = ["Top align text", "Center text", "Bottom align text"];
 
-pub(super) fn new_app(tool: Tool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+pub(super) fn new_app(tool: Tool) -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 800, "height": 400})).unwrap();
     app.sync_views();
     app.ui.tool = tool;
@@ -25,25 +25,25 @@ pub(super) fn new_app(tool: Tool) -> PhotocraftApp {
 }
 
 /// A text layer with `orientation`, made the active layer (selected, not edited).
-fn text_layer(app: &mut PhotocraftApp, orientation: &str) -> LayerId {
+fn text_layer(app: &mut MagicpicApp, orientation: &str) -> LayerId {
     let made = app.run("type.create", json!({"text": "AB CD", "x": 400, "y": 100, "orientation": orientation})).unwrap();
     LayerId(made["layer"].as_u64().unwrap())
 }
 
-pub(super) fn bar(app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
+pub(super) fn bar(app: MagicpicApp) -> Harness<'static, MagicpicApp> {
     let mut h = Harness::builder().with_size(egui::vec2(1200.0, 60.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut MagicpicApp| {
             ui.horizontal(|ui| super::options_bar(app, ui));
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(3);
     h
 }
 
 /// Which of the two button sets the bar shows; panics on a mix or neither.
-pub(super) fn shown(h: &Harness<'static, PhotocraftApp>) -> [&'static str; 3] {
+pub(super) fn shown(h: &Harness<'static, MagicpicApp>) -> [&'static str; 3] {
     let has = |label: &str| h.query_by_role_and_label(Role::Button, label).is_some();
     match (has("Top align text") && has("Bottom align text"), has("Left align text") && has("Right align text")) {
         (true, false) => VERTICAL,
@@ -53,11 +53,11 @@ pub(super) fn shown(h: &Harness<'static, PhotocraftApp>) -> [&'static str; 3] {
     }
 }
 
-pub(super) fn lit(h: &Harness<'static, PhotocraftApp>, label: &str) -> bool {
+pub(super) fn lit(h: &Harness<'static, MagicpicApp>, label: &str) -> bool {
     h.get_by_role_and_label(Role::Button, label).accesskit_node().toggled() == Some(Toggled::True)
 }
 
-pub(super) fn align_of(app: &PhotocraftApp, id: LayerId) -> TextAlign {
+pub(super) fn align_of(app: &MagicpicApp, id: LayerId) -> TextAlign {
     match &app.session.active().unwrap().doc.layer(id).unwrap().content {
         LayerContent::Text(t) => t.paragraphs[0].style.align,
         other => panic!("{}", other.kind_name()),

@@ -133,7 +133,7 @@ The three levers that would move them, each measured or bounded:
 ## Reproduce
 
 ```
-cargo build --release -p photocraft-algo --example bench_filters2
+cargo build --release -p magicpic-algo --example bench_filters2
 ./target/release/examples/bench_filters2 <row-substring> --reps 5
 ```
 
@@ -142,7 +142,7 @@ line per rep on stderr and, with `--json <file>`, the report `cargo xtask perf` 
 
 ## Suites run
 
-`cargo test -p photocraft-algo --release`: 764 passed, 2 failed, 27 ignored. Both failures
+`cargo test -p magicpic-algo --release`: 764 passed, 2 failed, 27 ignored. Both failures
 (`pixelate::tests::facet_reuse_matches_scalar_in_every_model`,
 `pixelate::tests::cell_filters_match_scalar_models_edges_and_fractional_cells`) compare NaN bit
 patterns (`NaN != NaN`, `2143289344` vs `4290772992`) and fail identically on the base tree with

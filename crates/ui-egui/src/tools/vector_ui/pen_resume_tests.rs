@@ -3,21 +3,21 @@
 
 use super::*;
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 200, "height": 200})).unwrap();
     app.sync_views();
     app
 }
 
 /// Edit › Undo or Redo as the menu, the shortcut and the control channel run it.
-fn menu(app: &mut PhotocraftApp, id: &str) {
+fn menu(app: &mut MagicpicApp, id: &str) {
     crate::menus::invoke(app, &egui::Context::default(), id, json!({})).unwrap();
 }
 
 /// A triangle drawn with the Pen and closed by clicking its first anchor; the knots it had
 /// before the close.
-fn close_triangle(app: &mut PhotocraftApp) -> Vec<[[f64; 2]; 3]> {
+fn close_triangle(app: &mut MagicpicApp) -> Vec<[[f64; 2]; 3]> {
     app.ui.tool = Tool::Pen;
     for (x, y) in [(20.0, 20.0), (120.0, 20.0), (120.0, 120.0)] {
         pen_down(app, x, y, false);
@@ -31,7 +31,7 @@ fn close_triangle(app: &mut PhotocraftApp) -> Vec<[[f64; 2]; 3]> {
 }
 
 /// [`close_triangle`] in Path mode: the closed triangle is the work path.
-fn closed_triangle(app: &mut PhotocraftApp) -> Vec<[[f64; 2]; 3]> {
+fn closed_triangle(app: &mut MagicpicApp) -> Vec<[[f64; 2]; 3]> {
     let knots = close_triangle(app);
     assert!(app.session.active().unwrap().doc.work_path.as_ref().unwrap().subpaths[0].closed);
     knots
@@ -65,7 +65,7 @@ fn pen_command_z_after_closing_reopens_the_path() {
 }
 
 /// A key press through the keyboard shortcuts, as the app handles it.
-fn press(app: &mut PhotocraftApp, key: egui::Key, modifiers: egui::Modifiers) {
+fn press(app: &mut MagicpicApp, key: egui::Key, modifiers: egui::Modifiers) {
     let ctx = egui::Context::default();
     ctx.begin_pass(egui::RawInput {
         events: vec![egui::Event::ModifiersChanged(modifiers), egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers }],
@@ -219,7 +219,7 @@ fn undo_gives_every_finished_path_back_to_the_pen_not_just_the_last() {
         }
         assert!(app.ui.pen.is_none());
     }
-    let subpaths = |app: &PhotocraftApp| app.session.active().unwrap().doc.work_path.as_ref().map_or(0, |p| p.subpaths.len());
+    let subpaths = |app: &MagicpicApp| app.session.active().unwrap().doc.work_path.as_ref().map_or(0, |p| p.subpaths.len());
     assert_eq!(subpaths(&app), 3, "the paths build up in the work path");
 
     // Undo walks back through each path: given back to the Pen, then one anchor at a time.
@@ -248,7 +248,7 @@ fn undo_steps_back_from_make_selection_to_the_path_being_drawn() {
     // The canvas menu's Make Selection ends the path, then makes the selection from it.
     pen_commit(&mut app, false);
     app.run("path.toSelection", json!({"name": "work"})).unwrap();
-    let doc = |app: &PhotocraftApp| app.session.active().unwrap().doc.clone();
+    let doc = |app: &MagicpicApp| app.session.active().unwrap().doc.clone();
     assert!(doc(&app).selection.is_some());
 
     menu(&mut app, "edit.undo");
@@ -282,7 +282,7 @@ fn undo_after_switching_tools_gives_the_path_back_to_the_pen() {
             }
         }
         let knots = app.ui.pen.as_ref().unwrap().knots.clone();
-        // Choosing another tool ends the path, as the frame loop does (`PhotocraftApp::logic`).
+        // Choosing another tool ends the path, as the frame loop does (`MagicpicApp::logic`).
         crate::tool_memory::select(&mut app, Tool::Move);
         pen_commit(&mut app, false);
         assert!(app.session.active().unwrap().doc.work_path.is_some());
@@ -417,7 +417,7 @@ fn pen_undo_after_closing_a_shape_reopens_the_path() {
     assert_eq!(app.ui.pen.as_ref().unwrap().knots, knots);
 }
 
-fn work_path(app: &PhotocraftApp) -> Option<Path> {
+fn work_path(app: &MagicpicApp) -> Option<Path> {
     app.session.active().unwrap().doc.work_path.clone()
 }
 
@@ -425,7 +425,7 @@ type Knots = Vec<[[f64; 2]; 3]>;
 
 /// An open path of two anchors ended with Esc (which keeps it selected, #12892), then carried on from its last anchor (#6593) by one
 /// more anchor and ended again. The open path and the carried-on draft's knots.
-fn carry_on_a_path(app: &mut PhotocraftApp) -> (Option<Path>, Knots, Knots) {
+fn carry_on_a_path(app: &mut MagicpicApp) -> (Option<Path>, Knots, Knots) {
     app.ui.tool = Tool::Pen;
     for (x, y) in [(20.0, 20.0), (120.0, 20.0)] {
         pen_down(app, x, y, false);
@@ -502,7 +502,7 @@ fn a_path_given_back_by_undo_is_owned_by_the_current_document_state() {
     let mut app = app();
     let knots = closed_triangle(&mut app);
     menu(&mut app, "edit.undo");
-    let owner_valid = |app: &PhotocraftApp| app.ui.pen.as_ref().and_then(|p| p.owner.as_ref()).is_some_and(|o| o.valid(app));
+    let owner_valid = |app: &MagicpicApp| app.ui.pen.as_ref().and_then(|p| p.owner.as_ref()).is_some_and(|o| o.valid(app));
     assert!(owner_valid(&app));
     assert!(!cancel_stale_pen(&mut app));
     finish_pen_if_left(&mut app);
@@ -514,7 +514,7 @@ fn a_path_given_back_by_undo_is_owned_by_the_current_document_state() {
 }
 
 /// Three anchors drawn with the Pen and ended with ↩; their knots.
-fn enter_path(app: &mut PhotocraftApp) -> Knots {
+fn enter_path(app: &mut MagicpicApp) -> Knots {
     app.ui.tool = Tool::Pen;
     for (x, y) in [(20.0, 20.0), (120.0, 20.0), (120.0, 120.0)] {
         pen_down(app, x, y, false);

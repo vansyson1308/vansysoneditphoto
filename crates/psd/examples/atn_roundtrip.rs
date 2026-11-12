@@ -1,9 +1,9 @@
 //! Check `.atn` files for byte-exact round trips: parse, write, compare, and show the first
-//! difference with its context: `cargo run -p photocraft-psd --example atn_roundtrip -- set.atn…`
+//! difference with its context: `cargo run -p magicpic-psd --example atn_roundtrip -- set.atn…`
 //!
 //! Exit status 1 when any file differs or fails to parse.
 
-use photocraft_psd::atn;
+use magicpic_psd::atn;
 
 fn hex(b: &[u8]) -> String {
     b.iter().map(|x| format!("{x:02x}")).collect::<Vec<_>>().join(" ")

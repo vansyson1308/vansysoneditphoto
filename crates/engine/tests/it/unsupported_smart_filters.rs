@@ -1,5 +1,5 @@
-use photocraft_doc::{LayerContent, LayerId, SmartFilter};
-use photocraft_engine::{Session, smart_cmds};
+use magicpic_doc::{LayerContent, LayerId, SmartFilter};
+use magicpic_engine::{Session, smart_cmds};
 use serde_json::json;
 
 const STORED: [f32; 4] = [0.0, 0.0, 1.0, 1.0];
@@ -16,7 +16,7 @@ fn mockup() -> (Session, LayerId) {
         sm.smart_filters.push(SmartFilter {
             command: "psd.unsupportedFilter".into(),
             params: json!({"name": "Sharpen", "filterID": 1399353968, "psd": ""}),
-            blend: photocraft_color::BlendMode::Normal,
+            blend: magicpic_color::BlendMode::Normal,
             opacity: 1.0,
             visible: true,
         });
@@ -29,14 +29,14 @@ fn mockup() -> (Session, LayerId) {
     (s, id)
 }
 
-fn cache(s: &Session, id: LayerId) -> photocraft_raster::Surface {
+fn cache(s: &Session, id: LayerId) -> magicpic_raster::Surface {
     let LayerContent::Smart(sm) = &s.active().unwrap().doc.layer(id).unwrap().content else { panic!("not a smart object") };
     sm.cache.clone().unwrap()
 }
 
 fn png() -> Vec<u8> {
-    let image = photocraft_codecs::Image::from_u8(8, 8, photocraft_codecs::ChannelLayout::Rgb, vec![0; 8 * 8 * 3]).unwrap();
-    photocraft_codecs::encode(&image, photocraft_codecs::Format::Png, &Default::default()).unwrap()
+    let image = magicpic_codecs::Image::from_u8(8, 8, magicpic_codecs::ChannelLayout::Rgb, vec![0; 8 * 8 * 3]).unwrap();
+    magicpic_codecs::encode(&image, magicpic_codecs::Format::Png, &Default::default()).unwrap()
 }
 
 #[test]

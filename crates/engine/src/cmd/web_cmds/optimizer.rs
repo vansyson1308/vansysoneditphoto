@@ -9,7 +9,7 @@ pub fn web_document(doc: &Document, p: &Value, st: &WebSettings) -> Result<(Docu
     let mut tmp = Session::new();
     tmp.add_document(doc.clone(), None);
     let mode = doc.mode;
-    if mode != photocraft_color::ColorMode::Rgb {
+    if mode != magicpic_color::ColorMode::Rgb {
         tmp.execute("image.mode.rgb", json!({}))?;
     }
     if st.convert_to_srgb && doc.icc_profile.is_some() {
@@ -88,8 +88,8 @@ pub fn web_exif(doc: &Document, m: WebMetadata) -> Option<&[u8]> {
 
 /// The response's warnings: EXIF that a JPEG couldn't hold (one segment, about 64 KB).
 pub(super) fn web_warnings(st: &WebSettings, exif: Option<&[u8]>, dpi: f32) -> Vec<String> {
-    exif.filter(|x| st.format == WebFormat::Jpeg && !photocraft_codecs::web::jpeg_exif_fits(x, Some(dpi)))
-        .map(|x| photocraft_codecs::FidelityWarning::MetadataTooLarge { what: "EXIF", bytes: x.len() }.to_string())
+    exif.filter(|x| st.format == WebFormat::Jpeg && !magicpic_codecs::web::jpeg_exif_fits(x, Some(dpi)))
+        .map(|x| magicpic_codecs::FidelityWarning::MetadataTooLarge { what: "EXIF", bytes: x.len() }.to_string())
         .into_iter()
         .collect()
 }
@@ -123,7 +123,7 @@ pub fn optimize(
         [p[0] * p[3] + matte[0] * (1.0 - p[3]), p[1] * p[3] + matte[1] * (1.0 - p[3]), p[2] * p[3] + matte[2] * (1.0 - p[3]), 1.0]
     };
     let (ww, hh) = (w as u32, h as u32);
-    let e = |e: photocraft_codecs::CodecError| other(e);
+    let e = |e: magicpic_codecs::CodecError| other(e);
     let mut look: Vec<u8> = Vec::new();
     let mut color_table = Vec::new();
     let mut transparent_index = None;
@@ -138,50 +138,50 @@ pub fn optimize(
             let q = if alpha { *p } else { over(p) };
             data.extend_from_slice(&[to8(q[0]), to8(q[1]), to8(q[2]), to8(q[3])][..k]);
         }
-        let layout = if alpha { photocraft_codecs::ChannelLayout::Rgba } else { photocraft_codecs::ChannelLayout::Rgb };
+        let layout = if alpha { magicpic_codecs::ChannelLayout::Rgba } else { magicpic_codecs::ChannelLayout::Rgb };
         (data, layout)
     };
-    let rgba = |data: &[u8], layout: photocraft_codecs::ChannelLayout| -> Vec<u8> {
-        if layout == photocraft_codecs::ChannelLayout::Rgba {
+    let rgba = |data: &[u8], layout: magicpic_codecs::ChannelLayout| -> Vec<u8> {
+        if layout == magicpic_codecs::ChannelLayout::Rgba {
             data.to_vec()
         } else {
             data.as_chunks::<3>().0.iter().flat_map(|c| [c[0], c[1], c[2], 255]).collect()
         }
     };
-    let meta = || photocraft_codecs::Metadata { dpi: Some((dpi, dpi)), xmp: xmp.map(str::to_string), ..Default::default() };
+    let meta = || magicpic_codecs::Metadata { dpi: Some((dpi, dpi)), xmp: xmp.map(str::to_string), ..Default::default() };
     let (bytes, colors) = match st.format {
         WebFormat::Png24 => {
             let (data, layout) = true_color();
             if preview {
                 look = rgba(&data, layout);
             }
-            let img = photocraft_codecs::Image::from_u8(ww, hh, layout, data).map_err(e)?.with_icc(icc.map(<[u8]>::to_vec)).with_meta(meta());
-            let opts = photocraft_codecs::EncodeOptions {
+            let img = magicpic_codecs::Image::from_u8(ww, hh, layout, data).map_err(e)?.with_icc(icc.map(<[u8]>::to_vec)).with_meta(meta());
+            let opts = magicpic_codecs::EncodeOptions {
                 png_interlaced: st.interlaced,
                 embed_icc: icc.is_some(),
                 embed_metadata: xmp.is_some(),
                 ..Default::default()
             };
-            (photocraft_codecs::encode(&img, photocraft_codecs::Format::Png, &opts).map_err(e)?, None)
+            (magicpic_codecs::encode(&img, magicpic_codecs::Format::Png, &opts).map_err(e)?, None)
         }
         WebFormat::Webp => {
             let (data, layout) = true_color();
             let icc = icc.filter(|_| st.embed_icc);
             // WebP holds EXIF (the metadata choice's "All" passes it in), so it rides along with the XMP.
-            let webp_meta = photocraft_codecs::Metadata { exif: exif.map(<[u8]>::to_vec), ..meta() };
-            let img = photocraft_codecs::Image::from_u8(ww, hh, layout, data).map_err(e)?.with_icc(icc.map(<[u8]>::to_vec)).with_meta(webp_meta);
-            let opts = photocraft_codecs::EncodeOptions {
+            let webp_meta = magicpic_codecs::Metadata { exif: exif.map(<[u8]>::to_vec), ..meta() };
+            let img = magicpic_codecs::Image::from_u8(ww, hh, layout, data).map_err(e)?.with_icc(icc.map(<[u8]>::to_vec)).with_meta(webp_meta);
+            let opts = magicpic_codecs::EncodeOptions {
                 webp_lossless: st.lossless,
                 webp_quality: st.quality.min(100),
                 embed_icc: icc.is_some(),
                 embed_metadata: exif.is_some() || xmp.is_some(),
                 ..Default::default()
             };
-            let bytes = photocraft_codecs::encode(&img, photocraft_codecs::Format::WebP, &opts).map_err(e)?;
+            let bytes = magicpic_codecs::encode(&img, magicpic_codecs::Format::WebP, &opts).map_err(e)?;
             if preview {
                 // Lossless shows the source; lossy shows the compression artefacts.
-                look = match (!st.lossless).then(|| photocraft_codecs::decode(&bytes).ok()).flatten() {
-                    Some(img) => img.convert(photocraft_codecs::ChannelLayout::Rgba, photocraft_codecs::SampleType::U8).data().to_vec(),
+                look = match (!st.lossless).then(|| magicpic_codecs::decode(&bytes).ok()).flatten() {
+                    Some(img) => img.convert(magicpic_codecs::ChannelLayout::Rgba, magicpic_codecs::SampleType::U8).data().to_vec(),
                     None => rgba(img.data(), layout),
                 };
             }
@@ -196,12 +196,12 @@ pub fn optimize(
             // Save for Web's 0–100 quality → encoder 1–100.
             let q = st.quality.max(1);
             let bytes =
-                photocraft_codecs::web::encode_jpeg_rgb8(ww, hh, &rgb, q, st.progressive, st.optimized, icc.filter(|_| st.embed_icc), Some(dpi), exif, xmp)
+                magicpic_codecs::web::encode_jpeg_rgb8(ww, hh, &rgb, q, st.progressive, st.optimized, icc.filter(|_| st.embed_icc), Some(dpi), exif, xmp)
                     .map_err(e)?;
             if preview {
                 // The preview shows the compression artefacts.
-                look = match photocraft_codecs::decode(&bytes) {
-                    Ok(img) => img.convert(photocraft_codecs::ChannelLayout::Rgba, photocraft_codecs::SampleType::U8).data().to_vec(),
+                look = match magicpic_codecs::decode(&bytes) {
+                    Ok(img) => img.convert(magicpic_codecs::ChannelLayout::Rgba, magicpic_codecs::SampleType::U8).data().to_vec(),
                     Err(_) => rgb.as_chunks::<3>().0.iter().flat_map(|c| [c[0], c[1], c[2], 255]).collect(),
                 };
             }
@@ -224,7 +224,7 @@ pub fn optimize(
             if preview {
                 look = white.iter().flat_map(|b| if *b { [255, 255, 255, 255] } else { [0, 0, 0, 255] }).collect();
             }
-            (photocraft_codecs::web::encode_wbmp(ww, hh, &white).map_err(e)?, Some(2))
+            (magicpic_codecs::web::encode_wbmp(ww, hh, &white).map_err(e)?, Some(2))
         }
         WebFormat::Gif | WebFormat::Png8 => {
             let transparent = st.transparency && region().any(|p| p[3] < 0.5);
@@ -291,9 +291,9 @@ pub fn optimize(
             }
             let tt = t.map(|v| v as u8);
             let bytes = if st.format == WebFormat::Gif {
-                photocraft_codecs::web::encode_gif_indexed(ww, hh, &idx, &pal, tt, st.interlaced).map_err(e)?
+                magicpic_codecs::web::encode_gif_indexed(ww, hh, &idx, &pal, tt, st.interlaced).map_err(e)?
             } else {
-                photocraft_codecs::encode_png_indexed(ww, hh, &idx, &pal, tt, None, None).map_err(e)?
+                magicpic_codecs::encode_png_indexed(ww, hh, &idx, &pal, tt, None, None).map_err(e)?
             };
             if preview {
                 indices = idx;

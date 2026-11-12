@@ -1,6 +1,6 @@
 use super::*;
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_raster::{Interrupt, Surface};
+use magicpic_color::{ColorMode, PixelFormat, SampleType};
+use magicpic_raster::{Interrupt, Surface};
 
 mod reference;
 

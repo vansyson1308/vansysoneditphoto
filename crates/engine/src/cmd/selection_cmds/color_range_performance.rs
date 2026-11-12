@@ -1,7 +1,7 @@
 //! Opt-in release comparison; full-canvas buffers belong on a CI runner.
 use super::*;
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_doc::{Layer, LayerContent, Size};
+use magicpic_color::{ColorMode, PixelFormat, SampleType};
+use magicpic_doc::{Layer, LayerContent, Size};
 use std::time::Instant;
 
 fn reference(s: &mut Session, p: &Value) {

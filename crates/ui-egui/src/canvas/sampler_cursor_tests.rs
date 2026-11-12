@@ -3,17 +3,17 @@ use egui_kittest::Harness;
 use serde_json::json;
 
 use super::ViewXform;
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::state::Tool;
 
-fn harness() -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn harness() -> Harness<'static, MagicpicApp> {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
     app.sync_views();
     app.ui.extras.rulers = false;
     app.ui.tool = Tool::ColorSampler;
     let mut h = Harness::builder().with_size(vec2(1000.0, 700.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut MagicpicApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
@@ -23,7 +23,7 @@ fn harness() -> Harness<'static, PhotocraftApp> {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     let v = &mut h.state_mut().ui.views[0];
     v.zoom = 1.0;
@@ -33,7 +33,7 @@ fn harness() -> Harness<'static, PhotocraftApp> {
     h
 }
 
-fn screen(h: &Harness<'static, PhotocraftApp>, x: f32, y: f32) -> Pos2 {
+fn screen(h: &Harness<'static, MagicpicApp>, x: f32, y: f32) -> Pos2 {
     let app = h.state();
     let v = &app.ui.views[0];
     ViewXform {
@@ -47,17 +47,17 @@ fn screen(h: &Harness<'static, PhotocraftApp>, x: f32, y: f32) -> Pos2 {
     .to_screen(x, y)
 }
 
-fn cursor_area_visible(h: &Harness<'static, PhotocraftApp>, id: &str) -> bool {
+fn cursor_area_visible(h: &Harness<'static, MagicpicApp>, id: &str) -> bool {
     let layer = egui::LayerId::new(egui::Order::Tooltip, egui::Id::unique(id));
     h.ctx.memory(|memory| memory.areas().visible_layer_ids().contains(&layer))
 }
 
-fn cursor_badge_visible(h: &Harness<'static, PhotocraftApp>, name: &str) -> bool {
+fn cursor_badge_visible(h: &Harness<'static, MagicpicApp>, name: &str) -> bool {
     let layer = egui::LayerId::new(egui::Order::Tooltip, egui::Id::unique(("pc-cursor-badge", name)));
     h.ctx.memory(|memory| memory.areas().visible_layer_ids().contains(&layer))
 }
 
-fn hover_at(h: &mut Harness<'static, PhotocraftApp>, doc_x: f32, doc_y: f32, m: Modifiers) -> egui::CursorIcon {
+fn hover_at(h: &mut Harness<'static, MagicpicApp>, doc_x: f32, doc_y: f32, m: Modifiers) -> egui::CursorIcon {
     h.event(egui::Event::ModifiersChanged(m));
     let p = screen(h, doc_x, doc_y);
     h.event(egui::Event::PointerMoved(p));
@@ -66,7 +66,7 @@ fn hover_at(h: &mut Harness<'static, PhotocraftApp>, doc_x: f32, doc_y: f32, m: 
 }
 
 /// The eyedropper's pipette: the OS bitmap where one uploads, else drawn (#12523).
-fn pipette_shown(h: &Harness<'static, PhotocraftApp>) -> bool {
+fn pipette_shown(h: &Harness<'static, MagicpicApp>) -> bool {
     crate::tool_cursor::pipette_shown(&h.ctx, &h.output().platform_output)
 }
 

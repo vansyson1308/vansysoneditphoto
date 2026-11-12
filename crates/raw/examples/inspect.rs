@@ -1,4 +1,4 @@
-//! Prints the raw metadata of files: `cargo run -p photocraft-raw --example inspect -- a.cr2 b.nef`
+//! Prints the raw metadata of files: `cargo run -p magicpic-raw --example inspect -- a.cr2 b.nef`
 //! (handy while adding corpus files; the oracle expectations in `tests/it/raw_corpus.rs` come from it).
 use std::env;
 
@@ -11,7 +11,7 @@ fn main() {
                 continue;
             }
         };
-        match photocraft_raw::decode(&bytes, &photocraft_raw::Limits::default()) {
+        match magicpic_raw::decode(&bytes, &magicpic_raw::Limits::default()) {
             Ok(s) => {
                 println!(
                     "{path}: {:?} make={:?} model={:?} {}x{} samples={} cfa={:?} wb={:?} black={:?} white={:?} crop={:?}..{:?} orientation={} warnings={}",

@@ -1,9 +1,9 @@
 //! Content-Aware Fill exposes native scale and mirror adaptation without changing defaults.
 
-use photocraft_algo::content_aware::{FillOptions, color_level, fill};
-use photocraft_doc::{LayerId, Rect};
-use photocraft_engine::Session;
-use photocraft_raster::Surface;
+use magicpic_algo::content_aware::{FillOptions, color_level, fill};
+use magicpic_doc::{LayerId, Rect};
+use magicpic_engine::Session;
+use magicpic_raster::Surface;
 use serde_json::{Value, json};
 
 const WIDTH: usize = 64;

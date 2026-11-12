@@ -1,8 +1,8 @@
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_compose::{composite_to_surface, composite_to_surface_with_interrupt};
-use photocraft_doc::{Document, Layer};
-use photocraft_geom::{Rect, Size};
-use photocraft_raster::Interrupt;
+use magicpic_color::{ColorMode, PixelFormat, SampleType};
+use magicpic_compose::{composite_to_surface, composite_to_surface_with_interrupt};
+use magicpic_doc::{Document, Layer};
+use magicpic_geom::{Rect, Size};
+use magicpic_raster::Interrupt;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[test]

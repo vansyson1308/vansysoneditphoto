@@ -7,13 +7,13 @@ use std::time::{Duration, Instant};
 use serde_json::json;
 
 use super::strokes::{feed_live_stroke_waiting, live_stroke_busy, stroke_command};
-use super::{PhotocraftApp, Tool, ToolEvent, cancel_mixer_on_context_change, tool_event};
+use super::{MagicpicApp, Tool, ToolEvent, cancel_mixer_on_context_change, tool_event};
 
 const M: egui::Modifiers = egui::Modifiers::NONE;
 
 /// A document with an empty layer and `tool` set up to paint a short stroke on it.
-fn app_for(tool: Tool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app_for(tool: Tool) -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 160, "height": 60, "background": "#00ff00"})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     app.run("tools.setColors", json!({"foreground": "#ff0000"})).unwrap();
@@ -23,7 +23,7 @@ fn app_for(tool: Tool) -> PhotocraftApp {
 }
 
 /// The pen moves along the stroke; the points reach the drag but the stroke isn't fed yet.
-fn move_without_feeding(app: &mut PhotocraftApp) {
+fn move_without_feeding(app: &mut MagicpicApp) {
     app.defer_live_stroke = true;
     for x in (30..=130).step_by(10) {
         tool_event(app, ToolEvent::Move { x: f64::from(x), y: 30.0, pressure: 1.0 }, M);
@@ -32,7 +32,7 @@ fn move_without_feeding(app: &mut PhotocraftApp) {
 }
 
 /// The command the release ran, undone and run again from its params: the pixels must match.
-fn assert_commit_replays(app: &mut PhotocraftApp, cmd: &str, what: &str) {
+fn assert_commit_replays(app: &mut MagicpicApp, cmd: &str, what: &str) {
     let doc = app.session.active().unwrap().doc.clone();
     let id = app.session.active().unwrap().active_layer.unwrap();
     assert!(doc.layer(id).unwrap().surface().unwrap().rgba(128, 30)[3] > 0.0, "{what}: the stroke reaches its last point");

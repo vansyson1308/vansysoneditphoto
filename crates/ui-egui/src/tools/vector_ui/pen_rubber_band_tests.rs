@@ -8,7 +8,7 @@ use serde_json::json;
 
 use super::PenPath;
 use super::add_anchor_options_bar_tests::harness;
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::canvas::ViewXform;
 use crate::control::{ControlRequest, Outcome, handle};
 use crate::state::{Tool, ToolOptions};
@@ -17,8 +17,8 @@ const GEAR: &str = "Set additional pen and path options";
 const RUBBER_BAND: &str = "Rubber Band";
 
 /// A 200x200 document with a two-anchor path being drawn by `tool` and the pointer away from it.
-fn drawing(tool: Tool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn drawing(tool: Tool) -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 200, "height": 200})).unwrap();
     app.sync_views();
     app.ui.tool = tool;
@@ -29,7 +29,7 @@ fn drawing(tool: Tool) -> PhotocraftApp {
 
 /// The dashes the vector overlay draws: the preview from the last anchor to the pointer is the
 /// only dashed line of a path being drawn.
-fn dashes(app: &PhotocraftApp) -> usize {
+fn dashes(app: &MagicpicApp) -> usize {
     let xf = ViewXform {
         rect: egui::Rect::from_min_size(Pos2::ZERO, egui::vec2(200., 200.)),
         zoom: 1.0,
@@ -115,7 +115,7 @@ fn the_setting_is_saved_inspected_and_reset() {
 
     let mut app = drawing(Tool::Pen);
     let ctx = egui::Context::default();
-    let inspect = |app: &mut PhotocraftApp| {
+    let inspect = |app: &mut MagicpicApp| {
         let (req, _rx) = ControlRequest::new("ui.inspect", json!({}));
         match handle(app, &ctx, &req) {
             Outcome::Done(v) => v["result"]["toolOptions"]["pen_rubber_band"].clone(),

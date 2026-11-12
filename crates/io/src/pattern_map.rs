@@ -6,11 +6,11 @@
 
 use std::sync::Arc;
 
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_doc::{Document, Pattern};
-use photocraft_geom::Rect;
-use photocraft_psd::patterns::{PatternBudget, PsdPattern, block_has_user_mask, block_key, mode_channels, parse_pattern_block_with, write_pattern_block};
-use photocraft_raster::Surface;
+use magicpic_color::{ColorMode, PixelFormat, SampleType};
+use magicpic_doc::{Document, Pattern};
+use magicpic_geom::Rect;
+use magicpic_psd::patterns::{PatternBudget, PsdPattern, block_has_user_mask, block_key, mode_channels, parse_pattern_block_with, write_pattern_block};
+use magicpic_raster::Surface;
 
 use crate::pixels::{max_sample, psd_depth, sample_for_depth, try_interleave, zero_sample};
 
@@ -110,7 +110,7 @@ fn pattern_from_psd(p: &PsdPattern, oom: &mut Option<String>) -> Option<Pattern>
     }
     let mut bytes = match try_interleave(&refs, &fill, n, s, &invert) {
         Ok(bytes) => bytes,
-        Err(photocraft_psd::PsdError::OutOfMemory(error)) => {
+        Err(magicpic_psd::PsdError::OutOfMemory(error)) => {
             *oom = Some(error.to_string());
             return None;
         }
@@ -121,7 +121,7 @@ fn pattern_from_psd(p: &PsdPattern, oom: &mut Option<String>) -> Option<Pattern>
     }
     let mut surface = Surface::new(fmt);
     let result = surface.try_write_interleaved(Rect::new(0, 0, w as i32, h as i32), &bytes);
-    photocraft_raster::scratch::give(bytes);
+    magicpic_raster::scratch::give(bytes);
     if let Err(error) = result {
         *oom = Some(error.to_string());
         return None;
@@ -132,23 +132,23 @@ fn pattern_from_psd(p: &PsdPattern, oom: &mut Option<String>) -> Option<Pattern>
 /// A document pattern as a PSD pattern (its own depth and colour model; other models as RGB).
 /// Dense export is separately bounded: oversized native declarations remain valid stored data.
 pub fn to_psd(p: &Pattern) -> Result<PsdPattern, String> {
-    let mut remaining = photocraft_doc::pattern::MAX_WORKING_BYTES;
+    let mut remaining = magicpic_doc::pattern::MAX_WORKING_BYTES;
     to_psd_in(p, &mut remaining)
 }
 
 /// Convert a library with one shared dense-plane allowance, for PAT and ASL writers.
 pub(crate) fn to_psd_patterns(patterns: &[Pattern]) -> Result<Vec<PsdPattern>, String> {
-    let mut remaining = photocraft_doc::pattern::MAX_WORKING_BYTES;
+    let mut remaining = magicpic_doc::pattern::MAX_WORKING_BYTES;
     patterns.iter().map(|p| to_psd_in(p, &mut remaining)).collect()
 }
 
 /// Share the retained plane allowance across every pattern in one exported file.
 fn to_psd_in(p: &Pattern, remaining: &mut u64) -> Result<PsdPattern, String> {
     let fail = |why: &str| format!("pattern \"{}\" cannot be exported: {why}", p.display_name());
-    if p.width == 0 || p.height == 0 || p.width > photocraft_doc::pattern::MAX_EDGE || p.height > photocraft_doc::pattern::MAX_EDGE {
+    if p.width == 0 || p.height == 0 || p.width > magicpic_doc::pattern::MAX_EDGE || p.height > magicpic_doc::pattern::MAX_EDGE {
         return Err(fail("invalid dimensions"));
     }
-    if p.pixel_count() > photocraft_doc::pattern::MAX_PAINT_PIXELS {
+    if p.pixel_count() > magicpic_doc::pattern::MAX_PAINT_PIXELS {
         return Err(fail("declared pixel count exceeds the pattern export limit; keep the native .pcraft file to preserve it"));
     }
     let f = p.surface.format();
@@ -230,7 +230,7 @@ pub fn try_from_global_blocks(doc: &Document) -> Result<Vec<Pattern>, String> {
     for (_, _, d) in doc.metadata.psd_global_blocks.iter().filter(|(_, k, _)| PATTERN_KEYS.contains(k)) {
         let patterns = match parse_pattern_block_with(d, &mut budget) {
             Ok(patterns) => patterns,
-            Err(photocraft_psd::PsdError::OutOfMemory(error)) => return Err(error.to_string()),
+            Err(magicpic_psd::PsdError::OutOfMemory(error)) => return Err(error.to_string()),
             Err(_) => continue,
         };
         for p in patterns {
@@ -243,13 +243,13 @@ pub fn try_from_global_blocks(doc: &Document) -> Result<Vec<Pattern>, String> {
 /// Global blocks to write: the raw ones while they still match [`Document::patterns`] (see
 /// [`repair_legacy_blocks`]), else the raw pattern blocks replaced by one written from the
 /// document (at the first one's position).
-pub fn export_global_blocks(doc: &Document) -> Result<Vec<photocraft_doc::PsdGlobalBlock>, String> {
-    export_global_blocks_with_limit(doc, photocraft_doc::pattern::MAX_WORKING_BYTES)
+pub fn export_global_blocks(doc: &Document) -> Result<Vec<magicpic_doc::PsdGlobalBlock>, String> {
+    export_global_blocks_with_limit(doc, magicpic_doc::pattern::MAX_WORKING_BYTES)
 }
 
 /// The strict exporter with an explicit dense-plane allowance, so tests can exercise shared
 /// admission using tiny patterns instead of allocating the production-sized budget.
-pub(crate) fn export_global_blocks_with_limit(doc: &Document, limit: u64) -> Result<Vec<photocraft_doc::PsdGlobalBlock>, String> {
+pub(crate) fn export_global_blocks_with_limit(doc: &Document, limit: u64) -> Result<Vec<magicpic_doc::PsdGlobalBlock>, String> {
     let mut warnings = Vec::new();
     let blocks = export_global_blocks_with_warnings_limit(doc, &mut warnings, limit);
     if warnings.is_empty() { Ok(blocks) } else { Err(warnings.join("; ")) }
@@ -257,11 +257,11 @@ pub(crate) fn export_global_blocks_with_limit(doc: &Document, limit: u64) -> Res
 
 /// Export patterns through the PSD model's warning contract: unsafe dense replacements
 /// are omitted with their names and reasons; unchanged raw pattern blocks stay verbatim.
-pub fn export_global_blocks_with_warnings(doc: &Document, warnings: &mut Vec<String>) -> Vec<photocraft_doc::PsdGlobalBlock> {
-    export_global_blocks_with_warnings_limit(doc, warnings, photocraft_doc::pattern::MAX_WORKING_BYTES)
+pub fn export_global_blocks_with_warnings(doc: &Document, warnings: &mut Vec<String>) -> Vec<magicpic_doc::PsdGlobalBlock> {
+    export_global_blocks_with_warnings_limit(doc, warnings, magicpic_doc::pattern::MAX_WORKING_BYTES)
 }
 
-fn export_global_blocks_with_warnings_limit(doc: &Document, warnings: &mut Vec<String>, limit: u64) -> Vec<photocraft_doc::PsdGlobalBlock> {
+fn export_global_blocks_with_warnings_limit(doc: &Document, warnings: &mut Vec<String>, limit: u64) -> Vec<magicpic_doc::PsdGlobalBlock> {
     let raw = &doc.metadata.psd_global_blocks;
     if from_global_blocks(doc) == doc.patterns {
         return repair_legacy_blocks(raw);
@@ -304,11 +304,11 @@ fn export_global_blocks_with_warnings_limit(doc: &Document, warnings: &mut Vec<S
     out
 }
 
-/// `raw` with each pattern block that keeps transparency where older PhotoCraft builds put it
+/// `raw` with each pattern block that keeps transparency where older MagicPic builds put it
 /// (which Photoshop refuses, #8054) rewritten in place from its own patterns. Every other block,
 /// unreadable pattern blocks included, is kept verbatim. Blocks are decoded in order with one
 /// shared budget, as [`from_global_blocks`] decodes them.
-fn repair_legacy_blocks(raw: &[photocraft_doc::PsdGlobalBlock]) -> Vec<photocraft_doc::PsdGlobalBlock> {
+fn repair_legacy_blocks(raw: &[magicpic_doc::PsdGlobalBlock]) -> Vec<magicpic_doc::PsdGlobalBlock> {
     if !raw.iter().any(|(_, k, d)| PATTERN_KEYS.contains(k) && block_has_user_mask(d)) {
         return raw.to_vec();
     }
@@ -331,20 +331,20 @@ fn repair_legacy_blocks(raw: &[photocraft_doc::PsdGlobalBlock]) -> Vec<photocraf
 
 /// Reads a `.pat` pattern file.
 pub fn read_pat(bytes: &[u8]) -> Result<Vec<Pattern>, String> {
-    let ps = photocraft_psd::patterns::parse_pat_file(bytes).map_err(|e| format!("not a readable .pat file: {e}"))?;
+    let ps = magicpic_psd::patterns::parse_pat_file(bytes).map_err(|e| format!("not a readable .pat file: {e}"))?;
     Ok(ps.iter().filter_map(from_psd).collect())
 }
 
 /// Writes patterns as a `.pat` file.
 pub fn write_pat(patterns: &[Pattern]) -> Result<Vec<u8>, String> {
     let patterns = to_psd_patterns(patterns)?;
-    photocraft_psd::patterns::write_pat_file(&patterns).map_err(|e| e.to_string())
+    magicpic_psd::patterns::write_pat_file(&patterns).map_err(|e| e.to_string())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_color::SampleType;
+    use magicpic_color::SampleType;
 
     fn pattern(mode: ColorMode, s: SampleType, alpha: bool) -> Pattern {
         let fmt = PixelFormat::new(mode, s, alpha);
@@ -380,7 +380,7 @@ mod tests {
 
     #[test]
     fn export_reuses_raw_blocks_until_patterns_change() {
-        let mut d = Document::new("x", photocraft_geom::Size { width: 4, height: 4 }, ColorMode::Rgb, SampleType::U8);
+        let mut d = Document::new("x", magicpic_geom::Size { width: 4, height: 4 }, ColorMode::Rgb, SampleType::U8);
         let p = pattern(ColorMode::Rgb, SampleType::U8, false);
         let raw = write_pattern_block(&[to_psd(&p).unwrap()]).unwrap();
         d.metadata.psd_global_blocks = vec![(*b"8BIM", *b"Txt2", Arc::new(vec![1])), (*b"8BIM", *b"Patt", Arc::new(raw.clone()))];
@@ -401,7 +401,7 @@ mod tests {
     fn transparent_pattern_blocks_from_older_builds_are_rewritten_on_save() {
         // #8054: Define Pattern over transparency, then a Pattern Fill layer; Photoshop refused
         // the PSD because the pattern's transparency sat in the user mask array.
-        let mut d = Document::new("x", photocraft_geom::Size { width: 4, height: 4 }, ColorMode::Rgb, SampleType::U16);
+        let mut d = Document::new("x", magicpic_geom::Size { width: 4, height: 4 }, ColorMode::Rgb, SampleType::U16);
         d.patterns.push(pattern(ColorMode::Rgb, SampleType::U16, true));
         let out = export_global_blocks(&d).unwrap();
         assert_eq!(out.len(), 1);
@@ -435,8 +435,8 @@ mod tests {
 #[cfg(test)]
 mod unpaintable_tests {
     use super::*;
-    use photocraft_doc::PixelFormat;
-    use photocraft_raster::Surface;
+    use magicpic_doc::PixelFormat;
+    use magicpic_raster::Surface;
 
     #[test]
     fn a_pattern_too_large_to_paint_is_named_on_opening() {
@@ -461,7 +461,7 @@ mod allocation_tests {
 
     #[test]
     fn shared_small_export_budget_is_an_error_without_warnings_and_explicit_with_warnings() {
-        let mut doc = Document::new("Patterns", photocraft_geom::Size::new(1, 1), ColorMode::Rgb, SampleType::U8);
+        let mut doc = Document::new("Patterns", magicpic_geom::Size::new(1, 1), ColorMode::Rgb, SampleType::U8);
         for name in ["First", "Second"] {
             let mut surface = Surface::new(PixelFormat::RGBA8);
             surface.fill_rect(Rect::new(0, 0, 2, 2), &[1., 0., 0., 1.]);
@@ -485,12 +485,12 @@ mod allocation_tests {
     fn oversized_native_pattern_declarations_are_preserved_but_exported_without_expansion() {
         for depth in SampleType::ALL {
             for mode in [ColorMode::Rgb, ColorMode::Multichannel] {
-                let mut doc = Document::new("Stored pattern declaration", photocraft_geom::Size::new(2, 2), mode, depth);
+                let mut doc = Document::new("Stored pattern declaration", magicpic_geom::Size::new(2, 2), mode, depth);
                 let mut surface = Surface::new(PixelFormat::new(ColorMode::Rgb, depth, true));
                 surface.write_pixel(0, 0, &[0.25, 0.5, 0.75, 1.]);
                 doc.patterns.push(Pattern { id: "oversized".into(), name: "Oversized retained pattern".into(), width: 30_000, height: 30_000, surface });
-                let bytes = photocraft_format::save_to_bytes(&doc, &Default::default()).unwrap();
-                let loaded = photocraft_format::load_from_bytes(&bytes).unwrap();
+                let bytes = magicpic_format::save_to_bytes(&doc, &Default::default()).unwrap();
+                let loaded = magicpic_format::load_from_bytes(&bytes).unwrap();
                 let before = loaded.clone();
                 let pattern = &loaded.patterns[0];
                 assert_eq!((pattern.width, pattern.height, pattern.surface.tile_count()), (30_000, 30_000, 1));
@@ -509,8 +509,8 @@ mod allocation_tests {
                     assert!(file.global_blocks.iter().all(|b| !PATTERN_KEYS.contains(&b.key) || b.data.is_empty()));
                 }
                 assert_eq!(loaded, before);
-                let saved = photocraft_format::save_to_bytes(&loaded, &Default::default()).unwrap();
-                assert_eq!(photocraft_format::load_from_bytes(&saved).unwrap().patterns, loaded.patterns);
+                let saved = magicpic_format::save_to_bytes(&loaded, &Default::default()).unwrap();
+                assert_eq!(magicpic_format::load_from_bytes(&saved).unwrap().patterns, loaded.patterns);
             }
         }
     }
@@ -525,7 +525,7 @@ mod allocation_tests {
             height: 5000,
             surface: Surface::new(PixelFormat::new(ColorMode::Rgb, SampleType::F32, true)),
         };
-        assert!(p.pixel_count() <= photocraft_doc::pattern::MAX_PAINT_PIXELS);
+        assert!(p.pixel_count() <= magicpic_doc::pattern::MAX_PAINT_PIXELS);
         assert!(to_psd(&p).unwrap_err().contains("memory budget"));
         // A tiny injected allowance proves that later patterns cannot reuse retained planes'
         // reservation, without creating a large buffer in the test.
@@ -540,7 +540,7 @@ mod allocation_tests {
     #[test]
     /// Keep safe patterns and unchanged raw blocks when an oversized pattern must be omitted from export.
     fn unsafe_pattern_omission_preserves_other_patterns_and_raw_blocks() {
-        let mut doc = Document::new("Patterns", photocraft_geom::Size::new(2, 2), ColorMode::Rgb, SampleType::U8);
+        let mut doc = Document::new("Patterns", magicpic_geom::Size::new(2, 2), ColorMode::Rgb, SampleType::U8);
         let mut surface = Surface::new(PixelFormat::RGBA8);
         surface.write_pixel(0, 0, &[1., 0., 0., 1.]);
         let small = Pattern { id: "small".into(), name: "Small".into(), width: 2, height: 2, surface };

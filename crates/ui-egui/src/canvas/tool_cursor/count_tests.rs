@@ -5,20 +5,20 @@
 use serde_json::json;
 
 use super::{CountCursor, count};
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::canvas::ToolEvent;
 use crate::state::Tool;
 
 /// A 200 × 100 document with the Count tool and one marker at 50,40.
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 100})).unwrap();
     app.run("count.add", json!({"x": 50, "y": 40})).unwrap();
     app.ui.tool = Tool::Count;
     app
 }
 
-fn markers(app: &PhotocraftApp) -> Vec<[f64; 2]> {
+fn markers(app: &MagicpicApp) -> Vec<[f64; 2]> {
     app.session.active().unwrap().doc.measurement.count_groups.iter().flat_map(|g| g.points.clone()).collect()
 }
 

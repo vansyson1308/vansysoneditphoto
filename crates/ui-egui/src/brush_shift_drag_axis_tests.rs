@@ -7,21 +7,21 @@
 //! - ⇧-click still draws a line from the last painted point in any direction.
 //! - The Freeform Pen's and the Gradient tool's ⇧ 45° snap are unchanged.
 //!
-//! The bounds below are PhotoCraft's own: the default 20 px round tip covers 24 px in each
+//! The bounds below are MagicPic's own: the default 20 px round tip covers 24 px in each
 //! direction (start dab 88,88 → 112,112), so a line from 100,100 to 200,100 bounds 88,88 →
 //! 212,112 -- the same flat band the reference application's 89,89 → 110,110 start dab shows.
 
-use photocraft_geom::Rect;
+use magicpic_geom::Rect;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::canvas::{ToolEvent, tool_event};
 use crate::state::Tool;
 use crate::stroke_constraint::{Axis, constrain};
 
 /// A fresh transparent document with the default brush and no smoothing, as the issue measured.
-fn app(tool: Tool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app(tool: Tool) -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 320, "height": 320, "background": "transparent"})).unwrap();
     app.session.tools.brush.smoothing.amount = 0.0;
     app.ui.tool = tool;
@@ -29,7 +29,7 @@ fn app(tool: Tool) -> PhotocraftApp {
 }
 
 /// ⇧-drag from `from` through `mids` to `to`, holding ⇧ the whole way.
-fn shift_drag(app: &mut PhotocraftApp, from: [f64; 2], mids: &[[f64; 2]], to: [f64; 2]) {
+fn shift_drag(app: &mut MagicpicApp, from: [f64; 2], mids: &[[f64; 2]], to: [f64; 2]) {
     let shift = egui::Modifiers::SHIFT;
     tool_event(app, ToolEvent::Down { x: from[0], y: from[1], pressure: 1.0 }, shift);
     for p in mids.iter().chain(std::iter::once(&to)) {
@@ -38,15 +38,15 @@ fn shift_drag(app: &mut PhotocraftApp, from: [f64; 2], mids: &[[f64; 2]], to: [f
     tool_event(app, ToolEvent::Up { x: to[0], y: to[1] }, shift);
 }
 
-fn bounds(app: &PhotocraftApp) -> Rect {
+fn bounds(app: &MagicpicApp) -> Rect {
     app.session.documents()[0].doc.layers[0].surface().unwrap().content_bounds()
 }
 
-fn alpha(app: &PhotocraftApp, x: i32, y: i32) -> f32 {
+fn alpha(app: &MagicpicApp, x: i32, y: i32) -> f32 {
     app.session.documents()[0].doc.layers[0].surface().unwrap().rgba(x, y)[3]
 }
 
-fn points(app: &PhotocraftApp) -> Vec<[f64; 2]> {
+fn points(app: &MagicpicApp) -> Vec<[f64; 2]> {
     let p = app.session.journal.iter().rev().find(|(id, _)| id == "paint.stroke").map(|(_, p)| p.clone()).unwrap();
     p["points"].as_array().unwrap().iter().map(|q| [q[0].as_f64().unwrap(), q[1].as_f64().unwrap()]).collect()
 }

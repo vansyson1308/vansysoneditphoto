@@ -2,8 +2,8 @@
 //! class `artboardSection` (`docs/atn.md`, "Recorded through the menus").
 
 use super::*;
-use photocraft_doc::{Layer, LayerId};
-use photocraft_geom::Rect;
+use magicpic_doc::{Layer, LayerId};
+use magicpic_geom::Rect;
 
 const NEW: &str = "layer.new.artboard";
 const FROM_LAYERS: &str = "layer.new.artboardFromLayers";
@@ -64,7 +64,7 @@ fn load(items: Vec<AtnItem>) -> (Session, Value) {
         ..Default::default()
     };
     let mut s = Session::new();
-    let r = s.execute("actions.load", json!({"data": photocraft_paint::tile::b64_encode(&atn::write(&file).unwrap())})).unwrap();
+    let r = s.execute("actions.load", json!({"data": magicpic_paint::tile::b64_encode(&atn::write(&file).unwrap())})).unwrap();
     (s, r)
 }
 
@@ -72,7 +72,7 @@ fn load(items: Vec<AtnItem>) -> (Session, Value) {
 fn saved(s: &mut Session) -> Vec<AtnItem> {
     let r = s.execute("actions.save", json!({"action": "A"})).unwrap();
     assert_eq!(r["skipped"], json!([]), "{r}");
-    atn::parse(&photocraft_paint::tile::b64_decode(r["data"].as_str().unwrap()).unwrap()).unwrap().actions.remove(0).items
+    atn::parse(&magicpic_paint::tile::b64_decode(r["data"].as_str().unwrap()).unwrap()).unwrap().actions.remove(0).items
 }
 
 /// The descriptor `id` with `p` saves as, if it saves.
@@ -151,7 +151,7 @@ fn a_loaded_artboard_from_layers_step_plays_and_undoes() {
         .edit("square", |doc, active| {
             let fmt = doc.pixel_format();
             let mut l = Layer::raster("Square", fmt);
-            l.surface_mut().unwrap().fill_rect(Rect::new(10, 15, 30, 45), &photocraft_raster::from_rgba(&fmt, [1.0, 0.0, 0.0, 1.0]));
+            l.surface_mut().unwrap().fill_rect(Rect::new(10, 15, 30, 45), &magicpic_raster::from_rgba(&fmt, [1.0, 0.0, 0.0, 1.0]));
             let id = doc.insert_above(None, l);
             *active = Some(id);
             Ok(id)
@@ -168,7 +168,7 @@ fn a_loaded_artboard_from_layers_step_plays_and_undoes() {
     assert_eq!(s.active().unwrap().doc.artboard_of(square), None);
 }
 
-/// A step recorded in PhotoCraft writes the measured keys without the session ids, `Nm  ` only
+/// A step recorded in MagicPic writes the measured keys without the session ids, `Nm  ` only
 /// for a name of its own, and loads back to the same settings.
 #[test]
 fn native_steps_save_the_measured_keys() {
@@ -306,7 +306,7 @@ fn oversized_recordings_are_not_kept_or_parsed() {
     assert_eq!(r["unsupported"].as_array().map(Vec::len), Some(1), "{r}");
     assert_eq!(saved(&mut s)[0].descriptor.as_ref().map(Descriptor::to_bytes), Some(huge.to_bytes()));
     // The same recording stored by hand: it matches the settings, but it is past the bound.
-    let p = json!({"rect": [10, 20, 100, 50], "name": long, SOURCE: photocraft_paint::tile::b64_encode(&huge.to_bytes())});
+    let p = json!({"rect": [10, 20, 100, 50], "name": long, SOURCE: magicpic_paint::tile::b64_encode(&huge.to_bytes())});
     let mut canonical = huge;
     canonical.items.retain(|(k, _)| !k.is("layerSectionStart") && !k.is("layerSectionEnd"));
     assert_eq!(exported(NEW, &p), Some(canonical));

@@ -19,7 +19,7 @@ pub(super) fn merge_spot(s: &mut Session, p: &Value) -> Result<Value> {
     s.edit("Merge Spot Channel", |doc, active| {
         let area = doc.bounds();
         let fmt = doc.pixel_format();
-        let comp = photocraft_compose::render(doc, area);
+        let comp = magicpic_compose::render(doc, area);
         let k = read_plane(&doc.channels[i].surface, area);
         let ink = ink.to_rgb();
         // Ink over the image: opaque at 100% solidity, multiplied (transparent ink) at 0%.
@@ -75,7 +75,7 @@ pub(super) fn split(s: &mut Session, p: &Value) -> Result<Value> {
     let mode = edit_mode(&doc);
     // A CMYK composite's channels are its inks: mixed on ink values where the stack allows, since
     // a trip through RGB moves them by a few levels (#9236).
-    let inks = if mode == ColorMode::Cmyk { photocraft_compose::cmyk::render_cmyk(&doc, doc.bounds()) } else { None };
+    let inks = if mode == ColorMode::Cmyk { magicpic_compose::cmyk::render_cmyk(&doc, doc.bounds()) } else { None };
     let (px, n) = match inks {
         Some(buf) => {
             let n = doc.pixel_format().channels();

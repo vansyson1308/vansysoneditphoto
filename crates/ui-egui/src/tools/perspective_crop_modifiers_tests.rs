@@ -11,8 +11,8 @@ const SHIFT: Modifiers = Modifiers::SHIFT;
 const ALT: Modifiers = Modifiers::ALT;
 
 /// An 800 × 500 document with the Perspective Crop tool.
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 800, "height": 500})).unwrap();
     app.sync_views();
     app.ui.tool = Tool::PerspectiveCrop;
@@ -20,7 +20,7 @@ fn app() -> PhotocraftApp {
 }
 
 /// A press at `from`, a move and the release at `to`, all with `mods`.
-fn drag(app: &mut PhotocraftApp, from: [f64; 2], to: [f64; 2], mods: Modifiers) {
+fn drag(app: &mut MagicpicApp, from: [f64; 2], to: [f64; 2], mods: Modifiers) {
     assert!(pointer(app, ToolEvent::Down { x: from[0], y: from[1], pressure: 1.0 }, mods));
     let mid = [(from[0] + to[0]) / 2.0, (from[1] + to[1]) / 2.0];
     assert!(pointer(app, ToolEvent::Move { x: mid[0], y: mid[1], pressure: 1.0 }, mods));
@@ -101,11 +101,11 @@ fn alt_corner_drag_past_the_opposite_corner_on_both_axes_turns_the_rectangle_180
     app.ui.perspective_crop = Some([[100.0, 100.0], [500.0, 100.0], [500.0, 400.0], [100.0, 400.0]]);
     // Where the turned rectangle will lie (40,60 to 100,100): a red patch in its bottom right and
     // a green one in its top left.
-    let patch = |app: &mut PhotocraftApp, x: i32, y: i32, c: [f32; 4]| {
+    let patch = |app: &mut MagicpicApp, x: i32, y: i32, c: [f32; 4]| {
         Arc::make_mut(&mut app.session.active_mut().unwrap().doc).layers[0]
             .surface_mut()
             .unwrap()
-            .fill_rect(photocraft_geom::Rect::from_xywh(x, y, 10, 10), &c);
+            .fill_rect(magicpic_geom::Rect::from_xywh(x, y, 10, 10), &c);
     };
     patch(&mut app, 90, 90, [1.0, 0.0, 0.0, 1.0]);
     patch(&mut app, 40, 60, [0.0, 1.0, 0.0, 1.0]);

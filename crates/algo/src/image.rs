@@ -1,7 +1,7 @@
 //! Interleaved `f32` image regions and sampling helpers.
 
-use photocraft_geom::Rect;
-use photocraft_raster::{Surface, scratch};
+use magicpic_geom::Rect;
+use magicpic_raster::{Surface, scratch};
 
 /// How samples outside an image are read.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

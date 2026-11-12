@@ -3,7 +3,7 @@
 //! Eyedropper shares with the Color Sampler.
 
 use super::*;
-use photocraft_geom::Rect;
+use magicpic_geom::Rect;
 
 /// The issue's test document: 800 × 600 RGB/8 white, with 2 px black and 2 px white vertical
 /// stripes at 350,100 to 450,200 (black at x 350–351, 354–355, …).
@@ -12,7 +12,7 @@ fn stripes() -> Session {
     s.execute("file.new", json!({"width": 800, "height": 600, "background": "white"})).unwrap();
     s.edit("stripes", |doc, _| {
         let surf = doc.layers[0].surface_mut().unwrap();
-        let black = photocraft_raster::from_rgba(&surf.format(), [0.0, 0.0, 0.0, 1.0]);
+        let black = magicpic_raster::from_rgba(&surf.format(), [0.0, 0.0, 0.0, 1.0]);
         for x in (350..450).step_by(4) {
             surf.fill_rect(Rect::new(x, 100, x + 2, 200), &black);
         }
@@ -79,7 +79,7 @@ fn a_box_at_the_canvas_edge_averages_only_the_pixels_inside() {
     s.execute("file.new", json!({"width": 20, "height": 10, "background": "white"})).unwrap();
     s.edit("dot", |doc, _| {
         let surf = doc.layers[0].surface_mut().unwrap();
-        let black = photocraft_raster::from_rgba(&surf.format(), [0.0, 0.0, 0.0, 1.0]);
+        let black = magicpic_raster::from_rgba(&surf.format(), [0.0, 0.0, 0.0, 1.0]);
         surf.fill_rect(Rect::new(0, 0, 1, 1), &black);
         Ok(())
     })
@@ -106,7 +106,7 @@ fn a_bad_size_is_an_error_not_a_panic() {
 fn bitmap_and_multichannel_documents_keep_the_point_readout_at_every_size() {
     // #11732 did not measure these two modes, so they keep today's behaviour: a Point Sample
     // reading, whatever Sample Size the Color Sampler and the Eyedropper share.
-    for mode in [photocraft_color::ColorMode::Bitmap, photocraft_color::ColorMode::Multichannel] {
+    for mode in [magicpic_color::ColorMode::Bitmap, magicpic_color::ColorMode::Multichannel] {
         let mut s = stripes();
         s.edit("mode", |doc, _| {
             doc.mode = mode;

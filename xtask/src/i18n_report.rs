@@ -14,8 +14,8 @@ struct Language {
 }
 
 /// `cargo xtask i18n-report` (the last `cargo xtask ci` step): per registered language, how many
-/// of PhotoCraft's English UI strings have a translation in the craft-i18n checkout
-/// `CRAFT_I18N_DIR` names, looked up as the app does (the `craft-i18n` crate: PhotoCraft's rows
+/// of MagicPic's English UI strings have a translation in the craft-i18n checkout
+/// `CRAFT_I18N_DIR` names, looked up as the app does (the `craft-i18n` crate: MagicPic's rows
 /// over the shared ones, a region falling back to its language), the strings it lacks, and how
 /// many rows are kept in English (a translation that is the English text itself). It never fails
 /// on a missing translation: that string shows in English, and translators fill it in craft-i18n.

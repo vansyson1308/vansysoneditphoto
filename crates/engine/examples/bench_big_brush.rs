@@ -2,15 +2,15 @@
 //! in `LiveStroke::push` (the engine's half of a frame; the canvas refresh comes after it).
 //!
 //! ```sh
-//! cargo run --release -p photocraft-engine --example bench_big_brush -- [brush.json] [--frames N] [--sizes 300,800,1500]
+//! cargo run --release -p magicpic-engine --example bench_big_brush -- [brush.json] [--frames N] [--sizes 300,800,1500]
 //! ```
 //!
 //! `brush.json` is a brush as Preferences saves it (`lastBrush.brush`, without its `tip`s). Without
 //! it the brush is a typical imported painting brush: a sampled tip at 5 % spacing with a Dual
 //! Brush twice its size, pressure size, opacity and flow, and 17 % smoothing. Then a soft round.
 //! Sampled tips are stand-ins of the imported brush's sizes.
-use photocraft_engine::{Session, brush_cmds::LiveStroke};
-use photocraft_paint::{StrokePoint, brush::BrushSettings, brush::TipShape, tile::GrayTile};
+use magicpic_engine::{Session, brush_cmds::LiveStroke};
+use magicpic_paint::{StrokePoint, brush::BrushSettings, brush::TipShape, tile::GrayTile};
 use serde_json::json;
 use std::time::Instant;
 

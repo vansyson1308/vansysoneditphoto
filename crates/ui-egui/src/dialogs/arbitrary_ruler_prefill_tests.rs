@@ -6,7 +6,7 @@
 //! decimal decided the dialog's value; only this field now keeps hundredths.
 
 use super::filter_dialog::{body, open, params_of, reset_fields};
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use serde_json::{Map, Value, json};
 
 /// Draw a dialog body once, as a live dialog does every frame: the drawn fields are what
@@ -30,8 +30,8 @@ fn drawn_texts(f: &mut Map<String, Value>) -> Vec<String> {
 
 /// A 318 px square document (the size `ok_runs_the_two_decimal_angle` measures on), a ruler
 /// from 100,100 to `end`, the opened Arbitrary dialog and its fields after one drawn frame.
-fn ruler_dialog(end: [i32; 2]) -> (PhotocraftApp, u64, Map<String, Value>) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn ruler_dialog(end: [i32; 2]) -> (MagicpicApp, u64, Map<String, Value>) {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 318, "height": 318})).unwrap();
     app.run("image.analysis.rulerTool", json!({"start": [100, 100], "end": end})).unwrap();
     let id = open(&mut app, "image.rotation.arbitrary").unwrap();
@@ -61,7 +61,7 @@ fn clockwise_ruler_prefills_clockwise_and_no_ruler_keeps_the_default() {
     assert_eq!(f["direction"], json!("cw"), "a rising ruler pre-fills Clockwise");
     assert!((a - 9.46).abs() < 1e-3, "the clockwise pre-fill is {a}, want 9.46 to two decimals");
     // No ruler: today's default, unchanged.
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 318, "height": 318})).unwrap();
     let id = open(&mut app, "image.rotation.arbitrary").unwrap();
     let mut f = app.ui.dialog_mut(id).unwrap().fields.clone();
@@ -153,7 +153,7 @@ fn other_number_fields_keep_their_precision() {
 /// the command, after opening or after Alt+Reset.
 #[test]
 fn the_ruler_angle_is_rounded_before_the_first_frame() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 318, "height": 318})).unwrap();
     app.run("image.analysis.rulerTool", json!({"start": [100, 100], "end": [143, 127]})).unwrap();
     let id = open(&mut app, "image.rotation.arbitrary").unwrap();

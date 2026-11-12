@@ -2,7 +2,7 @@
 
 use crate::common;
 use common::*;
-use photocraft_codecs::*;
+use magicpic_codecs::*;
 
 fn opts(l: Limits) -> DecodeOptions {
     DecodeOptions { limits: l, ..Default::default() }

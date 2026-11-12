@@ -3,7 +3,7 @@
 use std::io::Write;
 use std::sync::Arc;
 
-use photocraft_doc::import_conversion::{
+use magicpic_doc::import_conversion::{
     CONVERSION_SCHEMA_VERSION, ConversionReport, ConversionValidationError, ImportConversion, MAX_CONVERSION_ATTACHMENTS, MAX_CONVERSION_BYTES,
 };
 

@@ -2,17 +2,17 @@
 //! paths Direct Selection edits, one history step per click.
 
 use egui::Modifiers;
-use photocraft_doc::vector::Path;
-use photocraft_geom::Point;
+use magicpic_doc::vector::Path;
+use magicpic_geom::Point;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::canvas::{ToolEvent, tool_event};
 use crate::direct_select::PathRef;
 use crate::state::Tool;
 
-fn app(tool: Tool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app(tool: Tool) -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 200, "height": 200})).unwrap();
     app.sync_views();
     app.ui.tool = tool;
@@ -20,7 +20,7 @@ fn app(tool: Tool) -> PhotocraftApp {
 }
 
 /// A square work path; knot 1 at (120, 40) is smooth, so the top edge (0 → 1) is a curve.
-fn with_path(app: &mut PhotocraftApp) {
+fn with_path(app: &mut MagicpicApp) {
     let path = json!({"subpaths": [{"closed": true, "knots": [
         [40, 40],
         {"anchor": [120, 40], "in": [100, 20], "out": [140, 60], "smooth": true},
@@ -30,15 +30,15 @@ fn with_path(app: &mut PhotocraftApp) {
     app.run("path.set", json!({"name": "work", "path": path})).unwrap();
 }
 
-fn work(app: &PhotocraftApp) -> Path {
+fn work(app: &MagicpicApp) -> Path {
     app.session.active().unwrap().doc.work_path.clone().unwrap()
 }
 
-pub(super) fn steps(app: &PhotocraftApp) -> usize {
+pub(super) fn steps(app: &MagicpicApp) -> usize {
     app.session.active().unwrap().history.entries().len()
 }
 
-pub(super) fn click(app: &mut PhotocraftApp, at: [f64; 2], mods: Modifiers) {
+pub(super) fn click(app: &mut MagicpicApp, at: [f64; 2], mods: Modifiers) {
     tool_event(app, ToolEvent::Down { x: at[0], y: at[1], pressure: 1.0 }, mods);
     tool_event(app, ToolEvent::Up { x: at[0], y: at[1] }, mods);
 }
@@ -73,7 +73,7 @@ fn add_on_a_curve_splits_it_where_clicked() {
     let mut app = app(Tool::AddAnchorPoint);
     with_path(&mut app);
     let seg = work(&app).subpaths[0].segments()[0];
-    let on = photocraft_vector::edit::eval(&seg, 0.5);
+    let on = magicpic_vector::edit::eval(&seg, 0.5);
     click(&mut app, [on.x, on.y], Modifiers::NONE);
     let p = work(&app);
     let k = p.subpaths[0].knots[1];
@@ -81,10 +81,10 @@ fn add_on_a_curve_splits_it_where_clicked() {
     // The two halves still pass through the old curve's quarter points.
     let halves = &p.subpaths[0].segments()[..2];
     for t in [0.25, 0.75] {
-        let old = photocraft_vector::edit::eval(&seg, t);
+        let old = magicpic_vector::edit::eval(&seg, t);
         let near = halves
             .iter()
-            .flat_map(|s| (0..=400).map(move |i| photocraft_vector::edit::eval(s, f64::from(i) / 400.0)))
+            .flat_map(|s| (0..=400).map(move |i| magicpic_vector::edit::eval(s, f64::from(i) / 400.0)))
             .fold(f64::MAX, |d, q| d.min((q.x - old.x).hypot(q.y - old.y)));
         assert!(near < 0.1, "t={t}: {near}");
     }
@@ -232,7 +232,7 @@ fn add_and_delete_anchor_tools_edit_the_selected_saved_path() {
     let mut app = app(Tool::AddAnchorPoint);
     with_path(&mut app);
     let before_work = work(&app);
-    let path = photocraft_engine::vector_cmds::path_json(&before_work);
+    let path = magicpic_engine::vector_cmds::path_json(&before_work);
     app.run("path.set", json!({"name":"Saved", "path":path})).unwrap();
     app.ui.selected_path = Some("Saved".into());
     let n = steps(&app);
@@ -253,7 +253,7 @@ fn add_and_delete_anchor_tools_edit_the_selected_saved_path() {
     assert_eq!(app.session.active().unwrap().doc.paths.iter().find(|path| path.name == "Saved").unwrap().path, added);
 }
 
-fn pen_anchors(app: &PhotocraftApp) -> Vec<[f64; 2]> {
+fn pen_anchors(app: &MagicpicApp) -> Vec<[f64; 2]> {
     app.ui.pen.as_ref().map(|p| p.knots.iter().map(|k| k[0]).collect()).unwrap_or_default()
 }
 
@@ -317,7 +317,7 @@ fn the_pen_cursor_shows_auto_add_delete_on_the_path_being_drawn() {
     assert_eq!(badge(&app, Tool::Pen, Modifiers::SHIFT), None);
 }
 
-fn drag(app: &mut PhotocraftApp, from: [f64; 2], to: [f64; 2]) {
+fn drag(app: &mut MagicpicApp, from: [f64; 2], to: [f64; 2]) {
     tool_event(app, ToolEvent::Down { x: from[0], y: from[1], pressure: 1.0 }, Modifiers::NONE);
     let mid = [(from[0] + to[0]) / 2.0, (from[1] + to[1]) / 2.0];
     for at in [mid, to] {
@@ -327,7 +327,7 @@ fn drag(app: &mut PhotocraftApp, from: [f64; 2], to: [f64; 2]) {
 }
 
 /// A smooth knot: both handles pulled out, on one line through the anchor, on opposite sides.
-fn assert_smooth(k: &photocraft_doc::Knot) {
+fn assert_smooth(k: &magicpic_doc::Knot) {
     let (vi, vo) = ((k.in_ctrl.x - k.anchor.x, k.in_ctrl.y - k.anchor.y), (k.out_ctrl.x - k.anchor.x, k.out_ctrl.y - k.anchor.y));
     assert!(k.smooth, "{k:?}");
     assert!(vi.0.hypot(vi.1) > 1.0 && vo.0.hypot(vo.1) > 1.0, "both handles pulled out: {k:?}");
@@ -352,8 +352,8 @@ fn assert_close(got: &Path, want: &Path, what: &str) {
 /// `path` with the anchor a click at `at` adds, as the vector edit makes it, and that anchor.
 fn added_at(path: &Path, at: Point) -> (Path, [usize; 2]) {
     let mut p = path.clone();
-    let Some(photocraft_vector::edit::Hit::Segment(k, t)) = photocraft_vector::edit::hit(&p, at, 6.0, &[]) else { panic!("no segment at {at:?}") };
-    let added = photocraft_vector::edit::add_anchor(&mut p, k, t).unwrap();
+    let Some(magicpic_vector::edit::Hit::Segment(k, t)) = magicpic_vector::edit::hit(&p, at, 6.0, &[]) else { panic!("no segment at {at:?}") };
+    let added = magicpic_vector::edit::add_anchor(&mut p, k, t).unwrap();
     (p, added)
 }
 
@@ -364,7 +364,7 @@ fn an_added_anchor_on_a_curve_is_selected_smooth_and_shows_its_handles() {
     let mut app = app(Tool::AddAnchorPoint);
     with_path(&mut app);
     let before = work(&app);
-    let on = photocraft_vector::edit::eval(&before.subpaths[0].segments()[0], 0.4);
+    let on = magicpic_vector::edit::eval(&before.subpaths[0].segments()[0], 0.4);
     click(&mut app, [on.x, on.y], Modifiers::NONE);
     let p = work(&app);
     assert_eq!(p, added_at(&before, on).0, "the click is the vector split, nothing more");
@@ -384,10 +384,10 @@ fn dragging_from_an_add_moves_the_new_anchor_in_one_step() {
         let mut app = app(tool);
         with_path(&mut app);
         let (before, n) = (work(&app), steps(&app));
-        let on = photocraft_vector::edit::eval(&before.subpaths[0].segments()[0], 0.5);
+        let on = magicpic_vector::edit::eval(&before.subpaths[0].segments()[0], 0.5);
         drag(&mut app, [on.x, on.y], [on.x + 5.0, on.y + 15.0]);
         let (mut want, k) = added_at(&before, on);
-        photocraft_vector::edit::move_anchors(&mut want, &[k], [5.0, 15.0]).unwrap();
+        magicpic_vector::edit::move_anchors(&mut want, &[k], [5.0, 15.0]).unwrap();
         assert_close(&work(&app), &want, &format!("{tool:?}: the new anchor moved with its handles"));
         assert_smooth(&work(&app).subpaths[0].knots[1]);
         assert_eq!(steps(&app), n + 1, "{tool:?}: one step");
@@ -402,14 +402,14 @@ fn dragging_from_an_add_moves_the_new_anchor_in_one_step() {
 
 /// A Pen path being drawn: a corner at (40, 40), then a smooth anchor at (120, 40) dragged down,
 /// so the segment between them is a curve.
-fn app_with_curve_draft() -> PhotocraftApp {
+fn app_with_curve_draft() -> MagicpicApp {
     let mut app = app(Tool::Pen);
     click(&mut app, [40.0, 40.0], Modifiers::NONE);
     drag(&mut app, [120.0, 40.0], [120.0, 90.0]);
     app
 }
 
-fn pen_path(app: &PhotocraftApp) -> Path {
+fn pen_path(app: &MagicpicApp) -> Path {
     crate::vector_ui::pen_path(app.ui.pen.as_ref().unwrap())
 }
 
@@ -421,7 +421,7 @@ fn the_pen_adds_a_smooth_anchor_to_a_curve_being_drawn_and_drags_it() {
     let before = pen_path(&app);
     let seg = before.subpaths[0].segments()[0];
     assert!(seg[2] != seg[3], "the segment is a curve");
-    let on = photocraft_vector::edit::eval(&seg, 0.5);
+    let on = magicpic_vector::edit::eval(&seg, 0.5);
 
     click(&mut app, [on.x, on.y], Modifiers::NONE);
     let (want, k) = added_at(&before, on);
@@ -435,7 +435,7 @@ fn the_pen_adds_a_smooth_anchor_to_a_curve_being_drawn_and_drags_it() {
     let mut app = app_with_curve_draft();
     drag(&mut app, [on.x, on.y], [on.x, on.y - 20.0]);
     let (mut want, k) = added_at(&before, on);
-    photocraft_vector::edit::move_anchors(&mut want, &[k], [0.0, -20.0]).unwrap();
+    magicpic_vector::edit::move_anchors(&mut want, &[k], [0.0, -20.0]).unwrap();
     assert_close(&pen_path(&app), &want, "the drag moved the new anchor");
     assert_eq!(app.ui.pen.as_ref().map(|p| p.knots.len()), Some(3), "and placed no anchor of its own");
 }
@@ -447,7 +447,7 @@ fn a_drag_near_an_existing_anchor_adds_and_moves_nothing() {
     let mut app = app(Tool::AddAnchorPoint);
     with_path(&mut app);
     let (before, n) = (work(&app), steps(&app));
-    assert!(matches!(photocraft_vector::edit::hit(&before, Point::new(42.0, 41.0), 6.0, &[]), Some(photocraft_vector::edit::Hit::Anchor([0, 0]))));
+    assert!(matches!(magicpic_vector::edit::hit(&before, Point::new(42.0, 41.0), 6.0, &[]), Some(magicpic_vector::edit::Hit::Anchor([0, 0]))));
     drag(&mut app, [42.0, 41.0], [60.0, 70.0]);
     assert_eq!((work(&app), steps(&app)), (before, n));
     assert!(app.ui.direct_selection.anchors.is_empty() && app.ui.direct_selection.drag.is_none());

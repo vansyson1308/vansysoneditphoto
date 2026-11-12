@@ -4,7 +4,7 @@
 //! and every other mode paints what it painted before. Behind with Impressionist was not
 //! measured, so an Impressionist stroke paints what it paints in Normal.
 
-use photocraft_paint::StrokePoint;
+use magicpic_paint::StrokePoint;
 use serde_json::json;
 
 use super::*;
@@ -23,7 +23,7 @@ fn session(depth: u64, f: impl Fn(i32, i32) -> [f32; 4]) -> Session {
         let surf = doc.layer_mut(active.unwrap()).unwrap().surface_mut().unwrap();
         let fmt = surf.format();
         let data: Vec<f32> =
-            (b.y0..b.y1).flat_map(|y| (b.x0..b.x1).map(move |x| (x, y))).flat_map(|(x, y)| photocraft_raster::from_rgba(&fmt, f(x, y))).collect();
+            (b.y0..b.y1).flat_map(|y| (b.x0..b.x1).map(move |x| (x, y))).flat_map(|(x, y)| magicpic_raster::from_rgba(&fmt, f(x, y))).collect();
         surf.write_region(b, &data);
         Ok(())
     })
@@ -42,7 +42,7 @@ fn empty(_: i32, _: i32) -> [f32; 4] {
 }
 
 /// The active layer's pixels, row by row.
-fn pixels(doc: &photocraft_doc::Document, s: &Session) -> Vec<[f32; 4]> {
+fn pixels(doc: &magicpic_doc::Document, s: &Session) -> Vec<[f32; 4]> {
     let surf = doc.layer(s.active().unwrap().active_layer.unwrap()).unwrap().surface().unwrap();
     (0..H).flat_map(|y| (0..W).map(move |x| (x, y))).map(|(x, y)| surf.rgba(x, y)).collect()
 }

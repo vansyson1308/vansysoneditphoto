@@ -1,5 +1,5 @@
 use super::*;
-use photocraft_raster::{Interrupt, Surface};
+use magicpic_raster::{Interrupt, Surface};
 
 #[test]
 /// Without an owner extent, the requested area supplies Average's domain even beyond reference bounds.
@@ -154,7 +154,7 @@ fn native_matte_unassociation_keeps_separations_and_hdr() {
                 let mut expected = before.clone();
                 let a = *before.last().unwrap();
                 if a > 0. && a < 1. {
-                    let cmyk_black = photocraft_color::convert::rgb_to_cmyk([0.; 3]);
+                    let cmyk_black = magicpic_color::convert::rgb_to_cmyk([0.; 3]);
                     for (channel, v) in expected.iter_mut().take(format.channels() - 1).enumerate() {
                         let black: f32 = match (mode, channel) {
                             (ColorMode::Cmyk, c) => cmyk_black[c],
@@ -183,7 +183,7 @@ fn black_matte_keeps_lab_neutral_and_cmyk_native_separations() {
     let rect = Rect::new(0, 0, 1, 1);
     let mut cmyk = Surface::new(PixelFormat::new(ColorMode::Cmyk, SampleType::F32, true));
     let foreground = [0., 0.1, 0.2, 0.3];
-    let matte = photocraft_color::convert::rgb_to_cmyk([0.; 3]);
+    let matte = magicpic_color::convert::rgb_to_cmyk([0.; 3]);
     let mut observed: Vec<_> = foreground.into_iter().zip(matte).map(|(f, b)| 0.5 * f + 0.5 * b).collect();
     observed.push(0.5);
     cmyk.write_pixel(0, 0, &observed);

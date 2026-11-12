@@ -94,7 +94,7 @@ pub(crate) fn move_layers(doc: &mut Document, before: &Document, moves: &[(Layer
 
 /// [`move_layers`]. `wrap` is the canvas when View › Pattern Preview is on: raster pixels and
 /// linked masks on those layers that leave it come back on the opposite edge. `dx`/`dy` stay raw.
-pub(crate) fn move_layers_wrapped(doc: &mut Document, before: &Document, moves: &[(LayerId, i32, i32)], wrap: Option<photocraft_geom::Rect>) -> Result<()> {
+pub(crate) fn move_layers_wrapped(doc: &mut Document, before: &Document, moves: &[(LayerId, i32, i32)], wrap: Option<magicpic_geom::Rect>) -> Result<()> {
     for &(id, dx, dy) in moves {
         if dx == 0 && dy == 0 {
             continue;
@@ -209,7 +209,7 @@ pub fn translate(s: &mut Session, p: &Value) -> Result<Value> {
 
 /// The artboard a layer at `bounds` is on: the topmost board holding the centre of its bounds
 /// ([`crate::layer_place::centre`]), the rule a new layer is placed by. `boards` are top to bottom.
-fn board_under(boards: &[(LayerId, photocraft_geom::Rect)], bounds: photocraft_geom::Rect) -> Option<LayerId> {
+fn board_under(boards: &[(LayerId, magicpic_geom::Rect)], bounds: magicpic_geom::Rect) -> Option<LayerId> {
     let (cx, cy) = crate::layer_place::centre(bounds);
     boards.iter().find(|(_, r)| r.contains(cx, cy)).map(|(id, _)| *id)
 }
@@ -231,11 +231,11 @@ type Nest = ((usize, usize), LayerId, Option<LayerId>, Option<LayerId>);
 ///
 /// `ids` are the moved layers ([`move_targets`]), already at their new positions. Left where they
 /// are: artboards themselves, the Background, empty layers, layers whose board doesn't change, a
-/// group that would nest past [`photocraft_doc::MAX_GROUP_DEPTH`], and layers locked against it
+/// group that would nest past [`magicpic_doc::MAX_GROUP_DEPTH`], and layers locked against it
 /// with Lock › Prevent Auto-Nesting (on the layer, a group around it, or the board it would join).
 /// Returns the layers that changed board, bottom to top.
 fn auto_nest(doc: &mut Document, ids: &[LayerId]) -> Vec<LayerId> {
-    let boards: Vec<(LayerId, photocraft_geom::Rect)> = doc.artboards().into_iter().rev().map(|(id, _, board)| (id, board.rect)).collect();
+    let boards: Vec<(LayerId, magicpic_geom::Rect)> = doc.artboards().into_iter().rev().map(|(id, _, board)| (id, board.rect)).collect();
     if boards.is_empty() {
         return Vec::new();
     }
@@ -260,7 +260,7 @@ fn auto_nest(doc: &mut Document, ids: &[LayerId]) -> Vec<LayerId> {
         if from == to || to.is_some_and(|b| locked_board(doc, b)) || group.iter().any(|m| doc.effective_locks(m.id).artboard) {
             continue;
         }
-        if to.is_some() && group.iter().any(|m| 1 + crate::layer_place::subtree_depth(m) > photocraft_doc::MAX_GROUP_DEPTH) {
+        if to.is_some() && group.iter().any(|m| 1 + crate::layer_place::subtree_depth(m) > magicpic_doc::MAX_GROUP_DEPTH) {
             continue;
         }
         for (k, m) in group.into_iter().enumerate() {
@@ -329,7 +329,7 @@ pub fn moved_target(doc: &Document, ids: &[LayerId], dx: i32, dy: i32, mask_targ
 
 /// [`moved_target`] that wraps raster pixels inside `tile` (View › Pattern Preview). `None`
 /// is a straight move. `dx` and `dy` stay raw: only [`wrap_surface`] folds them into the tile.
-pub fn moved_wrapping(doc: &Document, ids: &[LayerId], dx: i32, dy: i32, mask_target: bool, wrap: Option<photocraft_geom::Rect>) -> Result<Document> {
+pub fn moved_wrapping(doc: &Document, ids: &[LayerId], dx: i32, dy: i32, mask_target: bool, wrap: Option<magicpic_geom::Rect>) -> Result<Document> {
     let mut out = doc.clone();
     for &id in ids {
         let locks = doc.effective_locks(id);
@@ -350,22 +350,22 @@ pub fn moved_wrapping(doc: &Document, ids: &[LayerId], dx: i32, dy: i32, mask_ta
 
 /// `dx` and `dy` folded into one `tile`. A tile with no extent leaves the delta unchanged.
 /// Raster wrapping uses this; text, shapes and other geometry keep the raw delta.
-pub fn wrapped_delta(dx: i32, dy: i32, tile: photocraft_geom::Rect) -> (i32, i32) {
+pub fn wrapped_delta(dx: i32, dy: i32, tile: magicpic_geom::Rect) -> (i32, i32) {
     let Some((w, h)) = tile_period(tile) else { return (dx, dy) };
     (wrap_axis(dx, w), wrap_axis(dy, h))
 }
 
-/// `photocraft_algo::resample::translate_surface` with the content scan cached per tile (a Move
+/// `magicpic_algo::resample::translate_surface` with the content scan cached per tile (a Move
 /// drag shifts the same layers every frame; scanning them each time cost more than the copy).
-pub(crate) fn shift_surface(s: &photocraft_raster::Surface, dx: i32, dy: i32) -> photocraft_raster::Surface {
-    s.translated(dx, dy, photocraft_compose::bounds::content_bounds(s))
+pub(crate) fn shift_surface(s: &magicpic_raster::Surface, dx: i32, dy: i32) -> magicpic_raster::Surface {
+    s.translated(dx, dy, magicpic_compose::bounds::content_bounds(s))
 }
 
 /// [`crate::commands::translate_layer`] plus the vector side, without re-rendering anything.
 /// `wrap` matches the commit: raster pixels fold back into the canvas.
-fn shift_shown(doc: &Document, l: &mut Layer, dx: i32, dy: i32, wrap: Option<photocraft_geom::Rect>) {
+fn shift_shown(doc: &Document, l: &mut Layer, dx: i32, dy: i32, wrap: Option<magicpic_geom::Rect>) {
     use self::shift_surface as translate_surface;
-    let a = photocraft_geom::Affine::translate(f64::from(dx), f64::from(dy));
+    let a = magicpic_geom::Affine::translate(f64::from(dx), f64::from(dy));
     if let Some(r) = &mut l.effects.reference {
         *r = (r.0 + f64::from(dx), r.1 + f64::from(dy));
     }
@@ -413,7 +413,7 @@ fn targets_only_wrap(doc: &Document, roots: &[LayerId], mask_target: bool) -> bo
 }
 
 fn subtree_wraps_only(l: &Layer, depth: usize) -> bool {
-    if depth > photocraft_doc::MAX_GROUP_DEPTH || l.effects.reference.is_some() || l.frame.is_some() {
+    if depth > magicpic_doc::MAX_GROUP_DEPTH || l.effects.reference.is_some() || l.frame.is_some() {
         return false;
     }
     if l.vector_mask.as_ref().is_some_and(|m| m.linked) && !wraps_linked_masks(&l.content) {
@@ -426,7 +426,7 @@ fn subtree_wraps_only(l: &Layer, depth: usize) -> bool {
     }
 }
 
-fn move_surface(s: &photocraft_raster::Surface, dx: i32, dy: i32, wrap: Option<photocraft_geom::Rect>) -> photocraft_raster::Surface {
+fn move_surface(s: &magicpic_raster::Surface, dx: i32, dy: i32, wrap: Option<magicpic_geom::Rect>) -> magicpic_raster::Surface {
     match wrap {
         Some(tile) => wrap_surface(s, dx, dy, tile),
         None => shift_surface(s, dx, dy),
@@ -444,7 +444,7 @@ pub(crate) fn wraps_linked_masks(content: &LayerContent) -> bool {
     }
 }
 
-fn tile_period(tile: photocraft_geom::Rect) -> Option<(i32, i32)> {
+fn tile_period(tile: magicpic_geom::Rect) -> Option<(i32, i32)> {
     let w = i32::try_from(tile.width()).ok()?;
     let h = i32::try_from(tile.height()).ok()?;
     (w > 0 && h > 0).then_some((w, h))
@@ -458,14 +458,14 @@ fn wrap_axis(delta: i32, period: i32) -> i32 {
 /// already outside the tile stay where they are. A shift that never leaves the tile is an
 /// ordinary move. Each wrap piece is a [`shift_surface`]-style tile copy of its source rect, so a
 /// live drag never materializes the in-canvas bounding rectangle as one buffer.
-pub(crate) fn wrap_surface(s: &photocraft_raster::Surface, dx: i32, dy: i32, tile: photocraft_geom::Rect) -> photocraft_raster::Surface {
+pub(crate) fn wrap_surface(s: &magicpic_raster::Surface, dx: i32, dy: i32, tile: magicpic_geom::Rect) -> magicpic_raster::Surface {
     let Some((w, h)) = tile_period(tile) else { return shift_surface(s, dx, dy) };
     let dx = wrap_axis(dx, w);
     let dy = wrap_axis(dy, h);
     if dx == 0 && dy == 0 {
         return s.clone();
     }
-    let content = photocraft_compose::bounds::content_bounds(s);
+    let content = magicpic_compose::bounds::content_bounds(s);
     let inside = content.intersect(&tile);
     if inside.is_empty() {
         return s.clone();
@@ -496,7 +496,7 @@ pub(crate) fn wrap_surface(s: &photocraft_raster::Surface, dx: i32, dy: i32, til
     out
 }
 
-fn shifted_piece(s: &photocraft_raster::Surface, dest: photocraft_geom::Rect, from: photocraft_geom::Rect) -> Option<photocraft_raster::Surface> {
+fn shifted_piece(s: &magicpic_raster::Surface, dest: magicpic_geom::Rect, from: magicpic_geom::Rect) -> Option<magicpic_raster::Surface> {
     let ox = dest.x0.checked_sub(from.x0)?;
     let oy = dest.y0.checked_sub(from.y0)?;
     let mut piece = s.translated(ox, oy, from);
@@ -507,7 +507,7 @@ fn shifted_piece(s: &photocraft_raster::Surface, dest: photocraft_geom::Rect, fr
 /// Drop samples `translated` kept because a tile-aligned shift clones whole 256×256 tiles.
 /// Only stored tiles are visited, so a sparse layer on a large canvas does not allocate the
 /// empty space between them.
-fn clip_to_rect(s: &mut photocraft_raster::Surface, dest: photocraft_geom::Rect) {
+fn clip_to_rect(s: &mut magicpic_raster::Surface, dest: magicpic_geom::Rect) {
     let coords: Vec<_> = s.tiles().map(|(c, _)| *c).collect();
     if coords.is_empty() {
         return;
@@ -528,7 +528,7 @@ fn clip_to_rect(s: &mut photocraft_raster::Surface, dest: photocraft_geom::Rect)
 }
 
 /// Copy `r` from stored source tiles (at most one 256×256 buffer at a time). Empty source tiles stay default.
-fn copy_rect(dst: &mut photocraft_raster::Surface, src: &photocraft_raster::Surface, r: photocraft_geom::Rect) {
+fn copy_rect(dst: &mut magicpic_raster::Surface, src: &magicpic_raster::Surface, r: magicpic_geom::Rect) {
     if r.is_empty() {
         return;
     }
@@ -546,8 +546,8 @@ fn copy_rect(dst: &mut photocraft_raster::Surface, src: &photocraft_raster::Surf
 /// the canvas stay put. Intersect/subtract masks keep the raw delta: flattening those copies
 /// would change the Boolean. Simple combine masks wrap as at most four zone copies of the
 /// in-canvas subpaths.
-pub(crate) fn wrap_path(path: &photocraft_doc::Path, dx: i32, dy: i32, tile: photocraft_geom::Rect) -> photocraft_doc::Path {
-    let a = photocraft_geom::Affine::translate(f64::from(dx), f64::from(dy));
+pub(crate) fn wrap_path(path: &magicpic_doc::Path, dx: i32, dy: i32, tile: magicpic_geom::Rect) -> magicpic_doc::Path {
+    let a = magicpic_geom::Affine::translate(f64::from(dx), f64::from(dy));
     let Some((w, h)) = tile_period(tile) else { return path.transform(&a) };
     let dx = wrap_axis(dx, w);
     let dy = wrap_axis(dy, h);
@@ -556,14 +556,14 @@ pub(crate) fn wrap_path(path: &photocraft_doc::Path, dx: i32, dy: i32, tile: pho
     }
     // Intersect/subtract/exclude copies would flatten into one Boolean and hide a seam. Keep
     // the raw delta; only Combine/Join can be unioned as wrap-zone copies.
-    let simple = !path.inverted && path.subpaths.iter().all(|s| matches!(s.op, photocraft_doc::PathOp::Combine | photocraft_doc::PathOp::Join));
+    let simple = !path.inverted && path.subpaths.iter().all(|s| matches!(s.op, magicpic_doc::PathOp::Combine | magicpic_doc::PathOp::Join));
     if !simple {
         return path.transform(&a);
     }
     let mut outside = Vec::new();
     let mut inside = Vec::new();
     for sub in &path.subpaths {
-        let one = photocraft_doc::Path { subpaths: vec![sub.clone()], fill_rule: path.fill_rule, inverted: false };
+        let one = magicpic_doc::Path { subpaths: vec![sub.clone()], fill_rule: path.fill_rule, inverted: false };
         if path_overlaps_tile(&one, tile) {
             inside.push(sub.clone());
         } else {
@@ -573,14 +573,14 @@ pub(crate) fn wrap_path(path: &photocraft_doc::Path, dx: i32, dy: i32, tile: pho
     if inside.is_empty() {
         return path.clone();
     }
-    let inside_path = photocraft_doc::Path { subpaths: inside, fill_rule: path.fill_rule, inverted: false };
+    let inside_path = magicpic_doc::Path { subpaths: inside, fill_rule: path.fill_rule, inverted: false };
     let mut wrapped = wrap_simple_inside(&inside_path, dx, dy, tile, w, h);
     wrapped.subpaths.extend(outside);
     wrapped
 }
 
-fn wrap_simple_inside(path: &photocraft_doc::Path, dx: i32, dy: i32, tile: photocraft_geom::Rect, w: i32, h: i32) -> photocraft_doc::Path {
-    let moved = path.transform(&photocraft_geom::Affine::translate(f64::from(dx), f64::from(dy)));
+fn wrap_simple_inside(path: &magicpic_doc::Path, dx: i32, dy: i32, tile: magicpic_geom::Rect, w: i32, h: i32) -> magicpic_doc::Path {
+    let moved = path.transform(&magicpic_geom::Affine::translate(f64::from(dx), f64::from(dy)));
     if path_inside_tile(&moved, tile) {
         return moved;
     }
@@ -589,15 +589,15 @@ fn wrap_simple_inside(path: &photocraft_doc::Path, dx: i32, dy: i32, tile: photo
     if path.subpaths.len() > 4 {
         return moved;
     }
-    let mut out = photocraft_doc::Path { subpaths: Vec::new(), fill_rule: moved.fill_rule, inverted: moved.inverted };
+    let mut out = magicpic_doc::Path { subpaths: Vec::new(), fill_rule: moved.fill_rule, inverted: moved.inverted };
     for (sx, sy) in [(0, 0), (-w, 0), (0, -h), (-w, -h)] {
-        let copy = moved.transform(&photocraft_geom::Affine::translate(f64::from(sx), f64::from(sy)));
+        let copy = moved.transform(&magicpic_geom::Affine::translate(f64::from(sx), f64::from(sy)));
         if !path_overlaps_tile(&copy, tile) {
             continue;
         }
         for (i, mut sub) in copy.subpaths.into_iter().enumerate() {
             if !out.subpaths.is_empty() && i == 0 {
-                sub.op = photocraft_doc::PathOp::Combine;
+                sub.op = magicpic_doc::PathOp::Combine;
             }
             out.subpaths.push(sub);
         }
@@ -605,18 +605,18 @@ fn wrap_simple_inside(path: &photocraft_doc::Path, dx: i32, dy: i32, tile: photo
     if out.subpaths.is_empty() { moved } else { out }
 }
 
-fn path_inside_tile(path: &photocraft_doc::Path, tile: photocraft_geom::Rect) -> bool {
+fn path_inside_tile(path: &magicpic_doc::Path, tile: magicpic_geom::Rect) -> bool {
     path.control_bounds()
         .is_some_and(|(x0, y0, x1, y1)| x0 >= f64::from(tile.x0) && y0 >= f64::from(tile.y0) && x1 <= f64::from(tile.x1) && y1 <= f64::from(tile.y1))
 }
 
-fn path_overlaps_tile(path: &photocraft_doc::Path, tile: photocraft_geom::Rect) -> bool {
+fn path_overlaps_tile(path: &magicpic_doc::Path, tile: magicpic_geom::Rect) -> bool {
     path.control_bounds()
         .is_some_and(|(x0, y0, x1, y1)| x1 > f64::from(tile.x0) && x0 < f64::from(tile.x1) && y1 > f64::from(tile.y0) && y0 < f64::from(tile.y1))
 }
 
 /// `area` minus `hole`, as at most four rectangles.
-fn rect_minus(area: photocraft_geom::Rect, hole: photocraft_geom::Rect) -> Vec<photocraft_geom::Rect> {
+fn rect_minus(area: magicpic_geom::Rect, hole: magicpic_geom::Rect) -> Vec<magicpic_geom::Rect> {
     let hit = area.intersect(&hole);
     if hit.is_empty() {
         return vec![area];
@@ -626,16 +626,16 @@ fn rect_minus(area: photocraft_geom::Rect, hole: photocraft_geom::Rect) -> Vec<p
     }
     let mut out = Vec::new();
     if area.x0 < hit.x0 {
-        out.push(photocraft_geom::Rect::new(area.x0, area.y0, hit.x0, area.y1));
+        out.push(magicpic_geom::Rect::new(area.x0, area.y0, hit.x0, area.y1));
     }
     if hit.x1 < area.x1 {
-        out.push(photocraft_geom::Rect::new(hit.x1, area.y0, area.x1, area.y1));
+        out.push(magicpic_geom::Rect::new(hit.x1, area.y0, area.x1, area.y1));
     }
     if area.y0 < hit.y0 {
-        out.push(photocraft_geom::Rect::new(hit.x0, area.y0, hit.x1, hit.y0));
+        out.push(magicpic_geom::Rect::new(hit.x0, area.y0, hit.x1, hit.y0));
     }
     if hit.y1 < area.y1 {
-        out.push(photocraft_geom::Rect::new(hit.x0, hit.y1, hit.x1, area.y1));
+        out.push(magicpic_geom::Rect::new(hit.x0, hit.y1, hit.x1, area.y1));
     }
     out.retain(|r| !r.is_empty());
     out
@@ -644,14 +644,14 @@ fn rect_minus(area: photocraft_geom::Rect, hole: photocraft_geom::Rect) -> Vec<p
 /// `(destination inside the tile, source rect inside `src`)` for a non-negative `dx`/`dy`
 /// smaller than the tile.
 fn wrap_pieces(
-    src: photocraft_geom::Rect,
+    src: magicpic_geom::Rect,
     dx: i32,
     dy: i32,
-    tile: photocraft_geom::Rect,
+    tile: magicpic_geom::Rect,
     w: i32,
     h: i32,
-) -> Vec<(photocraft_geom::Rect, photocraft_geom::Rect)> {
-    use photocraft_geom::Rect;
+) -> Vec<(magicpic_geom::Rect, magicpic_geom::Rect)> {
+    use magicpic_geom::Rect;
     let moved = src.translate(dx, dy);
     let zones = [
         (tile, 0, 0),
@@ -722,7 +722,7 @@ pub fn preview_move(doc: &Document, p: &Value, add_copy: bool) -> Option<Documen
 
 /// The rect of the artboard layer `id` sits in, or `None` when it sits in none (or is itself a
 /// board: boards are never nested, and moving one beside another carries its own rect).
-fn board_rect_of(doc: &Document, id: LayerId) -> Option<photocraft_geom::Rect> {
+fn board_rect_of(doc: &Document, id: LayerId) -> Option<magicpic_geom::Rect> {
     if doc.layer(id)?.artboard().is_some() {
         return None;
     }
@@ -733,7 +733,7 @@ fn board_rect_of(doc: &Document, id: LayerId) -> Option<photocraft_geom::Rect> {
 /// locked there (by its own lock or one on a group or board around it).
 #[derive(Clone, Copy)]
 struct Origin {
-    board: Option<photocraft_geom::Rect>,
+    board: Option<magicpic_geom::Rect>,
     pinned: bool,
 }
 

@@ -3,8 +3,8 @@
 
 use std::borrow::Cow;
 
-use photocraft_codecs::resolution::exif_with_resolution;
-use photocraft_codecs::{ChannelLayout, EncodeOptions, Format, SampleType, decode, encode};
+use magicpic_codecs::resolution::exif_with_resolution;
+use magicpic_codecs::{ChannelLayout, EncodeOptions, Format, SampleType, decode, encode};
 
 #[derive(Clone, Copy)]
 struct Layout {

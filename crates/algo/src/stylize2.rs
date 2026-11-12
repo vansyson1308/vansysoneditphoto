@@ -1,6 +1,6 @@
 //! Stylize: Diffuse, Extrude, Tiles, Trace Contour, Wind.
 
-use photocraft_geom::Rect;
+use magicpic_geom::Rect;
 
 mod extrude;
 mod wind;

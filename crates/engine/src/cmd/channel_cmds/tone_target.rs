@@ -100,8 +100,8 @@ mod tests {
     #[test]
     fn review_missing_pixel_layer_does_not_fall_back_to_composite() {
         let mut doc =
-            photocraft_doc::Document::new("Channels", photocraft_geom::Size::new(8, 8), photocraft_color::ColorMode::Rgb, photocraft_color::SampleType::U8);
-        doc.channels.push(photocraft_doc::AlphaChannel::new("Saved", photocraft_raster::Surface::new(photocraft_color::PixelFormat::GRAY8)));
+            magicpic_doc::Document::new("Channels", magicpic_geom::Size::new(8, 8), magicpic_color::ColorMode::Rgb, magicpic_color::SampleType::U8);
+        doc.channels.push(magicpic_doc::AlphaChannel::new("Saved", magicpic_raster::Surface::new(magicpic_color::PixelFormat::GRAY8)));
         let mut s = Session::new();
         s.add_document(doc, None);
         assert!(resolve_tone_target(&s, false, &json!({"target":"pixels"})).is_err());

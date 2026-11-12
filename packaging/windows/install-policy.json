@@ -1,302 +1,302 @@
 {
-  "id": "photocraft",
-  "name": "PhotoCraft",
+  "id": "magicpic",
+  "name": "MagicPic",
   "upgradeCode": "D9660F32-2D0A-4ABE-B73D-17BE25F1542C",
   "sources": [
-    "photocraft.wxs"
+    "magicpic.wxs"
   ],
-  "icon": "assets/app-icon/photocraft.ico",
+  "icon": "assets/app-icon/magicpic.ico",
   "localization": [
-    "photocraft.en-us.wxl"
+    "magicpic.en-us.wxl"
   ],
   "extensions": [
     "UI",
     "Util"
   ],
   "payloads": [
-    "photocraft-cli.exe",
-    "photocraft.exe"
+    "magicpic-cli.exe",
+    "magicpic.exe"
   ],
   "registry": [
     [
       "-1",
-      "Software\\Classes\\Photocraft.PhotoshopDocument\\shell\\open\\command",
+      "Software\\Classes\\Magicpic.PhotoshopDocument\\shell\\open\\command",
       "",
-      "\"[#PhotocraftExe]\" \"%1\""
+      "\"[#MagicpicExe]\" \"%1\""
     ],
     [
       "-1",
-      "Software\\Classes\\Photocraft.Image\\shell\\open\\command",
+      "Software\\Classes\\Magicpic.Image\\shell\\open\\command",
       "",
-      "\"[#PhotocraftExe]\" \"%1\""
+      "\"[#MagicpicExe]\" \"%1\""
     ],
     [
       "-1",
       "Software\\Classes\\.psd\\OpenWithProgids",
-      "Photocraft.PhotoshopDocument",
+      "Magicpic.PhotoshopDocument",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.psb\\OpenWithProgids",
-      "Photocraft.PhotoshopDocument",
+      "Magicpic.PhotoshopDocument",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.pdn\\OpenWithProgids",
-      "Photocraft.Image",
+      "Magicpic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.ora\\OpenWithProgids",
-      "Photocraft.Image",
+      "Magicpic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.kra\\OpenWithProgids",
-      "Photocraft.Image",
+      "Magicpic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.krz\\OpenWithProgids",
-      "Photocraft.Image",
+      "Magicpic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.png\\OpenWithProgids",
-      "Photocraft.Image",
+      "Magicpic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.jpg\\OpenWithProgids",
-      "Photocraft.Image",
+      "Magicpic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.jpeg\\OpenWithProgids",
-      "Photocraft.Image",
+      "Magicpic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.tif\\OpenWithProgids",
-      "Photocraft.Image",
+      "Magicpic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.tiff\\OpenWithProgids",
-      "Photocraft.Image",
+      "Magicpic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.webp\\OpenWithProgids",
-      "Photocraft.Image",
+      "Magicpic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.gif\\OpenWithProgids",
-      "Photocraft.Image",
+      "Magicpic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.bmp\\OpenWithProgids",
-      "Photocraft.Image",
+      "Magicpic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.tga\\OpenWithProgids",
-      "Photocraft.Image",
+      "Magicpic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.exr\\OpenWithProgids",
-      "Photocraft.Image",
+      "Magicpic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.hdr\\OpenWithProgids",
-      "Photocraft.Image",
+      "Magicpic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.avif\\OpenWithProgids",
-      "Photocraft.Image",
+      "Magicpic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.qoi\\OpenWithProgids",
-      "Photocraft.Image",
+      "Magicpic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.ico\\OpenWithProgids",
-      "Photocraft.Image",
+      "Magicpic.Image",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe",
+      "Software\\Classes\\Applications\\magicpic.exe",
       "FriendlyAppName",
-      "PhotoCraft"
+      "MagicPic"
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\shell\\open\\command",
+      "Software\\Classes\\Applications\\magicpic.exe\\shell\\open\\command",
       "",
-      "\"[#PhotocraftExe]\" \"%1\""
+      "\"[#MagicpicExe]\" \"%1\""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\magicpic.exe\\SupportedTypes",
       ".pcraft",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\magicpic.exe\\SupportedTypes",
       ".psd",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\magicpic.exe\\SupportedTypes",
       ".psb",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\magicpic.exe\\SupportedTypes",
       ".pdn",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\magicpic.exe\\SupportedTypes",
       ".ora",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\magicpic.exe\\SupportedTypes",
       ".kra",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\magicpic.exe\\SupportedTypes",
       ".krz",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\magicpic.exe\\SupportedTypes",
       ".png",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\magicpic.exe\\SupportedTypes",
       ".jpg",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\magicpic.exe\\SupportedTypes",
       ".jpeg",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\magicpic.exe\\SupportedTypes",
       ".tif",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\magicpic.exe\\SupportedTypes",
       ".tiff",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\magicpic.exe\\SupportedTypes",
       ".webp",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\magicpic.exe\\SupportedTypes",
       ".gif",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\magicpic.exe\\SupportedTypes",
       ".bmp",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\magicpic.exe\\SupportedTypes",
       ".tga",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\magicpic.exe\\SupportedTypes",
       ".exr",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\magicpic.exe\\SupportedTypes",
       ".hdr",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\magicpic.exe\\SupportedTypes",
       ".avif",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\magicpic.exe\\SupportedTypes",
       ".qoi",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\photocraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\magicpic.exe\\SupportedTypes",
       ".ico",
       ""
     ],
     [
       "-1",
-      "Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\photocraft.exe",
+      "Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\magicpic.exe",
       "",
-      "[#PhotocraftExe]"
+      "[#MagicpicExe]"
     ],
     [
       "-1",
-      "Software\\PhotoCraft",
+      "Software\\MagicPic",
       "InstallDir",
       "[INSTALLFOLDER]"
     ]

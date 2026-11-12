@@ -1,8 +1,8 @@
 //! Bézier flattening with a distance tolerance.
 
-use photocraft_doc::{Path, Subpath};
-use photocraft_geom::Point;
-use photocraft_raster::Interrupt;
+use magicpic_doc::{Path, Subpath};
+use magicpic_geom::Point;
+use magicpic_raster::Interrupt;
 
 /// A flattened subpath.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -73,13 +73,13 @@ fn eval(seg: &[Point; 4], t: f64) -> (f64, f64) {
 
 /// Validate before interactive rendering: finite coordinates and a bounded tessellation and
 /// dash workload. Arc length is bounded by the cubic control polygon, without allocating pixels.
-pub fn validate_shape(path: &Path, stroke: Option<&photocraft_doc::ShapeStroke>) -> Result<(), &'static str> {
+pub fn validate_shape(path: &Path, stroke: Option<&magicpic_doc::ShapeStroke>) -> Result<(), &'static str> {
     validate_workload(path, stroke, 1_000_000.0, "shape coordinates must be finite and within ±1000000 px")
 }
 
 fn validate_workload(
     path: &Path,
-    stroke: Option<&photocraft_doc::ShapeStroke>,
+    stroke: Option<&magicpic_doc::ShapeStroke>,
     coordinate_limit: f64,
     coordinate_error: &'static str,
 ) -> Result<(), &'static str> {
@@ -220,7 +220,7 @@ pub fn flatten_path_with(p: &Path, tol: f64, ctl: &Interrupt) -> Option<Vec<Poly
 mod tests {
     use super::*;
     use crate::shapes;
-    use photocraft_doc::Knot;
+    use magicpic_doc::Knot;
 
     #[test]
     fn lines_are_not_subdivided() {

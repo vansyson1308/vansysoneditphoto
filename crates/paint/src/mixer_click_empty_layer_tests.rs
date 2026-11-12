@@ -5,8 +5,8 @@
 
 use crate::mixer::{MixerSettings, MixerState, apply_mixer_stroke};
 use crate::{BrushSettings, Stroke, StrokePoint};
-use photocraft_color::PixelFormat;
-use photocraft_raster::Surface;
+use magicpic_color::PixelFormat;
+use magicpic_raster::Surface;
 
 fn click(s: &mut Surface, wet: f32) {
     click_with(s, wet, 0.9, 1.0);
@@ -58,7 +58,7 @@ fn a_wet_click_on_an_empty_layer_is_a_full_strength_dab() {
 #[test]
 fn a_wet_click_on_a_colour_still_mixes_it_in() {
     let mut s = Surface::new(PixelFormat::RGBA8);
-    s.fill_rect(photocraft_geom::Rect::new(0, 0, 400, 120), &[1.0, 0.0, 0.0, 1.0]);
+    s.fill_rect(magicpic_geom::Rect::new(0, 0, 400, 120), &[1.0, 0.0, 0.0, 1.0]);
     click(&mut s, 0.8);
     let c = s.rgba(182, 47);
     assert!(c[0] > 0.3, "the red under the click is mixed in: {c:?}");

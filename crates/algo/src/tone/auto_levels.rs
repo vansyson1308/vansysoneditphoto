@@ -1,7 +1,7 @@
-//! Numeric analysis for PhotoCraft's ordinary Auto Tone/Contrast/Color policy.
+//! Numeric analysis for MagicPic's ordinary Auto Tone/Contrast/Color policy.
 //! Display-bin sampling and clipping are independent of document/layer models.
-use photocraft_geom::{Rect, TILE_SIZE};
-use photocraft_raster::{Interrupt, Surface};
+use magicpic_geom::{Rect, TILE_SIZE};
+use magicpic_raster::{Interrupt, Surface};
 
 const MAX_ROW_BYTES: usize = 64 << 20;
 const MAX_SAMPLES: u64 = 16_000_000;
@@ -145,7 +145,7 @@ pub fn analyze(surface: &Surface, area: Rect, kind: Kind, ctl: &Interrupt<'_>) -
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_color::{ColorMode, PixelFormat, SampleType};
+    use magicpic_color::{ColorMode, PixelFormat, SampleType};
     #[test]
     /// Pin native per-channel, combined-contrast and color-neutralization policies against known histogram samples.
     fn known_native_bins_keep_tone_contrast_and_color_policy_at_every_depth() {

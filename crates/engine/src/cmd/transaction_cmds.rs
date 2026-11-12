@@ -10,7 +10,7 @@
 //! document is noted before the steps run, each step is checked to have stayed on its own
 //! document, and a failure puts every document back.
 
-use photocraft_doc::DocId;
+use magicpic_doc::DocId;
 use serde::Deserialize;
 use serde_json::{Value, json};
 
@@ -325,14 +325,14 @@ mod tests {
         layers: usize,
         history: Vec<String>,
         snapshots: usize,
-        active_layer: Option<photocraft_doc::LayerId>,
+        active_layer: Option<magicpic_doc::LayerId>,
         dirty: bool,
     }
 
     fn state(s: &Session) -> State {
         let st = s.active().unwrap();
         State {
-            pixels: photocraft_compose::flatten(&st.doc).px.clone(),
+            pixels: magicpic_compose::flatten(&st.doc).px.clone(),
             layers: st.doc.layers.len(),
             history: st.history.entries(),
             snapshots: st.snapshots.len(),

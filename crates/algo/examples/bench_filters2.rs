@@ -1,16 +1,16 @@
 //! Timing for the heavier second-batch filters on a ~24 MP (6000×4000) RGBA8 layer.
 //!
-//! `cargo run --release -p photocraft-algo --example bench_filters2 [name-substring] [--reps N] [--quick] [--json <file>]`
+//! `cargo run --release -p magicpic-algo --example bench_filters2 [name-substring] [--reps N] [--quick] [--json <file>]`
 //!
 //! `--json` writes the report `cargo xtask perf` reads: `{"rows": [{"name", "samples_ms"}]}`.
 //! `--quick` runs the list on a 1500×1000 layer instead, for `cargo xtask perf --quick`.
-use photocraft_algo::{
+use magicpic_algo::{
     BlurPath, BlurQuality, BlurShape, DepthSource, Distribution, FieldPin, FilterParams, IrisPin, Light, SmartBlurMode, SpinPin, TextureChannel, apply,
     output_area,
 };
-use photocraft_color::PixelFormat;
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use magicpic_color::PixelFormat;
+use magicpic_geom::Rect;
+use magicpic_raster::Surface;
 
 /// Rows per band when hashing an output region: the hash sequence must match hashing the whole
 /// region, so bands walk `y` in order, but the buffer stays a few MB instead of the layer's 384 MB.

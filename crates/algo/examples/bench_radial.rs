@@ -1,14 +1,14 @@
 //! Paired, end-to-end Radial Blur benchmark against the current upstream sampler.
-//! cargo run --release -j 12 -p photocraft-algo --example bench_radial
+//! cargo run --release -j 12 -p magicpic-algo --example bench_radial
 //! Defaults: 6000x4000 RGBA8, Good, amount 100, 12 Rayon workers, three runs.
 //! Optional positional arguments: width height amount repeats.
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    use photocraft_algo::{Ctx, FilterParams, Image, RadialMethod, RadialQuality, TILE, apply_in, kernel};
-    use photocraft_color::PixelFormat;
-    use photocraft_geom::Rect;
-    use photocraft_raster::Surface;
+    use magicpic_algo::{Ctx, FilterParams, Image, RadialMethod, RadialQuality, TILE, apply_in, kernel};
+    use magicpic_color::PixelFormat;
+    use magicpic_geom::Rect;
+    use magicpic_raster::Surface;
     use rayon::prelude::*;
     use std::time::Instant;
 

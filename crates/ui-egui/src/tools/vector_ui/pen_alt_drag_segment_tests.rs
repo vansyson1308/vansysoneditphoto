@@ -3,18 +3,18 @@
 //! Photoshop. Everywhere else ⌥ does what it did.
 
 use egui::Modifiers;
-use photocraft_doc::vector::Path;
-use photocraft_geom::Point;
+use magicpic_doc::vector::Path;
+use magicpic_geom::Point;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::canvas::{ToolEvent, tool_event};
 use crate::state::Tool;
 
 /// The document of the issue: 800 × 600 px with a Work Path whose first segment is straight and
 /// runs through (150, 300). The segment 1 → 2 is a curve.
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 800, "height": 600})).unwrap();
     app.sync_views();
     app.ui.tool = Tool::Pen;
@@ -28,17 +28,17 @@ fn app() -> PhotocraftApp {
 }
 
 /// The Work Path as it is now.
-fn work(app: &PhotocraftApp) -> Path {
+fn work(app: &MagicpicApp) -> Path {
     app.session.active().unwrap().doc.work_path.clone().unwrap()
 }
 
 /// How many History steps the document has.
-fn steps(app: &PhotocraftApp) -> usize {
+fn steps(app: &MagicpicApp) -> usize {
     app.session.active().unwrap().history.entries().len()
 }
 
 /// A press at `from`, a drag to `to` in a few moves and the release there, with `mods` held.
-fn drag(app: &mut PhotocraftApp, from: [f64; 2], to: [f64; 2], mods: Modifiers) {
+fn drag(app: &mut MagicpicApp, from: [f64; 2], to: [f64; 2], mods: Modifiers) {
     tool_event(app, ToolEvent::Down { x: from[0], y: from[1], pressure: 1.0 }, mods);
     if from != to {
         for i in 1..=4 {
@@ -131,7 +131,7 @@ fn alt_elsewhere_keeps_what_it_did() {
     let (before, n) = (work(&app), steps(&app));
     // On the curve 1 → 2 (its point at t = 0.5).
     let seg = before.subpaths[0].segments()[1];
-    let on_curve = photocraft_vector::edit::eval(&seg, 0.5);
+    let on_curve = magicpic_vector::edit::eval(&seg, 0.5);
     drag(&mut app, [on_curve.x, on_curve.y], [on_curve.x, on_curve.y - 40.0], Modifiers::ALT);
     assert_eq!((work(&app), steps(&app)), (before.clone(), n), "a curved segment: nothing, as before");
     assert!(app.ui.pen.is_none());

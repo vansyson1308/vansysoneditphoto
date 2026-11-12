@@ -1,7 +1,7 @@
 //! Regression coverage for Image Processor document sources and preservation of open work.
 use crate::Session;
-use photocraft_doc::Document;
-use photocraft_geom::Rect;
+use magicpic_doc::Document;
+use magicpic_geom::Rect;
 use serde_json::{Value, json};
 use std::sync::Arc;
 
@@ -12,13 +12,13 @@ fn add(s: &mut Session, name: &str, depth: u32, background: &str) -> crate::Resu
 
 /// Sample the same interior pixel before and after processing through the CPU compositor.
 fn pixel(doc: &Document) -> [f32; 4] {
-    photocraft_compose::render(doc, Rect::new(1, 1, 2, 2)).px[0]
+    magicpic_compose::render(doc, Rect::new(1, 1, 2, 2)).px[0]
 }
 
 /// Reimport a reported output so assertions examine encoded pixels and document metadata.
 fn exported(result: &Value, index: usize) -> std::result::Result<Document, Box<dyn std::error::Error>> {
     let path = result["files"][index].as_str().ok_or("export result has no filename")?;
-    Ok(photocraft_io::import(path, &std::fs::read(path)?)?.document)
+    Ok(magicpic_io::import(path, &std::fs::read(path)?)?.document)
 }
 
 /// Resizing must use unsaved pixels at every supported depth while leaving the source
@@ -197,7 +197,7 @@ fn image_processor_open_sources_export_a_moved_selection_without_committing_it_i
 /// survive PSD export as the corresponding embedded payload.
 #[test]
 fn image_processor_open_embeds_relative_links_from_each_documents_own_folder() {
-    use photocraft_doc::{LayerContent, SmartSource};
+    use magicpic_doc::{LayerContent, SmartSource};
 
     let dir = tempfile::tempdir().unwrap();
     let mut s = Session::new();
@@ -232,7 +232,7 @@ fn image_processor_open_embeds_relative_links_from_each_documents_own_folder() {
             .find_map(|layer| match &layer.content {
                 LayerContent::Smart(smart) => match &smart.source {
                     SmartSource::Embedded { bytes, .. } => Some(bytes.as_slice()),
-                    SmartSource::Linked { path } => photocraft_io::linked::embedded_payload(&copy.metadata, path).map(|(_, bytes)| bytes),
+                    SmartSource::Linked { path } => magicpic_io::linked::embedded_payload(&copy.metadata, path).map(|(_, bytes)| bytes),
                 },
                 _ => None,
             })

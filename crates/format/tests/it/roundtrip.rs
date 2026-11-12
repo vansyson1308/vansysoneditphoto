@@ -2,18 +2,18 @@
 
 use crate::common;
 use common::*;
-use photocraft_color::{ColorMode, SampleType};
-use photocraft_doc::text::{CharStyle, ParagraphStyle, TextRun};
-use photocraft_doc::text_styles::{CharacterStyleDef, ParagraphStyleDef};
-use photocraft_doc::{Document, Layer, LayerContent, LayerId, Slice, TextLayer, VarKind, VariableDef};
-use photocraft_format::*;
-use photocraft_raster::Rgba8Image;
+use magicpic_color::{ColorMode, SampleType};
+use magicpic_doc::text::{CharStyle, ParagraphStyle, TextRun};
+use magicpic_doc::text_styles::{CharacterStyleDef, ParagraphStyleDef};
+use magicpic_doc::{Document, Layer, LayerContent, LayerId, Slice, TextLayer, VarKind, VariableDef};
+use magicpic_format::*;
+use magicpic_raster::Rgba8Image;
 
 const MODES: [ColorMode; 4] = [ColorMode::Rgb, ColorMode::Grayscale, ColorMode::Cmyk, ColorMode::Lab];
 
 /// Create inert historical conversion metadata with one native target and a separately stored original attachment.
-fn conversion_report() -> photocraft_doc::import_conversion::ImportConversion {
-    use photocraft_doc::import_conversion::*;
+fn conversion_report() -> magicpic_doc::import_conversion::ImportConversion {
+    use magicpic_doc::import_conversion::*;
     let owner = SourceItemRef { kind: "layer".into(), ordinal: 3, name: "Duplicate".into(), ..Default::default() };
     ImportConversion::Report(ConversionReport {
         source_format: "xcf".into(),
@@ -42,21 +42,21 @@ fn conversion_report() -> photocraft_doc::import_conversion::ImportConversion {
 /// Round-trip converted native structures and off-canvas samples at every depth without losing their report.
 fn converted_native_groups_masks_off_canvas_pixels_and_report_survive_at_every_depth() {
     for depth in SampleType::ALL {
-        let mut doc = Document::new("Native converted components", photocraft_geom::Size::new(4, 3), ColorMode::Rgb, depth);
+        let mut doc = Document::new("Native converted components", magicpic_geom::Size::new(4, 3), ColorMode::Rgb, depth);
         let mut raster = Layer::raster("Pixels", doc.pixel_format());
         raster.surface_mut().unwrap().write_pixel(-2, 1, &[if depth == SampleType::F32 { 1.5 } else { 0.75 }, 0.25, 0.5, 0.8]);
-        let mut coverage = photocraft_raster::Surface::new(photocraft_color::PixelFormat::new(ColorMode::Grayscale, depth, false));
+        let mut coverage = magicpic_raster::Surface::new(magicpic_color::PixelFormat::new(ColorMode::Grayscale, depth, false));
         coverage.write_pixel(-2, 1, &[0.5]);
-        raster.mask = Some(photocraft_doc::LayerMask { surface: coverage, enabled: true, linked: true, density: 0.8, feather: 1.25 });
+        raster.mask = Some(magicpic_doc::LayerMask { surface: coverage, enabled: true, linked: true, density: 0.8, feather: 1.25 });
         let child = raster.id;
         let group = Layer::group("Native group", vec![raster]);
         let group_id = group.id;
         doc.layers.push(group);
         let mut report = conversion_report();
-        if let photocraft_doc::import_conversion::ImportConversion::Report(report) = &mut report {
+        if let magicpic_doc::import_conversion::ImportConversion::Report(report) = &mut report {
             report.entries[0].targets = vec![
-                photocraft_doc::import_conversion::NativeTargetRef { layer_id: Some(group_id), ..Default::default() },
-                photocraft_doc::import_conversion::NativeTargetRef { layer_id: Some(child), ..Default::default() },
+                magicpic_doc::import_conversion::NativeTargetRef { layer_id: Some(group_id), ..Default::default() },
+                magicpic_doc::import_conversion::NativeTargetRef { layer_id: Some(child), ..Default::default() },
             ];
         }
         doc.metadata.import_conversion = Some(report.into());
@@ -70,7 +70,7 @@ fn converted_native_groups_masks_off_canvas_pixels_and_report_survive_at_every_d
 /// Verify report attachments use native hashed blobs and never acquire executable document semantics.
 fn import_conversion_roundtrip_is_inert_and_uses_native_blobs() {
     for depth in SampleType::ALL {
-        let mut doc = Document::new("Converted", photocraft_geom::Size::new(4, 3), ColorMode::Rgb, depth);
+        let mut doc = Document::new("Converted", magicpic_geom::Size::new(4, 3), ColorMode::Rgb, depth);
         doc.metadata.import_conversion = Some(conversion_report().into());
         let bytes = save_to_bytes(&doc, &SaveOptions::default()).unwrap();
         assert_eq!(load_from_bytes(&bytes).unwrap(), doc);
@@ -90,9 +90,9 @@ fn import_conversion_roundtrip_is_inert_and_uses_native_blobs() {
 #[test]
 /// Preserve a future report schema and its bytes as opaque optional metadata.
 fn unknown_optional_import_report_survives_without_interpretation() {
-    use photocraft_doc::import_conversion::ImportConversion;
+    use magicpic_doc::import_conversion::ImportConversion;
     use std::sync::Arc;
-    let mut doc = Document::new("Future report", photocraft_geom::Size::new(1, 1), ColorMode::Grayscale, SampleType::U16);
+    let mut doc = Document::new("Future report", magicpic_geom::Size::new(1, 1), ColorMode::Grayscale, SampleType::U16);
     doc.metadata.import_conversion = Some(Arc::new(ImportConversion::Opaque {
         schema_version: 99,
         record: Arc::new(br#"{"future-fields":["never execute"]}"#.to_vec()),
@@ -105,7 +105,7 @@ fn unknown_optional_import_report_survives_without_interpretation() {
 /// Native loading preserves known and future report values while subsequent document clones share their entire report allocation.
 #[test]
 fn native_report_roundtrip_restores_shared_known_and_opaque_metadata() {
-    use photocraft_doc::import_conversion::ImportConversion;
+    use magicpic_doc::import_conversion::ImportConversion;
     use std::sync::Arc;
     let future = ImportConversion::Opaque {
         schema_version: 77,
@@ -113,7 +113,7 @@ fn native_report_roundtrip_restores_shared_known_and_opaque_metadata() {
         attachments: vec![Arc::new(vec![0, 17, 255, 42])],
     };
     for report in [conversion_report(), future] {
-        let mut doc = Document::new("Shared native provenance", photocraft_geom::Size::new(1, 1), ColorMode::Rgb, SampleType::F32);
+        let mut doc = Document::new("Shared native provenance", magicpic_geom::Size::new(1, 1), ColorMode::Rgb, SampleType::F32);
         doc.metadata.import_conversion = Some(Arc::new(report));
         let bytes = save_to_bytes(&doc, &SaveOptions::default()).unwrap();
         let reopened = load_from_bytes(&bytes).unwrap();
@@ -130,8 +130,8 @@ fn native_report_roundtrip_restores_shared_known_and_opaque_metadata() {
 #[test]
 /// Reject invalid attachment references before writing a native bundle.
 fn import_report_invalid_references_are_rejected_before_save() {
-    use photocraft_doc::import_conversion::ImportConversion;
-    let mut doc = Document::new("Invalid report", photocraft_geom::Size::new(1, 1), ColorMode::Rgb, SampleType::U8);
+    use magicpic_doc::import_conversion::ImportConversion;
+    let mut doc = Document::new("Invalid report", magicpic_geom::Size::new(1, 1), ColorMode::Rgb, SampleType::U8);
     let mut report = conversion_report();
     if let ImportConversion::Report(report) = &mut report {
         report.entries[0].attachments = vec![1];
@@ -143,8 +143,8 @@ fn import_report_invalid_references_are_rejected_before_save() {
 #[test]
 /// Preserve ordinal/path identity and multiple historical targets even when source display names repeat.
 fn import_report_distinguishes_duplicate_names_and_preserves_one_to_many_targets() {
-    use photocraft_doc::import_conversion::*;
-    let mut doc = Document::new("Duplicate items", photocraft_geom::Size::new(1, 1), ColorMode::Rgb, SampleType::U8);
+    use magicpic_doc::import_conversion::*;
+    let mut doc = Document::new("Duplicate items", magicpic_geom::Size::new(1, 1), ColorMode::Rgb, SampleType::U8);
     let mut data = conversion_report();
     if let ImportConversion::Report(report) = &mut data {
         let mut other = report.entries[0].clone();
@@ -161,7 +161,7 @@ fn import_report_distinguishes_duplicate_names_and_preserves_one_to_many_targets
 #[test]
 /// Check backward compatibility when the optional native report field is absent.
 fn older_bundles_without_import_conversion_still_load() {
-    let doc = Document::new("Older bundle", photocraft_geom::Size::new(1, 1), ColorMode::Rgb, SampleType::U8);
+    let doc = Document::new("Older bundle", magicpic_geom::Size::new(1, 1), ColorMode::Rgb, SampleType::U8);
     let bytes = save_to_bytes(&doc, &SaveOptions::default()).unwrap();
     let zip = zip::ZipReader::new(&bytes).unwrap();
     let manifest: serde_json::Value = serde_json::from_slice(&zip.read(zip.find("manifest.json").unwrap(), 1 << 20).unwrap()).unwrap();
@@ -196,7 +196,7 @@ fn edit_import_bundle(bytes: &[u8], omit: Option<&str>, edit: impl Fn(&mut serde
 #[test]
 /// Require controlled native-load errors for malformed report records and unavailable attachment blobs.
 fn import_report_corrupt_framing_and_missing_blobs_fail_without_panic() {
-    let mut doc = Document::new("Report framing", photocraft_geom::Size::new(1, 1), ColorMode::Rgb, SampleType::U8);
+    let mut doc = Document::new("Report framing", magicpic_geom::Size::new(1, 1), ColorMode::Rgb, SampleType::U8);
     doc.metadata.import_conversion = Some(conversion_report().into());
     let bytes = save_to_bytes(&doc, &SaveOptions::default()).unwrap();
     let zip = zip::ZipReader::new(&bytes).unwrap();
@@ -222,8 +222,8 @@ fn import_report_corrupt_framing_and_missing_blobs_fail_without_panic() {
 #[test]
 /// Count escaped JSON bytes so serialization expansion cannot bypass the independent report ceiling.
 fn import_report_encoded_size_is_bounded_even_when_strings_expand_in_json() {
-    use photocraft_doc::import_conversion::ImportConversion;
-    let mut doc = Document::new("Escaped report", photocraft_geom::Size::new(1, 1), ColorMode::Rgb, SampleType::U8);
+    use magicpic_doc::import_conversion::ImportConversion;
+    let mut doc = Document::new("Escaped report", magicpic_geom::Size::new(1, 1), ColorMode::Rgb, SampleType::U8);
     let mut report = conversion_report();
     if let ImportConversion::Report(report) = &mut report {
         let mut entry = report.entries[0].clone();
@@ -238,8 +238,8 @@ fn import_report_encoded_size_is_bounded_even_when_strings_expand_in_json() {
 #[test]
 /// Ensure blob-cache reuse still enforces report payload limits rather than treating cached data as free.
 fn import_report_limits_also_apply_to_already_cached_blobs() {
-    use photocraft_doc::import_conversion::MAX_CONVERSION_BYTES;
-    let mut doc = Document::new("Cached blob", photocraft_geom::Size::new(1, 1), ColorMode::Rgb, SampleType::U8);
+    use magicpic_doc::import_conversion::MAX_CONVERSION_BYTES;
+    let mut doc = Document::new("Cached blob", magicpic_geom::Size::new(1, 1), ColorMode::Rgb, SampleType::U8);
     doc.icc_profile = Some(std::sync::Arc::new(vec![0; MAX_CONVERSION_BYTES + 1]));
     let mut layer = Layer::raster("Cached", doc.pixel_format());
     layer.psd_blocks.push((*b"test", doc.icc_profile.as_ref().unwrap().clone()));
@@ -255,7 +255,7 @@ fn import_report_limits_also_apply_to_already_cached_blobs() {
 #[test]
 /// Verify measured loading reports unique decoded blob work without double-charging shared references.
 fn measured_native_load_reports_existing_unique_blob_accounting() {
-    let mut doc = Document::new("Measured contents", photocraft_geom::Size::new(1, 1), ColorMode::Rgb, SampleType::U8);
+    let mut doc = Document::new("Measured contents", magicpic_geom::Size::new(1, 1), ColorMode::Rgb, SampleType::U8);
     let shared = std::sync::Arc::new(vec![7; 123]);
     doc.metadata.exif = Some(shared.clone());
     doc.metadata.psd_resources.push((1000, "Shared".into(), shared));
@@ -268,8 +268,8 @@ fn measured_native_load_reports_existing_unique_blob_accounting() {
 
 #[test]
 fn gradient_overlay_interpolation_roundtrips_in_native_documents() {
-    use photocraft_doc::effects::GradientInterpolation;
-    use photocraft_doc::{Color, Effect, FxCommon, Gradient};
+    use magicpic_doc::effects::GradientInterpolation;
+    use magicpic_doc::{Color, Effect, FxCommon, Gradient};
 
     for mode in MODES {
         for depth in [SampleType::U8, SampleType::U16, SampleType::F32] {
@@ -280,7 +280,7 @@ fn gradient_overlay_interpolation_roundtrips_in_native_documents() {
                 stops: vec![(0.0, Color::rgb(0.123456, 0.4, 0.9)), (0.4, Color::WHITE), (1.0, Color::BLACK)],
             };
             let effect = Effect::GradientOverlay {
-                common: FxCommon::new(photocraft_doc::BlendMode::Normal, 1.0),
+                common: FxCommon::new(magicpic_doc::BlendMode::Normal, 1.0),
                 gradient: Gradient::default(),
                 dither: true,
                 interpolation: Some(source),
@@ -297,8 +297,8 @@ fn gradient_overlay_interpolation_roundtrips_in_native_documents() {
 /// method) through a native save, and a file without one still loads.
 #[test]
 fn gradient_map_source_roundtrips_in_native_documents() {
-    use photocraft_doc::Adjustment;
-    use photocraft_doc::adjust::GradientSource;
+    use magicpic_doc::Adjustment;
+    use magicpic_doc::adjust::GradientSource;
     let mut doc = rich_doc(ColorMode::Rgb, SampleType::U8);
     let source =
         GradientSource { stops: vec![(0.0, [0.1, 0.2, 0.6]), (1.0, [1.0, 0.8, 0.2])], midpoints: vec![0.3], smoothness: 0.8, method: "perceptual".into() };
@@ -315,15 +315,15 @@ fn gradient_map_source_roundtrips_in_native_documents() {
 
 #[test]
 fn old_effect_snapshots_need_no_interpolation_record() {
-    let effect = photocraft_doc::Effect::GradientOverlay {
-        common: photocraft_doc::FxCommon::new(photocraft_doc::BlendMode::Normal, 1.0),
-        gradient: photocraft_doc::Gradient::default(),
+    let effect = magicpic_doc::Effect::GradientOverlay {
+        common: magicpic_doc::FxCommon::new(magicpic_doc::BlendMode::Normal, 1.0),
+        gradient: magicpic_doc::Gradient::default(),
         dither: false,
         interpolation: None,
     };
     let json = serde_json::to_value(&effect).unwrap();
     assert!(json["GradientOverlay"].get("interpolation").is_none());
-    assert_eq!(serde_json::from_value::<photocraft_doc::Effect>(json).unwrap(), effect);
+    assert_eq!(serde_json::from_value::<magicpic_doc::Effect>(json).unwrap(), effect);
 }
 
 #[test]
@@ -331,12 +331,12 @@ fn custom_shape_stroke_roundtrip_keeps_every_style_field() {
     for mode in MODES {
         for depth in [SampleType::U8, SampleType::U16, SampleType::F32] {
             let mut d = rich_doc(mode, depth);
-            let stroke = photocraft_doc::ShapeStroke {
+            let stroke = magicpic_doc::ShapeStroke {
                 width: 5.5,
                 opacity: 0.35,
-                align: photocraft_doc::StrokeAlign::Outside,
-                cap: photocraft_doc::LineCap::Square,
-                join: photocraft_doc::LineJoin::Bevel,
+                align: magicpic_doc::StrokeAlign::Outside,
+                cap: magicpic_doc::LineCap::Square,
+                join: magicpic_doc::LineJoin::Bevel,
                 miter_limit: 2.0,
                 dashes: vec![0.0, 2.0, 4.0, 1.0, 1.5, 3.0],
                 dash_offset: -0.5,
@@ -344,8 +344,8 @@ fn custom_shape_stroke_roundtrip_keeps_every_style_field() {
             };
             d.layers.push(Layer::new(
                 "Custom stroke",
-                LayerContent::Shape(photocraft_doc::ShapeLayer {
-                    path: photocraft_doc::Path::new(vec![photocraft_doc::Subpath::polygon(&[(10.0, 10.0), (40.0, 10.0), (25.0, 40.0)])]),
+                LayerContent::Shape(magicpic_doc::ShapeLayer {
+                    path: magicpic_doc::Path::new(vec![magicpic_doc::Subpath::polygon(&[(10.0, 10.0), (40.0, 10.0), (25.0, 40.0)])]),
                     stroke: Some(stroke),
                     ..Default::default()
                 }),
@@ -455,7 +455,7 @@ impl ByteSource for FsDir {
 
 /// Deepest group nesting in `layers` (0 when there are no groups).
 fn group_depth(layers: &[Layer]) -> usize {
-    layers.iter().map(|l| if let photocraft_doc::LayerContent::Group(g) = &l.content { 1 + group_depth(&g.children) } else { 0 }).max().unwrap_or(0)
+    layers.iter().map(|l| if let magicpic_doc::LayerContent::Group(g) = &l.content { 1 + group_depth(&g.children) } else { 0 }).max().unwrap_or(0)
 }
 
 /// [`rich_doc`] with its layers wrapped in groups until they are nested `levels` deep.
@@ -500,13 +500,13 @@ fn group_depth_matches_craft_pcraft_format() {
 
 #[test]
 fn empty_document_roundtrips() {
-    let doc = Document::new("empty", photocraft_doc::Size::new(1, 1), ColorMode::Rgb, SampleType::U8);
+    let doc = Document::new("empty", magicpic_doc::Size::new(1, 1), ColorMode::Rgb, SampleType::U8);
     assert_eq!(load_from_bytes(&save_to_bytes(&doc, &SaveOptions::default()).unwrap()).unwrap(), doc);
 }
 
 #[test]
 fn exhausted_document_ids_and_maximal_text_runs_roundtrip() {
-    let mut doc = Document::new("exhausted", photocraft_doc::Size::new(2, 1), ColorMode::Rgb, SampleType::U8);
+    let mut doc = Document::new("exhausted", magicpic_doc::Size::new(2, 1), ColorMode::Rgb, SampleType::U8);
     doc.slices.list.push(Slice { id: u32::MAX, ..Default::default() });
     doc.text_styles.character.push(CharacterStyleDef { id: u32::MAX, ..Default::default() });
     doc.text_styles.paragraph.push(ParagraphStyleDef { id: u32::MAX, ..Default::default() });
@@ -516,8 +516,8 @@ fn exhausted_document_ids_and_maximal_text_runs_roundtrip() {
             text: "ab".into(),
             runs: vec![TextRun { len: 1, style: CharStyle::default() }, TextRun { len: usize::MAX, style: CharStyle { size_pt: 24.0, ..Default::default() } }],
             paragraphs: vec![
-                photocraft_doc::text::ParagraphRun { len: 1, style: ParagraphStyle::default() },
-                photocraft_doc::text::ParagraphRun { len: usize::MAX, style: ParagraphStyle::default() },
+                magicpic_doc::text::ParagraphRun { len: 1, style: ParagraphStyle::default() },
+                magicpic_doc::text::ParagraphRun { len: usize::MAX, style: ParagraphStyle::default() },
             ],
             ..Default::default()
         }),
@@ -537,8 +537,8 @@ fn exhausted_document_ids_and_maximal_text_runs_roundtrip() {
 
 #[test]
 fn text_run_baseline_roundtrips() {
-    use photocraft_doc::text::FontBaseline;
-    let mut doc = Document::new("scripts", photocraft_doc::Size::new(2, 1), ColorMode::Rgb, SampleType::U8);
+    use magicpic_doc::text::FontBaseline;
+    let mut doc = Document::new("scripts", magicpic_doc::Size::new(2, 1), ColorMode::Rgb, SampleType::U8);
     doc.layers.push(Layer::new(
         "Text",
         LayerContent::Text(TextLayer {
@@ -703,7 +703,7 @@ fn directory_save_rejects_manifest_symlink_without_overwriting_target() {
 
 #[test]
 fn identical_tiles_are_stored_once() {
-    let mut doc = Document::new("d", photocraft_doc::Size::new(10, 10), ColorMode::Rgb, SampleType::U8);
+    let mut doc = Document::new("d", magicpic_doc::Size::new(10, 10), ColorMode::Rgb, SampleType::U8);
     let mut a = Layer::raster("a", doc.pixel_format());
     scribble(a.surface_mut().unwrap(), 5, false);
     let b = a.duplicate();
@@ -720,10 +720,10 @@ fn identical_tiles_are_stored_once() {
 #[test]
 fn solid_fill_reopens_with_one_shared_tile() {
     for depth in [SampleType::U8, SampleType::U16, SampleType::F32] {
-        let size = photocraft_doc::Size::new(2048, 2048);
+        let size = magicpic_doc::Size::new(2048, 2048);
         let mut doc = Document::new("d", size, ColorMode::Rgb, depth);
         let mut l = Layer::raster("solid", doc.pixel_format());
-        l.surface_mut().unwrap().fill_rect(photocraft_geom::Rect::from_size(size), &[1.0, 0.5, 0.25, 1.0]);
+        l.surface_mut().unwrap().fill_rect(magicpic_geom::Rect::from_size(size), &[1.0, 0.5, 0.25, 1.0]);
         doc.layers.push(l);
         let bytes = save_to_bytes(&doc, &SaveOptions::default()).unwrap();
         let one_tile = (256 * 256 * doc.pixel_format().bytes_per_pixel()) as u64;
@@ -775,7 +775,7 @@ fn previews_embedded_and_readable() {
     let opts = SaveOptions { thumbnail: Some(thumb.clone()), composite: Some(thumb.clone()), ..Default::default() };
     let bytes = save_to_bytes(&doc, &opts).unwrap();
     let png = read_thumbnail(&bytes).unwrap().unwrap();
-    let img = photocraft_codecs::decode(&png).unwrap();
+    let img = magicpic_codecs::decode(&png).unwrap();
     assert_eq!(img.dimensions(), (4, 3));
     assert_eq!(img.to_rgba8(), thumb.pixels);
     let m = read_manifest(&bytes).unwrap();
@@ -904,14 +904,14 @@ fn vector_fields_roundtrip_and_default_when_absent() {
         }
     }
     strip(&mut v["layers"]);
-    let old: photocraft_format::manifest::DocM = serde_json::from_value(v).unwrap();
+    let old: magicpic_format::manifest::DocM = serde_json::from_value(v).unwrap();
     assert!(old.paths.is_empty() && old.work_path.is_none());
     assert!(old.layers.iter().all(|l| l.vector_mask.is_none()));
     let shapes: Vec<_> = old
         .layers
         .iter()
         .filter_map(|l| match &l.content {
-            photocraft_format::manifest::ContentM::Shape { density, feather, .. } => Some((*density, *feather)),
+            magicpic_format::manifest::ContentM::Shape { density, feather, .. } => Some((*density, *feather)),
             _ => None,
         })
         .collect();
@@ -922,8 +922,8 @@ fn vector_fields_roundtrip_and_default_when_absent() {
 /// before `kern` existed load with no manual kerning.
 #[test]
 fn text_kerning_roundtrips_and_defaults() {
-    use photocraft_doc::LayerContent;
-    use photocraft_doc::text::Kerning;
+    use magicpic_doc::LayerContent;
+    use magicpic_doc::text::Kerning;
     let doc = rich_doc(ColorMode::Rgb, SampleType::U8);
     let bytes = save_to_bytes(&doc, &SaveOptions::default()).unwrap();
     let back = load_from_bytes(&bytes).unwrap();
@@ -952,7 +952,7 @@ fn text_kerning_roundtrips_and_defaults() {
     }
     strip(&mut v);
     assert!(!v.to_string().contains("\"kern\""));
-    let old: photocraft_format::manifest::DocM = serde_json::from_value(v).unwrap();
+    let old: magicpic_format::manifest::DocM = serde_json::from_value(v).unwrap();
     let s = serde_json::to_string(&old).unwrap();
     assert!(s.contains("\"kern\":0.0"), "kern defaults to 0");
 }
@@ -960,8 +960,8 @@ fn text_kerning_roundtrips_and_defaults() {
 /// Type on a path (#218): the path, start and end offsets, and flip survive .pcraft.
 #[test]
 fn path_text_shape_roundtrips() {
-    use photocraft_doc::text::TextShape;
-    use photocraft_doc::vector::Subpath;
+    use magicpic_doc::text::TextShape;
+    use magicpic_doc::vector::Subpath;
     let mut doc = rich_doc(ColorMode::Rgb, SampleType::U8);
     let path = Subpath::polyline(&[(0.0, 0.0), (50.0, 20.0), (120.0, 5.5)]);
     let ids: Vec<LayerId> = doc.walk().into_iter().filter(|(_, _, l)| matches!(l.content, LayerContent::Text(_))).map(|(_, _, l)| l.id).collect();
@@ -981,8 +981,8 @@ fn path_text_shape_roundtrips() {
 /// Area type (#218): the whole path, ops and fill rule included, survives .pcraft.
 #[test]
 fn area_text_shape_roundtrips() {
-    use photocraft_doc::text::TextShape;
-    use photocraft_doc::vector::{FillRule, Path, PathOp, Subpath};
+    use magicpic_doc::text::TextShape;
+    use magicpic_doc::vector::{FillRule, Path, PathOp, Subpath};
     let mut doc = rich_doc(ColorMode::Rgb, SampleType::U8);
     let mut path = Path::new(vec![
         Subpath::polygon(&[(0.0, 0.0), (200.0, 0.0), (200.0, 120.0), (0.0, 120.0)]),
@@ -1006,13 +1006,13 @@ fn area_text_shape_roundtrips() {
 
 #[test]
 fn channel_restrictions_and_bevel_elements_roundtrip() {
-    use photocraft_doc::{Bevel, BevelContour, BevelTexture, Contour, Effect};
+    use magicpic_doc::{Bevel, BevelContour, BevelTexture, Contour, Effect};
     let mut doc = rich_doc(ColorMode::Rgb, SampleType::U8);
     doc.layers[0].excluded_channels = 0b101;
     let mut b = Bevel {
         enabled: true,
-        style: photocraft_doc::BevelStyle::Emboss,
-        technique: photocraft_doc::BevelTechnique::ChiselHard,
+        style: magicpic_doc::BevelStyle::Emboss,
+        technique: magicpic_doc::BevelTechnique::ChiselHard,
         depth: 1.2,
         up: false,
         size: 9.0,
@@ -1022,10 +1022,10 @@ fn channel_restrictions_and_bevel_elements_roundtrip() {
         use_global_light: false,
         gloss_contour: Contour::Linear,
         gloss_anti_alias: false,
-        highlight: photocraft_doc::FxCommon::new(photocraft_color::BlendMode::Screen, 0.7),
-        highlight_color: photocraft_color::Color::WHITE,
-        shadow: photocraft_doc::FxCommon::new(photocraft_color::BlendMode::Multiply, 0.6),
-        shadow_color: photocraft_color::Color::BLACK,
+        highlight: magicpic_doc::FxCommon::new(magicpic_color::BlendMode::Screen, 0.7),
+        highlight_color: magicpic_color::Color::WHITE,
+        shadow: magicpic_doc::FxCommon::new(magicpic_color::BlendMode::Multiply, 0.6),
+        shadow_color: magicpic_color::Color::BLACK,
         contour: None,
         texture: None,
     };
@@ -1039,7 +1039,7 @@ fn channel_restrictions_and_bevel_elements_roundtrip() {
 
 #[test]
 fn blend_if_roundtrips() {
-    use photocraft_doc::{BlendIf, BlendRange};
+    use magicpic_doc::{BlendIf, BlendRange};
     let mut doc = rich_doc(ColorMode::Rgb, SampleType::U16);
     let mut bi = BlendIf::default();
     bi.set(0, [BlendRange { black: [20, 60], white: [255, 255] }, BlendRange::FULL]);
@@ -1057,7 +1057,7 @@ fn blend_if_roundtrips() {
 /// Photoshop's defaults, and default layers don't write it.
 #[test]
 fn advanced_blending_roundtrips_and_defaults_when_absent() {
-    use photocraft_doc::{AdvancedBlending, Knockout};
+    use magicpic_doc::{AdvancedBlending, Knockout};
     for depth in SampleType::ALL {
         let mut doc = rich_doc(ColorMode::Rgb, depth);
         let a = AdvancedBlending {
@@ -1086,24 +1086,24 @@ fn advanced_blending_roundtrips_and_defaults_when_absent() {
         for l in old["layers"].as_array_mut().unwrap() {
             l.as_object_mut().unwrap().remove("advanced");
         }
-        let old: photocraft_format::manifest::DocM = serde_json::from_value(old).unwrap();
+        let old: magicpic_format::manifest::DocM = serde_json::from_value(old).unwrap();
         assert!(old.layers.iter().all(|l| l.advanced.is_default()));
     }
 }
 
 #[test]
 fn video_layer_frames_survive_roundtrip() {
-    use photocraft_doc::{Timeline, VideoData, VideoSource};
-    use photocraft_geom::Rect;
-    let mut doc = Document::new("Vid", photocraft_geom::Size { width: 8, height: 6 }, ColorMode::Rgb, SampleType::U8);
+    use magicpic_doc::{Timeline, VideoData, VideoSource};
+    use magicpic_geom::Rect;
+    let mut doc = Document::new("Vid", magicpic_geom::Size { width: 8, height: 6 }, ColorMode::Rgb, SampleType::U8);
     doc.timeline = Some(Timeline::new(3, 24.0));
     let fmt = doc.pixel_format();
     let mut l = Layer::raster("Clip", fmt);
     let mut frames = Vec::new();
     for i in 0..3u8 {
-        let mut s = photocraft_raster::Surface::new(fmt);
+        let mut s = magicpic_raster::Surface::new(fmt);
         let v = i as f32 / 2.0;
-        s.fill_rect(Rect::new(0, 0, 8, 6), &photocraft_raster::from_rgba(&fmt, [v, 0.0, 1.0 - v, 1.0]));
+        s.fill_rect(Rect::new(0, 0, 8, 6), &magicpic_raster::from_rgba(&fmt, [v, 0.0, 1.0 - v, 1.0]));
         frames.push(s);
     }
     let mut vd = VideoData::new(frames, 24.0);
@@ -1134,7 +1134,7 @@ fn video_layer_frames_survive_roundtrip() {
 /// save is refused instead, naming the value; finite documents are unaffected.
 #[test]
 fn a_non_finite_float_is_refused_at_save_rather_than_breaking_every_later_load() {
-    use photocraft_doc::Adjustment;
+    use magicpic_doc::Adjustment;
     type Mutate = Box<dyn Fn(&mut Document)>;
     let base = rich_doc(ColorMode::Rgb, SampleType::U8);
     let cases: Vec<(&str, Mutate)> = vec![
@@ -1225,12 +1225,12 @@ fn variables_follow_layer_id_remapping() {
 
 #[test]
 fn color_lookup_lut_file_round_trips_and_old_files_load() {
-    use photocraft_doc::Adjustment;
-    use photocraft_doc::adjust::{LutFormat, LutSource};
+    use magicpic_doc::Adjustment;
+    use magicpic_doc::adjust::{LutFormat, LutSource};
     let lut = Some(std::sync::Arc::new(vec![0.5f32; 24]));
     let source = Some(LutSource { format: LutFormat::ThreeDl, bytes: std::sync::Arc::new(b"0 1023\n0 0 0\n".to_vec()) });
     let adj = Adjustment::ColorLookup { name: "Film.3dl".into(), lut, size: 2, tetrahedral: false, dither: false, source };
-    let mut doc = Document::new("d", photocraft_doc::Size::new(4, 4), ColorMode::Rgb, SampleType::U8);
+    let mut doc = Document::new("d", magicpic_doc::Size::new(4, 4), ColorMode::Rgb, SampleType::U8);
     doc.insert_above(None, Layer::new("lookup", LayerContent::Adjustment(adj.clone())));
     let back = load_from_bytes(&save_to_bytes(&doc, &SaveOptions::default()).unwrap()).unwrap();
     assert_eq!(back, doc, "the LUT file survives a .pcraft round trip (#6544)");
@@ -1245,7 +1245,7 @@ fn color_lookup_lut_file_round_trips_and_old_files_load() {
 /// Removing previews is post-commit housekeeping, not part of publishing the new document.
 #[test]
 fn directory_save_without_previews_removes_stale_files_after_commit() {
-    let mut doc = Document::new("before", photocraft_doc::Size::new(4, 3), ColorMode::Rgb, SampleType::U8);
+    let mut doc = Document::new("before", magicpic_doc::Size::new(4, 3), ColorMode::Rgb, SampleType::U8);
     let dir = temp_dir("preview-cleanup");
     let mut writer = PcraftWriter::new();
     let opts = SaveOptions { thumbnail: Some(Rgba8Image::new(2, 2)), composite: Some(Rgba8Image::new(4, 3)), ..Default::default() };
@@ -1265,7 +1265,7 @@ fn failed_manifest_commit_preserves_omitted_previews() {
     use std::os::windows::fs::OpenOptionsExt;
 
     for depth in [SampleType::U8, SampleType::U16, SampleType::F32] {
-        let mut doc = Document::with_background("before", photocraft_doc::Size::new(4, 3), ColorMode::Rgb, depth, photocraft_color::Color::WHITE);
+        let mut doc = Document::with_background("before", magicpic_doc::Size::new(4, 3), ColorMode::Rgb, depth, magicpic_color::Color::WHITE);
         let dir = temp_dir("locked-manifest-previews");
         let mut writer = PcraftWriter::new();
         let opts = SaveOptions { thumbnail: Some(Rgba8Image::new(2, 2)), composite: Some(Rgba8Image::new(4, 3)), ..Default::default() };
@@ -1296,7 +1296,7 @@ fn failed_manifest_commit_preserves_omitted_previews() {
 fn locked_stale_preview_does_not_fail_committed_save() {
     use std::os::windows::fs::OpenOptionsExt;
 
-    let mut doc = Document::new("before", photocraft_doc::Size::new(4, 3), ColorMode::Rgb, SampleType::U8);
+    let mut doc = Document::new("before", magicpic_doc::Size::new(4, 3), ColorMode::Rgb, SampleType::U8);
     let dir = temp_dir("locked-stale-preview");
     let mut writer = PcraftWriter::new();
     let opts = SaveOptions { thumbnail: Some(Rgba8Image::new(2, 2)), composite: Some(Rgba8Image::new(4, 3)), ..Default::default() };
@@ -1315,20 +1315,20 @@ fn locked_stale_preview_does_not_fail_committed_save() {
 
 #[test]
 fn arrow_document_is_backward_compatible() {
-    use photocraft_doc::{Fill, LiveShape, Path, ShapeLayer, Subpath};
+    use magicpic_doc::{Fill, LiveShape, Path, ShapeLayer, Subpath};
 
     let arrow =
         LiveShape::ArrowLine { from: [12.0, 64.0], to: [140.0, 64.0], weight: 16.0, start: false, end: true, width: 52.0, length: 50.0, concavity: 20.0 };
 
     let path = Path::new(vec![Subpath::polygon(&[(12.0, 56.0), (100.0, 56.0), (100.0, 44.0), (140.0, 64.0), (100.0, 84.0), (100.0, 72.0), (12.0, 72.0)])]);
 
-    let mut doc = Document::new("Arrow compatibility", photocraft_doc::Size::new(256, 256), ColorMode::Rgb, SampleType::U8);
+    let mut doc = Document::new("Arrow compatibility", magicpic_doc::Size::new(256, 256), ColorMode::Rgb, SampleType::U8);
 
     doc.layers.push(Layer::new(
         "Editable arrow",
         LayerContent::Shape(ShapeLayer {
             path: path.clone(),
-            fill: Some(Fill::Solid(photocraft_doc::Color::BLACK)),
+            fill: Some(Fill::Solid(magicpic_doc::Color::BLACK)),
             live: Some(arrow.clone()),
             ..Default::default()
         }),
@@ -1374,8 +1374,8 @@ fn arrow_document_is_backward_compatible() {
 #[test]
 fn file_encoding_source_images_roundtrips_and_defaults_when_absent() {
     for count in [3, u32::MAX] {
-        let mut doc = Document::new("anim", photocraft_doc::Size::new(2, 2), ColorMode::Rgb, SampleType::U8);
-        doc.file_encoding = photocraft_doc::FileEncoding { jpeg_quality: Some(80), source_images: Some(count), ..Default::default() };
+        let mut doc = Document::new("anim", magicpic_doc::Size::new(2, 2), ColorMode::Rgb, SampleType::U8);
+        doc.file_encoding = magicpic_doc::FileEncoding { jpeg_quality: Some(80), source_images: Some(count), ..Default::default() };
         let bytes = save_to_bytes(&doc, &SaveOptions::default()).unwrap();
         let loaded = load_from_bytes(&bytes).unwrap();
         assert_eq!(loaded.file_encoding.source_images, Some(count));
@@ -1385,7 +1385,7 @@ fn file_encoding_source_images_roundtrips_and_defaults_when_absent() {
         let mut json = serde_json::to_value(read_manifest(&bytes).unwrap().document).unwrap();
         let encoding = json["file_encoding"].as_object_mut().unwrap();
         assert_eq!(encoding.remove("sourceImages"), Some(serde_json::json!(count)));
-        let old: photocraft_format::manifest::DocM = serde_json::from_value(json).unwrap();
-        assert_eq!(old.file_encoding, photocraft_doc::FileEncoding { jpeg_quality: Some(80), ..Default::default() });
+        let old: magicpic_format::manifest::DocM = serde_json::from_value(json).unwrap();
+        assert_eq!(old.file_encoding, magicpic_doc::FileEncoding { jpeg_quality: Some(80), ..Default::default() });
     }
 }

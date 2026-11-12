@@ -1,6 +1,6 @@
 [package]
-name = "photocraft-io"
-description = "Import/export between photocraft documents and PSD/PSB and flat raster formats"
+name = "magicpic-io"
+description = "Import/export between magicpic documents and PSD/PSB and flat raster formats"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -12,8 +12,8 @@ workspace = true
 [features]
 # Real-file corpus tests (opt-in; `cargo xtask test-corpus`). Fail when the corpus is missing.
 corpus = []
-# HEIC/HEIF decode (forwarded to photocraft-codecs; see its `heif` feature).
-heif = ["photocraft-codecs/heif"]
+# HEIC/HEIF decode (forwarded to magicpic-codecs; see its `heif` feature).
+heif = ["magicpic-codecs/heif"]
 # Test support for synthetic memory injection, estimate charges and verification across crates.
 testgen = []
 # Editable PDF import (experimental): painted paths and embedded-font text become editable
@@ -21,21 +21,21 @@ testgen = []
 pdf-editable = ["dep:kurbo"]
 
 [dependencies]
-photocraft-geom = { workspace = true }
-photocraft-color = { workspace = true }
-photocraft-cms = { workspace = true }
-photocraft-raster = { workspace = true }
-photocraft-doc = { workspace = true }
-photocraft-compose = { workspace = true }
-photocraft-algo = { workspace = true }
-photocraft-psd = { workspace = true }
-photocraft-codecs = { workspace = true }
-photocraft-raw = { workspace = true }
-photocraft-affinity = { workspace = true }
-photocraft-text = { workspace = true }
-photocraft-paint = { workspace = true }
-photocraft-vector = { workspace = true }
-photocraft-format = { path = "../format" }
+magicpic-geom = { workspace = true }
+magicpic-color = { workspace = true }
+magicpic-cms = { workspace = true }
+magicpic-raster = { workspace = true }
+magicpic-doc = { workspace = true }
+magicpic-compose = { workspace = true }
+magicpic-algo = { workspace = true }
+magicpic-psd = { workspace = true }
+magicpic-codecs = { workspace = true }
+magicpic-raw = { workspace = true }
+magicpic-affinity = { workspace = true }
+magicpic-text = { workspace = true }
+magicpic-paint = { workspace = true }
+magicpic-vector = { workspace = true }
+magicpic-format = { path = "../format" }
 craft-docpath = { workspace = true }
 thiserror = { workspace = true }
 ttf-parser = "0.25.1"
@@ -67,13 +67,13 @@ resvg = { version = "0.45", default-features = false, features = ["text", "raste
 lopdf = { version = "0.38", default-features = false }
 miniz_oxide = "0.9"
 crc32fast = "1.5"
-photocraft-affinity = { workspace = true, features = ["synth"] }
+magicpic-affinity = { workspace = true, features = ["synth"] }
 flate2 = { workspace = true }
-photocraft-psd = { workspace = true, features = ["testgen"] }
-photocraft-raw = { workspace = true, features = ["testgen"] }
-photocraft-testkit = { workspace = true }
+magicpic-psd = { workspace = true, features = ["testgen"] }
+magicpic-raw = { workspace = true, features = ["testgen"] }
+magicpic-testkit = { workspace = true }
 proptest = { workspace = true }
-# Lossless JPEG XL encoder for the JPEG XL DNG preview test (tests only), as in photocraft-raw.
+# Lossless JPEG XL encoder for the JPEG XL DNG preview test (tests only), as in magicpic-raw.
 zune-jpegxl = { version = "=0.5.2", default-features = false, features = ["std"] }
 zune-core = { workspace = true }
 tiff = { version = "0.11", default-features = false, features = ["deflate", "lzw"] }

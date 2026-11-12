@@ -5,9 +5,9 @@
 //! described by Barnes/Lehman/Mulla, Computers & Geosciences62 (2014),117–127:
 //! <https://doi.org/10.1016/j.cageo.2013.04.024>. Independent implementation; no source code copied.
 use crate::{Ctx, image::Image};
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_geom::Rect;
-use photocraft_raster::{Interrupt, Surface};
+use magicpic_color::{ColorMode, PixelFormat, SampleType};
+use magicpic_geom::Rect;
+use magicpic_raster::{Interrupt, Surface};
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 
@@ -86,7 +86,7 @@ fn shape(rect: Rect, channels: usize, operation: Operation<'_>) -> Result<Shape,
 }
 /// Admit padded output tiles, cloned sparse headers and selection/topology scratch before allocating any result.
 fn preflight(surface: &Surface, area: Rect, shape: Shape, operation: Operation<'_>, selection: Option<&Surface>) -> Result<(), Error> {
-    let ts = i64::from(photocraft_geom::TILE_SIZE);
+    let ts = i64::from(magicpic_geom::TILE_SIZE);
     let tile_count = |lo: i32, hi: i32| -> Result<usize, Error> {
         if hi <= lo {
             return Ok(0);
@@ -527,7 +527,7 @@ fn identity_region(source: &Image, out: Rect) -> Result<Vec<f32>, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_color::ColorMode;
+    use magicpic_color::ColorMode;
     #[test]
     /// Allow small point edits on large owners while keeping reconstruction, geometry and output workspace limits.
     fn small_point_operations_in_large_domain_keep_reconstruction_and_output_limits() {
@@ -767,7 +767,7 @@ mod tests {
                 }
             }
         }
-        let normalization = photocraft_raster::from_rgba(&PixelFormat::new(ColorMode::Lab, SampleType::F32, true), [0., 0., 0., 1.]);
+        let normalization = magicpic_raster::from_rgba(&PixelFormat::new(ColorMode::Lab, SampleType::F32, true), [0., 0., 0., 1.]);
         assert_eq!(&normalization[1..3], &[128. / 255., 128. / 255.]);
     }
     #[test]

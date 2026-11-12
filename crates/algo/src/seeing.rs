@@ -7,11 +7,11 @@
 //! judges a picture or "improves" it. The same input and parameters always give the same
 //! output; the only randomness is [`frames`], which is a pure function of its seed.
 //!
-//! Luminosity is [`photocraft_color::blend::lum`], the editor's own definition (the one the
+//! Luminosity is [`magicpic_color::blend::lum`], the editor's own definition (the one the
 //! Luminosity blend mode and the histogram use), taken on the composite's encoded values. It is
 //! an aid for comparing tones, not a colorimetric measurement.
 
-use photocraft_color::blend::{lum, set_lum};
+use magicpic_color::blend::{lum, set_lum};
 use serde::{Deserialize, Serialize};
 
 /// Largest buffer a view accepts (a 4096² preview). Callers reduce the composite first.

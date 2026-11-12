@@ -1,9 +1,9 @@
 //! End-to-end timing of `select.grow` and `select.similar` on large documents.
-//! `cargo run --release -p photocraft-engine --example bench_grow_similar [reps]`
+//! `cargo run --release -p magicpic-engine --example bench_grow_similar [reps]`
 use std::time::{Duration, Instant};
 
-use photocraft_engine::Session;
-use photocraft_geom::Rect;
+use magicpic_engine::Session;
+use magicpic_geom::Rect;
 use serde_json::json;
 
 fn main() {

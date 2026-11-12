@@ -4,7 +4,7 @@
 //! blue foreground, Color mode, Continuous, Contiguous, tolerance 30 %, an 80 px hard tip clicked at
 //! 100,120.
 
-use photocraft_color::PixelFormat;
+use magicpic_color::PixelFormat;
 
 use super::*;
 use crate::{BrushSettings, StrokePoint};
@@ -12,8 +12,8 @@ use crate::{BrushSettings, StrokePoint};
 fn target() -> Surface {
     let fmt = PixelFormat::RGBA8;
     let mut s = Surface::new(fmt);
-    s.fill_rect(Rect::new(0, 0, 200, 300), &photocraft_raster::from_rgba(&fmt, [220.0 / 255.0, 30.0 / 255.0, 30.0 / 255.0, 1.0]));
-    s.fill_rect(Rect::new(0, 140, 200, 160), &photocraft_raster::from_rgba(&fmt, [1.0, 1.0, 1.0, 1.0]));
+    s.fill_rect(Rect::new(0, 0, 200, 300), &magicpic_raster::from_rgba(&fmt, [220.0 / 255.0, 30.0 / 255.0, 30.0 / 255.0, 1.0]));
+    s.fill_rect(Rect::new(0, 140, 200, 160), &magicpic_raster::from_rgba(&fmt, [1.0, 1.0, 1.0, 1.0]));
     s
 }
 
@@ -55,7 +55,7 @@ const RED: [i32; 3] = [220, 30, 30];
 fn full() -> [i32; 3] {
     let mut s = target();
     let b = blend_rgb(BlendMode::Color, [220.0 / 255.0, 30.0 / 255.0, 30.0 / 255.0], [0.0, 0.0, 1.0]);
-    s.fill_rect(Rect::new(0, 0, 1, 1), &photocraft_raster::from_rgba(&PixelFormat::RGBA8, [b[0], b[1], b[2], 1.0]));
+    s.fill_rect(Rect::new(0, 0, 1, 1), &magicpic_raster::from_rgba(&PixelFormat::RGBA8, [b[0], b[1], b[2], 1.0]));
     px(&s, 0, 0)
 }
 

@@ -2,7 +2,7 @@
 //! application's messages, changing nothing and adding no history; the live stroke is refused the
 //! same way. RGB, Grayscale, CMYK and Lab at every depth, Multichannel and Duotone keep sharpening.
 
-use photocraft_color::{ColorMode, SampleType};
+use magicpic_color::{ColorMode, SampleType};
 use serde_json::json;
 
 use super::dodge_refuses_indexed_tests::{pixels, session, steps};

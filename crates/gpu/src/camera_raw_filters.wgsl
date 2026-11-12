@@ -1,5 +1,5 @@
 // Dehaze, Clarity and Texture for Camera Raw's GPU preview: develop's `box_mean`, `guided`,
-// `guided_fast` and `dehaze` (constants from `photocraft_algo::camera_raw::spatial`) as fragment
+// `guided_fast` and `dehaze` (constants from `magicpic_algo::camera_raw::spatial`) as fragment
 // passes. Appended to `camera_raw_tone.wgsl`, whose bindings and helpers it uses;
 // `camera_raw_tone.rs` orders the passes and `camera_raw.wgsl` applies their results.
 

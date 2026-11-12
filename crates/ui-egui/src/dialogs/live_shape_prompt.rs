@@ -6,10 +6,10 @@
 use serde_json::{Map, Value, json};
 
 use super::dont_show_again;
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::direct_select::{DirectSelection, PathRef};
 use crate::state::DialogKind;
-use photocraft_doc::{LayerContent, LayerId};
+use magicpic_doc::{LayerContent, LayerId};
 
 /// Marks the question; the dialog's fields carry the layer and the command's parameters.
 const MARK: &str = "__liveShapeDeleteAnchor";
@@ -22,7 +22,7 @@ pub fn owns(fields: &Map<String, Value>) -> bool {
 }
 
 /// Whether `r` is a live shape layer, such as a rectangle from the Rectangle tool in Shape mode.
-fn is_live(app: &PhotocraftApp, r: PathRef) -> bool {
+fn is_live(app: &MagicpicApp, r: PathRef) -> bool {
     let PathRef::Layer(id) = r else { return false };
     app.session.active().and_then(|st| st.doc.layer(LayerId(id))).is_some_and(|layer| matches!(&layer.content, LayerContent::Shape(sh) if sh.live.is_some()))
 }
@@ -30,7 +30,7 @@ fn is_live(app: &PhotocraftApp, r: PathRef) -> bool {
 /// Ask before `path.deleteAnchor` with `params` runs on `r`. True when the question is open (or
 /// already was), so the caller stops; false when the deletion goes ahead: `r` is not a live shape
 /// or "Don't show again" was ticked.
-pub fn ask(app: &mut PhotocraftApp, r: PathRef, params: &Value) -> bool {
+pub fn ask(app: &mut MagicpicApp, r: PathRef, params: &Value) -> bool {
     let PathRef::Layer(layer) = r else { return false };
     let Some((document, revision)) = app.session.active().map(|st| (st.doc.id.0, st.revision)) else { return false };
     if !is_live(app, r) || dont_show_again::dismissed(app, PREF) {
@@ -61,7 +61,7 @@ pub fn body(ui: &mut egui::Ui, fields: &mut Map<String, Value>) {
 }
 
 /// Yes: the anchor goes in one "Delete Anchor Point" step, and a ticked "Don't show again" is kept.
-pub fn confirm(app: &mut PhotocraftApp, fields: &Map<String, Value>) -> Result<Value, String> {
+pub fn confirm(app: &mut MagicpicApp, fields: &Map<String, Value>) -> Result<Value, String> {
     let layer = fields.get("layer").and_then(Value::as_u64).ok_or(tl!("No anchor to delete"))?;
     let params = fields.get("params").cloned().ok_or(tl!("No anchor to delete"))?;
     let asked = fields.get("__document").and_then(Value::as_u64).zip(fields.get("__revision").and_then(Value::as_u64));

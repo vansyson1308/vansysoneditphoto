@@ -2,7 +2,7 @@
 //! selection and drops the selection in the same History step, while `new_layer` (used by the
 //! canvas preview during the drag) masks the preview without mutating the document's selection.
 
-use photocraft_geom::Rect;
+use magicpic_geom::Rect;
 use serde_json::json;
 
 use super::{CREATE, LayerId, new_layer};
@@ -32,7 +32,7 @@ fn create_masks_with_the_selection_drops_it_and_undo_restores_it() {
         assert_eq!(preview_mask.surface.content_bounds(), bounds, "{depth}-bit preview mask bounds");
         let mut preview_doc = (*s.active().unwrap().doc).clone();
         preview_doc.layers.push(preview);
-        let flat = photocraft_compose::flatten(&preview_doc);
+        let flat = magicpic_compose::flatten(&preview_doc);
         assert_eq!(flat.px[300 * 800 + 300], [0.0, 0.0, 0.0, 1.0], "{depth}-bit preview inside selection");
         assert_eq!(flat.px[100 * 800 + 100], [1.0, 1.0, 1.0, 1.0], "{depth}-bit preview outside selection");
         assert!(s.active().unwrap().doc.selection.is_some(), "{depth}-bit preview keeps selection");

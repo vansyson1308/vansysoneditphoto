@@ -50,7 +50,7 @@ const INDEXED_REFUSAL: &str = "Could not set the clone source because it does no
 
 pub(super) fn healing_brush(s: &mut Session, p: &Value) -> Result<Value> {
     const CMD: &str = "paint.healingBrush";
-    if s.active().is_some_and(|st| st.doc.mode == photocraft_color::ColorMode::Indexed) {
+    if s.active().is_some_and(|st| st.doc.mode == magicpic_color::ColorMode::Indexed) {
         return Err(EngineError::Other(INDEXED_REFUSAL.into()));
     }
     let (stroke, id) = parse_brush(s, p, CMD)?;
@@ -117,10 +117,10 @@ pub(super) fn history_source(s: &Session, id: Option<LayerId>, p: &Value, cmd: &
             let only = source_doc.layers.first().ok_or_else(missing)?;
             // A shape paints past its path, as in Photoshop: a solid fill its colour, and a gradient,
             // a pattern or no fill plain white, whatever its outline.
-            if let photocraft_doc::LayerContent::Shape(shape) = &only.content {
+            if let magicpic_doc::LayerContent::Shape(shape) = &only.content {
                 let color = match &shape.fill {
-                    Some(photocraft_doc::Fill::Solid(color)) => *color,
-                    _ => photocraft_color::Color::WHITE,
+                    Some(magicpic_doc::Fill::Solid(color)) => *color,
+                    _ => magicpic_color::Color::WHITE,
                 };
                 let c = color.in_mode(fmt.mode);
                 let mut pixel = c.c.get(..fmt.mode.color_channels()).unwrap_or_default().to_vec();

@@ -5,15 +5,15 @@
 use egui::Modifiers;
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::canvas::{ToolEvent, tool_event};
 use crate::state::Tool;
 
 const SHIFT_ALT: Modifiers = Modifiers { alt: true, ctrl: false, shift: true, mac_cmd: false, command: false };
 
 /// A 400 × 300 document, a red layer to sample, blue foreground.
-fn app(tool: Tool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app(tool: Tool) -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
     app.run("edit.fill", json!({"color": "#ff0000"})).unwrap();
     app.run("tools.setColors", json!({"foreground": "#0000ff"})).unwrap();
@@ -22,23 +22,23 @@ fn app(tool: Tool) -> PhotocraftApp {
     app
 }
 
-fn click(app: &mut PhotocraftApp, x: f64, y: f64, mods: Modifiers) {
+fn click(app: &mut MagicpicApp, x: f64, y: f64, mods: Modifiers) {
     tool_event(app, ToolEvent::Down { x, y, pressure: 1.0 }, mods);
     // A click's own jitter: a move or two on the spot.
     tool_event(app, ToolEvent::Move { x, y, pressure: 1.0 }, mods);
     tool_event(app, ToolEvent::Up { x, y }, mods);
 }
 
-fn samplers(app: &mut PhotocraftApp) -> Vec<Value> {
+fn samplers(app: &mut MagicpicApp) -> Vec<Value> {
     let r = app.run("view.colorSamplers.list", json!({})).unwrap();
     r.get("samplers").and_then(Value::as_array).cloned().unwrap_or_default()
 }
 
-fn foreground(app: &PhotocraftApp) -> [f32; 4] {
+fn foreground(app: &MagicpicApp) -> [f32; 4] {
     app.session.tools.foreground
 }
 
-fn steps(app: &PhotocraftApp) -> usize {
+fn steps(app: &MagicpicApp) -> usize {
     app.session.active().unwrap().history.past_len()
 }
 
@@ -165,6 +165,6 @@ fn a_full_document_refused_for_another_reason_keeps_the_error_styling() {
     assert!(app.ui.status_error, "and keeps its error styling: {:?}", app.ui.status);
 }
 
-fn samplers_of(app: &PhotocraftApp) -> Vec<[f64; 2]> {
+fn samplers_of(app: &MagicpicApp) -> Vec<[f64; 2]> {
     app.session.active().map(|d| d.color_samplers.clone()).unwrap_or_default()
 }

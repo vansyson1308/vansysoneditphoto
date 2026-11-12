@@ -6,16 +6,16 @@ use egui::accesskit::Role;
 use egui::vec2;
 use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
-use photocraft_doc::{Fill, LayerContent, LayerId};
+use magicpic_doc::{Fill, LayerContent, LayerId};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::canvas::ToolEvent;
 use crate::state::Tool;
 
 /// A document with a pixel layer below a Gradient fill layer; returns (app, pixel layer, fill layer).
-fn doc() -> (PhotocraftApp, LayerId, LayerId) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn doc() -> (MagicpicApp, LayerId, LayerId) {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 300, "height": 200})).unwrap();
     let pixels = LayerId(app.run("layer.new.layer", json!({})).unwrap()["layer"].as_u64().unwrap());
     let fill = LayerId(app.run("layer.newFillLayer.gradient", json!({"from": "#235b49", "to": "#a7d4ab", "angle": 90})).unwrap()["layer"].as_u64().unwrap());
@@ -24,21 +24,21 @@ fn doc() -> (PhotocraftApp, LayerId, LayerId) {
     (app, pixels, fill)
 }
 
-fn select(app: &mut PhotocraftApp, id: LayerId) {
+fn select(app: &mut MagicpicApp, id: LayerId) {
     app.run("layer.select", json!({"layer": id.0})).unwrap();
     assert_eq!(app.session.active().unwrap().active_layer, Some(id));
 }
 
-fn bar(app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
+fn bar(app: MagicpicApp) -> Harness<'static, MagicpicApp> {
     let mut h = Harness::builder().with_size(vec2(1600.0, 300.0)).build_ui_state(|ui, app| crate::panels::options_bar(app, ui), app);
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ProMedium);
+    MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::ProMedium);
     h.run_steps(4);
     h
 }
 
 /// The mode dropdown, found by its role and options rather than its label (the blend Mode label
 /// reads "Mode:" or "Mode" by theme): (greyed, the option it shows).
-fn dropdown(h: &Harness<'static, PhotocraftApp>) -> (bool, String) {
+fn dropdown(h: &Harness<'static, MagicpicApp>) -> (bool, String) {
     let modes = ["Gradient", "Classic gradient"];
     let mut combos = h.query_all_by_role(Role::ComboBox).filter(|n| n.accesskit_node().value().is_some_and(|v| modes.contains(&v.as_str())));
     let node = combos.next().expect("the mode dropdown");
@@ -48,7 +48,7 @@ fn dropdown(h: &Harness<'static, PhotocraftApp>) -> (bool, String) {
 }
 
 /// Pick `option` from the enabled mode dropdown, as a click on it and then on the option does.
-fn pick(h: &mut Harness<'static, PhotocraftApp>, option: &str) {
+fn pick(h: &mut Harness<'static, MagicpicApp>, option: &str) {
     let modes = ["Gradient", "Classic gradient"];
     h.query_all_by_role(Role::ComboBox).find(|n| n.accesskit_node().value().is_some_and(|v| modes.contains(&v.as_str()))).expect("the mode dropdown").click();
     h.run_steps(2);
@@ -56,7 +56,7 @@ fn pick(h: &mut Harness<'static, PhotocraftApp>, option: &str) {
     h.run_steps(2);
 }
 
-fn gradient_of(app: &PhotocraftApp, id: LayerId) -> Fill {
+fn gradient_of(app: &MagicpicApp, id: LayerId) -> Fill {
     match &app.session.active().unwrap().doc.layer(id).unwrap().content {
         LayerContent::Fill(f @ Fill::Gradient { .. }) => f.clone(),
         other => panic!("{}", other.kind_name()),
@@ -129,7 +129,7 @@ fn the_fill_layer_gets_the_live_bar_with_classic_chosen() {
     app.ui.tool_options.gradient_reverse = !before.gradient_reverse;
     crate::gradient_ui::options_changed(&mut app, &before);
     assert!(matches!(gradient_of(&app, fill), Fill::Gradient { reverse, .. } if reverse != before.gradient_reverse), "Reverse");
-    let mode_and_opacity = |h: &Harness<'static, PhotocraftApp>| {
+    let mode_and_opacity = |h: &Harness<'static, MagicpicApp>| {
         let mode = h.query_all_by_role(Role::ComboBox).any(|n| n.accesskit_node().value().as_deref() == Some("Normal"));
         (mode, h.query_by_label_contains("Opacity").is_some())
     };

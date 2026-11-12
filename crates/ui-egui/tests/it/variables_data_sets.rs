@@ -1,11 +1,11 @@
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
-use photocraft_ui_egui::PhotocraftApp;
-use photocraft_ui_egui::state::DialogKind;
+use magicpic_ui_egui::MagicpicApp;
+use magicpic_ui_egui::state::DialogKind;
 use serde_json::{Map, json};
 
-fn app_with_variables_dialog(cur: u64) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), photocraft_ui_egui::Services::default());
+fn app_with_variables_dialog(cur: u64) -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), magicpic_ui_egui::Services::default());
     app.run("file.new", json!({"width": 64, "height": 64})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     let state = json!({
@@ -27,18 +27,18 @@ fn app_with_variables_dialog(cur: u64) -> PhotocraftApp {
     app
 }
 
-fn harness(app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
+fn harness(app: MagicpicApp) -> Harness<'static, MagicpicApp> {
     let mut h = Harness::builder().with_size(egui::vec2(900.0, 700.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut MagicpicApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
             }
-            photocraft_ui_egui::dialogs::show(app, &ctx);
+            magicpic_ui_egui::dialogs::show(app, &ctx);
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, photocraft_ui_egui::theme::ThemeKind::ALL[0]);
+    MagicpicApp::setup_context(&h.ctx, magicpic_ui_egui::theme::ThemeKind::ALL[0]);
     h.run_steps(3);
     h
 }
@@ -57,20 +57,20 @@ fn out_of_range_data_set_index_is_clamped_before_delete() {
 }
 
 /// A real image file and unsaved dialog edits exercise the same path as manual entry.
-fn pixel_replacement_harness() -> (tempfile::TempDir, Harness<'static, PhotocraftApp>) {
+fn pixel_replacement_harness() -> (tempfile::TempDir, Harness<'static, MagicpicApp>) {
     let dir = tempfile::tempdir().unwrap();
     for (name, color) in [("blue.png", "#0000ff"), ("red.png", "#ff0000")] {
-        let mut source = photocraft_engine::Session::new();
+        let mut source = magicpic_engine::Session::new();
         source.execute("file.new", json!({"width": 8, "height": 8, "background": color})).unwrap();
-        let png = photocraft_io::export(&source.active().unwrap().doc, "png", &photocraft_io::ExportOptions::default()).unwrap().bytes;
+        let png = magicpic_io::export(&source.active().unwrap().doc, "png", &magicpic_io::ExportOptions::default()).unwrap().bytes;
         std::fs::write(dir.path().join(name), png).unwrap();
     }
     let path = dir.path().join("blue.png");
 
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), photocraft_ui_egui::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), magicpic_ui_egui::Services::default());
     app.run("file.new", json!({"width": 8, "height": 8, "background": "white"})).unwrap();
     let layer = app.session.active().unwrap().active_layer.unwrap();
-    photocraft_ui_egui::menus::invoke(&mut app, &egui::Context::default(), "image.variables.dataSets", json!({})).unwrap();
+    magicpic_ui_egui::menus::invoke(&mut app, &egui::Context::default(), "image.variables.dataSets", json!({})).unwrap();
     let dialog = app.ui.dialogs.last_mut().unwrap();
     dialog.fields.insert(
         "__variables".into(),
@@ -82,23 +82,23 @@ fn pixel_replacement_harness() -> (tempfile::TempDir, Harness<'static, Photocraf
     (dir, harness(app))
 }
 
-fn save_draft_and_open_apply_menu(h: &mut Harness<'static, PhotocraftApp>) {
+fn save_draft_and_open_apply_menu(h: &mut Harness<'static, MagicpicApp>) {
     h.get_by_label("OK").click();
     h.run_steps(3);
     assert!(h.state().ui.dialogs.is_empty());
     let ctx = h.ctx.clone();
-    photocraft_ui_egui::menus::invoke(h.state_mut(), &ctx, "image.applyDataSet", json!({})).unwrap();
+    magicpic_ui_egui::menus::invoke(h.state_mut(), &ctx, "image.applyDataSet", json!({})).unwrap();
     h.run_steps(3);
 }
 
-fn read_pixel(h: &mut Harness<'static, PhotocraftApp>) -> serde_json::Value {
+fn read_pixel(h: &mut Harness<'static, MagicpicApp>) -> serde_json::Value {
     h.state_mut().run("document.pixel", json!({"x": 4, "y": 4})).unwrap()
 }
 
 /// CSV chosen through the import menu supplies the row that Apply renders and OK preserves.
 #[test]
 fn imported_csv_replaces_pixels_through_the_apply_dialog() {
-    use photocraft_ui_egui::file_dialog::{FileDialogAnswer, FileDialogRequest};
+    use magicpic_ui_egui::file_dialog::{FileDialogAnswer, FileDialogRequest};
 
     for contents in [false, true] {
         let (dir, mut h) = pixel_replacement_harness();
@@ -118,7 +118,7 @@ fn imported_csv_replaces_pixels_through_the_apply_dialog() {
             reply.send(Some(answer.clone()));
         }));
         let ctx = h.ctx.clone();
-        photocraft_ui_egui::menus::invoke(h.state_mut(), &ctx, "file.import.variableDataSets", json!({})).unwrap();
+        magicpic_ui_egui::menus::invoke(h.state_mut(), &ctx, "file.import.variableDataSets", json!({})).unwrap();
         h.state_mut().poll_file_dialog(&ctx, None);
         assert!(!h.state().file_dialog_open());
         let rows = &h.state().session.active().unwrap().doc.variables.data_sets;
@@ -126,7 +126,7 @@ fn imported_csv_replaces_pixels_through_the_apply_dialog() {
         assert_eq!(rows[0].name, "Imported");
         assert_eq!(read_pixel(&mut h), json!([1.0, 1.0, 1.0, 1.0]), "import alone does not apply a row");
 
-        photocraft_ui_egui::menus::invoke(h.state_mut(), &ctx, "image.applyDataSet", json!({})).unwrap();
+        magicpic_ui_egui::menus::invoke(h.state_mut(), &ctx, "image.applyDataSet", json!({})).unwrap();
         h.run_steps(3);
         h.get_by_label("Apply").click();
         h.run_steps(3);
@@ -145,10 +145,10 @@ fn imported_csv_replaces_pixels_through_the_apply_dialog() {
 #[test]
 fn apply_menu_ok_requires_a_row_but_not_variable_definitions() {
     for (rows, explicit, expected) in [(json!([]), false, None), (json!([{"name": "Empty", "values": []}]), false, Some(0)), (json!([]), true, None)] {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), photocraft_ui_egui::Services::default());
+        let mut app = MagicpicApp::new(magicpic_engine::Session::new(), magicpic_ui_egui::Services::default());
         app.run("file.new", json!({"width": 8, "height": 8, "background": "white"})).unwrap();
         app.run("image.variables.dataSets", json!({"dataSets": rows})).unwrap();
-        photocraft_ui_egui::menus::invoke(&mut app, &egui::Context::default(), "image.applyDataSet", json!({})).unwrap();
+        magicpic_ui_egui::menus::invoke(&mut app, &egui::Context::default(), "image.applyDataSet", json!({})).unwrap();
         if explicit {
             app.ui.dialogs.last_mut().unwrap().fields.insert("__apply".into(), json!(0));
         }
@@ -303,7 +303,7 @@ fn variables_editor_ok_only_saves_configuration() {
         h.get_by_label("Cancel").click();
         h.run_steps(3);
         let ctx = h.ctx.clone();
-        photocraft_ui_egui::menus::invoke(h.state_mut(), &ctx, menu, json!({})).unwrap();
+        magicpic_ui_egui::menus::invoke(h.state_mut(), &ctx, menu, json!({})).unwrap();
         h.state_mut().ui.dialogs.last_mut().unwrap().fields.insert("__variables".into(), state);
         h.run_steps(3);
         h.get_by_label("OK").click();
@@ -347,8 +347,8 @@ fn failed_apply_can_be_corrected_without_retries_or_cancel_rollback() {
 }
 
 /// `ui.dialog.set` can store any JSON in `__variables`; the editors write into its entries.
-fn app_with_malformed_variables(page: &str) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), photocraft_ui_egui::Services::default());
+fn app_with_malformed_variables(page: &str) -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), magicpic_ui_egui::Services::default());
     app.run("file.new", json!({"width": 64, "height": 64})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     let mut fields = Map::new();
@@ -361,7 +361,7 @@ fn app_with_malformed_variables(page: &str) -> PhotocraftApp {
     app
 }
 
-fn type_into_first_text_field(h: &mut Harness<'static, PhotocraftApp>) {
+fn type_into_first_text_field(h: &mut Harness<'static, MagicpicApp>) {
     h.query_all_by_role(egui::accesskit::Role::TextInput).next().expect("a text field").click();
     h.run_steps(2);
     h.query_all_by_role(egui::accesskit::Role::TextInput).next().expect("a text field").type_text("z");

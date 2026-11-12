@@ -60,7 +60,7 @@ fn session() -> Session {
     s.edit("paint", |doc, active| {
         let l = doc.layer_mut(active.unwrap()).unwrap();
         l.surface_mut().unwrap().fill_rect(Rect::new(10, 5, 20, 15), &[1.0, 0.0, 0.0, 1.0]);
-        l.mask = Some(photocraft_doc::LayerMask::reveal_all());
+        l.mask = Some(magicpic_doc::LayerMask::reveal_all());
         l.effects.items.push(Effect::default_drop_shadow());
         Ok(())
     })
@@ -79,7 +79,7 @@ fn crop_moves_stored_video_frames() {
     s.edit("video", |doc, active| {
         let l = doc.layer_mut(active.unwrap()).unwrap();
         let frame = l.surface().unwrap().clone();
-        let mut v = photocraft_doc::VideoData::new(vec![frame.clone(), frame.clone()], 24.0);
+        let mut v = magicpic_doc::VideoData::new(vec![frame.clone(), frame.clone()], 24.0);
         v.original_frames = Some(vec![frame.clone(), frame]);
         l.video = Some(v);
         Ok(())
@@ -104,7 +104,7 @@ fn delete_cropped_pixels_crops_stored_video_frames() {
         let red = l.surface().unwrap().clone();
         let mut blue = red.clone();
         blue.fill_rect(Rect::new(0, 0, 40, 20), &[0.0, 0.0, 1.0, 1.0]);
-        let mut v = photocraft_doc::VideoData::new(vec![red.clone(), blue.clone()], 24.0);
+        let mut v = magicpic_doc::VideoData::new(vec![red.clone(), blue.clone()], 24.0);
         v.original_frames = Some(vec![red, blue]);
         l.video = Some(v);
         Ok(())
@@ -207,7 +207,7 @@ fn image_size_keeps_canvas_edges_opaque() {
             s.execute("select.all", json!({})).unwrap();
             s.execute("image.imageSize", json!({"width": w, "resample": resample})).unwrap();
             let d = doc(&s);
-            let flat = photocraft_compose::flatten(d);
+            let flat = magicpic_compose::flatten(d);
             let (w, h) = (flat.rect.width() as usize, flat.rect.height() as usize);
             let mid = flat.px[(h / 2) * w + w / 2];
             assert!((mid[3] - 1.0).abs() < 1e-3, "{depth} {resample}: {mid:?}");
@@ -310,12 +310,12 @@ fn image_size_keeps_the_pixels_of_type_in_a_missing_font() {
             s.execute("file.new", json!({"width": 100, "height": 100, "depth": depth})).unwrap();
             let cache = s
                 .edit("type", |doc, active| {
-                    let mut t = photocraft_doc::TextLayer { text: "Hello!".into(), font_family: font.into(), size_pt: 26.0, ..Default::default() };
-                    t.transform = photocraft_geom::Affine::translate(10.0, 60.0);
-                    // Deliberately not what PhotoCraft would draw, so a re-render shows.
+                    let mut t = magicpic_doc::TextLayer { text: "Hello!".into(), font_family: font.into(), size_pt: 26.0, ..Default::default() };
+                    t.transform = magicpic_geom::Affine::translate(10.0, 60.0);
+                    // Deliberately not what MagicPic would draw, so a re-render shows.
                     let fmt = doc.pixel_format();
                     let mut cache = Surface::new(fmt);
-                    cache.fill_rect(Rect::new(10, 20, 90, 60), &photocraft_raster::from_rgba(&fmt, [0.4, 0.2, 0.6, 1.0]));
+                    cache.fill_rect(Rect::new(10, 20, 90, 60), &magicpic_raster::from_rgba(&fmt, [0.4, 0.2, 0.6, 1.0]));
                     t.cache = Some(cache.clone());
                     *active = Some(doc.insert_above(None, Layer::new("Hello!", LayerContent::Text(t))));
                     Ok(cache)
@@ -619,7 +619,7 @@ fn turned_crop_deleting_pixels_keeps_type_and_smart_objects_whole() {
         s.execute("layer.smartObjects.convertToSmartObject", json!({})).unwrap();
         s.edit("unlink", |doc, active| {
             if let LayerContent::Smart(sm) = &mut doc.layer_mut(active.unwrap()).unwrap().content {
-                sm.source = photocraft_doc::SmartSource::Linked { path: "missing-photocraft-test-source.psd".into() };
+                sm.source = magicpic_doc::SmartSource::Linked { path: "missing-magicpic-test-source.psd".into() };
             }
             Ok(())
         })
@@ -690,7 +690,7 @@ fn extending_the_canvas_keeps_the_backgrounds_hidden_pixels() {
 /// from empty ones: the added area takes the colour, the kept area stays (#7086).
 #[test]
 fn an_alpha_less_background_extension_takes_the_colour() {
-    let mut surf = Surface::new(photocraft_color::PixelFormat::GRAY8);
+    let mut surf = Surface::new(magicpic_color::PixelFormat::GRAY8);
     surf.fill_rect(Rect::new(-50, 0, 100, 100), &[0.6]);
     let kept = surf.pixel(50, 50);
     fill_background_extension(&mut surf, Rect::new(-60, 0, 100, 100), Rect::new(0, 0, 100, 100), &[0.0]);
@@ -790,7 +790,7 @@ fn crop_at_a_small_angle_keeps_the_frame_size_in_every_mode() {
 /// frame spans several tiles, at several depths and angles).
 #[test]
 fn turned_crop_deleting_pixels_matches_turning_the_whole_canvas() {
-    use photocraft_color::PixelFormat;
+    use magicpic_color::PixelFormat;
     let pixels = || (0..500).flat_map(|y| (0..700).map(move |x| (x, y)));
     for depth in [8, 16, 32] {
         for angle in [3.0, -7.5, 33.0, 181.0] {
@@ -805,7 +805,7 @@ fn turned_crop_deleting_pixels_matches_turning_the_whole_canvas() {
                     let gray: Vec<f32> = pixels().map(|(x, y)| wave(y, x, 4)).collect();
                     let l = doc.layer_mut(active.unwrap()).unwrap();
                     l.surface_mut().unwrap().write_region(all, &rgba);
-                    let mut mask = photocraft_doc::LayerMask::reveal_all();
+                    let mut mask = magicpic_doc::LayerMask::reveal_all();
                     mask.surface.write_region(all, &gray);
                     l.mask = Some(mask);
                     let bg = doc.background_mut().unwrap().surface_mut().unwrap();
@@ -813,7 +813,7 @@ fn turned_crop_deleting_pixels_matches_turning_the_whole_canvas() {
                     let fmt = PixelFormat::new(ColorMode::Grayscale, doc.pixel_format().sample, false);
                     let mut ch = Surface::new(fmt);
                     ch.write_region(all, &gray);
-                    doc.channels.push(photocraft_doc::AlphaChannel::new("Alpha 1", ch));
+                    doc.channels.push(magicpic_doc::AlphaChannel::new("Alpha 1", ch));
                     Ok(())
                 })
                 .unwrap();
@@ -1052,10 +1052,10 @@ fn hidden_resample_budget_names_what_delete_cropped_pixels_keeps() {
     let mut s = Session::new();
     s.execute("file.new", json!({"width": 100, "height": 100})).unwrap();
     s.edit("channel", |doc, _| {
-        let fmt = photocraft_color::PixelFormat::new(ColorMode::Grayscale, doc.pixel_format().sample, false);
+        let fmt = magicpic_color::PixelFormat::new(ColorMode::Grayscale, doc.pixel_format().sample, false);
         let mut ch = Surface::new(fmt);
         ch.write_region(Rect::new(0, 0, 100, 100), &[1.0; 100 * 100]);
-        doc.channels.push(photocraft_doc::AlphaChannel::new("Alpha 1", ch));
+        doc.channels.push(magicpic_doc::AlphaChannel::new("Alpha 1", ch));
         Ok(())
     })
     .unwrap();

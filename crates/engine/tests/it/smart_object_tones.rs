@@ -1,6 +1,6 @@
-use photocraft_doc::{LayerContent, LayerId};
-use photocraft_engine::{Session, smart_cmds};
-use photocraft_raster::Surface;
+use magicpic_doc::{LayerContent, LayerId};
+use magicpic_engine::{Session, smart_cmds};
+use magicpic_raster::Surface;
 use serde_json::json;
 
 fn mean_difference(a: &Surface, b: &Surface) -> f64 {

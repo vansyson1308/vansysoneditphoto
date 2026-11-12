@@ -1,9 +1,9 @@
 //! Shared helpers for the second filter batch: colour-model access, window
 //! buffers, single-channel box/Gaussian blurs and jittered cell points.
 
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_geom::Rect;
-use photocraft_raster::{from_rgba_into, to_rgba};
+use magicpic_color::{ColorMode, PixelFormat, SampleType};
+use magicpic_geom::Rect;
+use magicpic_raster::{from_rgba_into, to_rgba};
 
 use crate::Ctx;
 use crate::image::Image;
@@ -447,7 +447,7 @@ mod tests {
         }
     }
 
-    /// `cargo test -p photocraft-algo --release --lib -- --nocapture cols_timing`
+    /// `cargo test -p magicpic-algo --release --lib -- --nocapture cols_timing`
     #[test]
     fn cols_timing() {
         for (w, h, n, r) in [(324, 324, 2, 9), (1122, 1122, 2, 79), (1122, 786, 2, 79)] {

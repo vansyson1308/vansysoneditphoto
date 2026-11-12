@@ -2,7 +2,7 @@
 //! real workspace on disk, and bridged against an app stand-in that runs the real engine.
 
 use base64::Engine as _;
-use photocraft_automation::{AuthorizedWorkspace, Headless, PhotocraftMcp};
+use magicpic_automation::{AuthorizedWorkspace, Headless, MagicpicMcp};
 use rmcp::model::{CallToolRequestParams, CallToolResult, ClientConfig};
 use rmcp::service::RunningService;
 use rmcp::{ClientHandler, RoleClient, ServiceExt};
@@ -21,7 +21,7 @@ impl ClientHandler for Client {
 
 type Mcp = RunningService<RoleClient, Client>;
 
-async fn connect(server: PhotocraftMcp) -> Mcp {
+async fn connect(server: MagicpicMcp) -> Mcp {
     let (s, c) = tokio::io::duplex(1 << 20);
     tokio::spawn(async move {
         if let Ok(running) = server.serve(s).await {
@@ -54,12 +54,12 @@ fn error_of(r: &CallToolResult) -> String {
 }
 
 /// The image of a tool result: its decoded pixels, MIME type and the JSON note beside it.
-fn image_of(r: &CallToolResult) -> (photocraft_codecs::Image, String, Value) {
+fn image_of(r: &CallToolResult) -> (magicpic_codecs::Image, String, Value) {
     assert_ne!(r.is_error, Some(true), "tool error: {}", text(r));
     let img = r.content.iter().find_map(|c| c.as_image()).expect("image content");
     let bytes = base64::engine::general_purpose::STANDARD.decode(&img.data).unwrap();
     let note = serde_json::from_str(&text(r)).unwrap_or(Value::Null);
-    (photocraft_codecs::decode(&bytes).unwrap(), img.mime_type.clone(), note)
+    (magicpic_codecs::decode(&bytes).unwrap(), img.mime_type.clone(), note)
 }
 
 struct Workspace(std::path::PathBuf);
@@ -71,8 +71,8 @@ impl Workspace {
         std::fs::create_dir_all(&d).unwrap();
         Workspace(d)
     }
-    fn server(&self) -> PhotocraftMcp {
-        PhotocraftMcp::headless_with_workspace(AuthorizedWorkspace::new(Some(&self.0), Some(&self.0)).expect("test workspace"))
+    fn server(&self) -> MagicpicMcp {
+        MagicpicMcp::headless_with_workspace(AuthorizedWorkspace::new(Some(&self.0), Some(&self.0)).expect("test workspace"))
     }
     /// A 120×80 photo-like PNG: a sky gradient over dark ground with a bright warm square.
     fn photo(&self, name: &str) {
@@ -90,8 +90,8 @@ impl Workspace {
                 px.extend(c);
             }
         }
-        let img = photocraft_codecs::Image::from_u8(w, h, photocraft_codecs::ChannelLayout::Rgba, px).unwrap();
-        std::fs::write(self.0.join(name), photocraft_codecs::encode(&img, photocraft_codecs::Format::Png, &Default::default()).unwrap()).unwrap();
+        let img = magicpic_codecs::Image::from_u8(w, h, magicpic_codecs::ChannelLayout::Rgba, px).unwrap();
+        std::fs::write(self.0.join(name), magicpic_codecs::encode(&img, magicpic_codecs::Format::Png, &Default::default()).unwrap()).unwrap();
     }
 }
 
@@ -153,11 +153,11 @@ async fn files_list_finds_the_newest_picture_and_stays_inside_the_roots() {
     let second = Workspace::new("list-second");
     std::thread::sleep(std::time::Duration::from_millis(1100));
     // The second root's picture has another size, so which file opened can be told apart.
-    let small = photocraft_codecs::Image::from_u8(60, 40, photocraft_codecs::ChannelLayout::Rgba, vec![200; 60 * 40 * 4]).unwrap();
-    std::fs::write(second.0.join("old.png"), photocraft_codecs::encode(&small, photocraft_codecs::Format::Png, &Default::default()).unwrap()).unwrap();
+    let small = magicpic_codecs::Image::from_u8(60, 40, magicpic_codecs::ChannelLayout::Rgba, vec![200; 60 * 40 * 4]).unwrap();
+    std::fs::write(second.0.join("old.png"), magicpic_codecs::encode(&small, magicpic_codecs::Format::Png, &Default::default()).unwrap()).unwrap();
     std::fs::write(second.0.join("odd name. "), "x").unwrap();
     let both = AuthorizedWorkspace::with_read_roots([ws.0.as_path(), second.0.as_path()], None).unwrap();
-    let client = connect(PhotocraftMcp::headless_with_workspace(both)).await;
+    let client = connect(MagicpicMcp::headless_with_workspace(both)).await;
     let v = json_of(&call(&client, "files_list", json!({})).await);
     let entries = v["entries"].as_array().unwrap();
     assert!(entries.iter().all(|e| e["path"] != "odd name. "), "{entries:?}");
@@ -172,7 +172,7 @@ async fn files_list_finds_the_newest_picture_and_stays_inside_the_roots() {
     client.cancel().await.unwrap();
 
     // Without roots there is nothing to list.
-    let client = connect(PhotocraftMcp::headless()).await;
+    let client = connect(MagicpicMcp::headless()).await;
     assert!(error_of(&call(&client, "files_list", json!({})).await).contains("not granted"));
     client.cancel().await.unwrap();
 }
@@ -263,7 +263,7 @@ async fn variants_are_reproducible_and_survive_save_and_reopen() {
     let exported = json_of(&call(&client, "doc_export", json!({"index": 1, "path": "bright.png"})).await);
     assert_eq!(exported["verified"], true);
     // The export opens again and is the picture that was previewed.
-    let flat = photocraft_codecs::decode(&std::fs::read(ws.0.join("bright.png")).unwrap()).unwrap();
+    let flat = magicpic_codecs::decode(&std::fs::read(ws.0.join("bright.png")).unwrap()).unwrap();
     assert_eq!(flat.dimensions(), (120, 80));
     assert_eq!(flat.to_rgba8(), previews[0], "preview and export differ");
 
@@ -288,7 +288,7 @@ async fn variants_are_reproducible_and_survive_save_and_reopen() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn a_stale_revision_is_refused_and_a_current_one_runs() {
-    let client = connect(PhotocraftMcp::headless()).await;
+    let client = connect(MagicpicMcp::headless()).await;
     json_of(&call(&client, "doc_new", json!({"width": 32, "height": 32})).await);
     let seen = revision(&client).await;
     // Somebody else edits after the agent looked.
@@ -330,7 +330,7 @@ async fn a_stale_revision_is_refused_and_a_current_one_runs() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn an_atomic_batch_rolls_back_and_a_plain_batch_does_not() {
-    let client = connect(PhotocraftMcp::headless()).await;
+    let client = connect(MagicpicMcp::headless()).await;
     json_of(&call(&client, "doc_new", json!({"width": 32, "height": 32})).await);
     let before = json_of(&call(&client, "doc_inspect", json!({})).await);
     let steps = json!([
@@ -437,7 +437,7 @@ async fn bad_files_and_refused_writes_are_errors_that_keep_the_session() {
     client.cancel().await.unwrap();
 
     // A read-only launch cannot export at all.
-    let read_only = PhotocraftMcp::headless_with_workspace(AuthorizedWorkspace::new(Some(&ws.0), None).unwrap());
+    let read_only = MagicpicMcp::headless_with_workspace(AuthorizedWorkspace::new(Some(&ws.0), None).unwrap());
     let client = connect(read_only).await;
     json_of(&call(&client, "doc_open", json!({"path": "photo.png"})).await);
     assert!(error_of(&call(&client, "doc_export", json!({"path": "second.png"})).await).contains("write authority is absent"));
@@ -484,7 +484,7 @@ async fn bridged_views_render_the_document_and_edits_reach_the_app_session() {
     let mut backend = Headless::new();
     backend.handle("doc.new", json!({"width": 64, "height": 48, "name": "open in app"})).unwrap();
     let (addr, app) = engine_app(backend).await;
-    let client = connect(PhotocraftMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
+    let client = connect(MagicpicMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
 
     // A document view in bridge mode is the document, not the window.
     let (img, _, note) = image_of(&call(&client, "render_preview", json!({"view": "normal"})).await);
@@ -521,7 +521,7 @@ async fn a_bridge_without_an_app_fails_instead_of_editing_another_session() {
     let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap().to_string();
     drop(listener);
-    let client = connect(PhotocraftMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
+    let client = connect(MagicpicMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
     for (tool, args) in [
         ("render_preview", json!({"view": "luminance"})),
         ("command_run", json!({"id": "layer.newAdjustmentLayer.invert", "expect_revision": 1})),
@@ -561,7 +561,7 @@ async fn a_lost_reply_to_an_atomic_batch_is_reported_as_unknown_and_never_resent
         let resent = tokio::time::timeout(std::time::Duration::from_millis(500), listener.accept()).await.is_ok();
         (backend.session.active().unwrap().doc.layer_count(), resent)
     });
-    let client = connect(PhotocraftMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
+    let client = connect(MagicpicMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
     let steps = json!([{"id": "layer.newAdjustmentLayer.invert"}, {"id": "layer.newAdjustmentLayer.posterize"}]);
     let r = json_of(&call(&client, "command_batch", json!({"steps": steps, "atomic": true})).await);
     assert_eq!(r["outcome"], "unknown", "{r}");

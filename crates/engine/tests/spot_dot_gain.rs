@@ -1,5 +1,5 @@
 //! Edit › Color Settings › Spot drives the compositor's application-wide spot dot gain
-//! (`photocraft_compose::multichannel::spot_dot_gain`), which the ink preview of Multichannel
+//! (`magicpic_compose::multichannel::spot_dot_gain`), which the ink preview of Multichannel
 //! documents adds to every channel.
 //!
 //! This test has its own integration-test binary (its own process) for the same reason as
@@ -7,8 +7,8 @@
 //! concurrent test could flatten one document under two settings. Keep any other test that
 //! changes the spot dot gain in this file.
 
-use photocraft_compose::multichannel::{SPOT_DOT_GAIN, spot_dot_gain};
-use photocraft_engine::Session;
+use magicpic_compose::multichannel::{SPOT_DOT_GAIN, spot_dot_gain};
+use magicpic_engine::Session;
 use serde_json::json;
 
 /// A Multichannel document with one transparent black ink at 50 %.
@@ -29,7 +29,7 @@ fn spot_dot_gain_setting() {
 
     // The ink preview follows the setting: a 50 % dot darkens as the gain rises.
     half_tint(&mut s);
-    let paper = |s: &Session| photocraft_compose::flatten(&s.active().unwrap().doc).px[0][0];
+    let paper = |s: &Session| magicpic_compose::flatten(&s.active().unwrap().doc).px[0][0];
     let r = s.execute("edit.colorSettings", json!({"spotDotGain": 0})).unwrap();
     assert_eq!(r["settings"]["spotDotGain"], 0.0);
     assert_eq!(spot_dot_gain(), 0.0);
@@ -66,7 +66,7 @@ fn spot_dot_gain_setting() {
     // Saved with the preferences and applied when they load.
     s.execute("edit.colorSettings", json!({"spotDotGain": 38})).unwrap();
     let saved = s.prefs_to_json();
-    photocraft_compose::multichannel::set_spot_dot_gain(SPOT_DOT_GAIN);
+    magicpic_compose::multichannel::set_spot_dot_gain(SPOT_DOT_GAIN);
     let mut again = Session::new();
     again.load_prefs_json(&saved).unwrap();
     assert_eq!(again.color.settings.spot_dot_gain, 38.0);
@@ -81,5 +81,5 @@ fn spot_dot_gain_setting() {
     assert_eq!(third.color.settings.spot_dot_gain, SPOT_DOT_GAIN);
     assert_eq!(spot_dot_gain(), SPOT_DOT_GAIN);
     third.execute("edit.colorSettings", json!({"intent": "relative"})).unwrap();
-    photocraft_compose::multichannel::set_spot_dot_gain(SPOT_DOT_GAIN);
+    magicpic_compose::multichannel::set_spot_dot_gain(SPOT_DOT_GAIN);
 }

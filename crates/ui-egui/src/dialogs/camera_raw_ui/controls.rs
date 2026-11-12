@@ -1,7 +1,7 @@
 use super::open::{Target, cancel, raw_stage};
 use super::sidecar::{load_settings, report_file_error, save_settings};
 use super::{
-    Align2, BANDS, CameraRaw, CameraRawDialog, Color32, ERect, FontId, PANEL_W, PhotocraftApp, Pos2, Sense, Stroke, Tokens, ToneZone, Value, Wheel, curve_lut,
+    Align2, BANDS, CameraRaw, CameraRawDialog, Color32, ERect, FontId, PANEL_W, MagicpicApp, Pos2, Sense, Stroke, Tokens, ToneZone, Value, Wheel, curve_lut,
     json, pos2, vec2, widgets,
 };
 
@@ -48,7 +48,7 @@ fn history_keys(d: &mut CameraRawDialog, ctx: &egui::Context) {
     }
 }
 
-pub(super) fn commit(app: &mut PhotocraftApp) -> Result<Value, String> {
+pub(super) fn commit(app: &mut MagicpicApp) -> Result<Value, String> {
     let d = app.camera_raw.as_ref().ok_or(tl!("RAW Develop isn't open"))?;
     let result = match d.target {
         Target::NewFilter => {
@@ -79,8 +79,8 @@ pub(super) fn commit(app: &mut PhotocraftApp) -> Result<Value, String> {
 /// The open-time demosaic choice (at the top of Detail). Photoshop's Camera Raw picks one method
 /// for every file; here it is the user's. Open re-develops with it; the preview keeps the method
 /// the file was opened with (the differences are finer than the preview's pixels).
-fn demosaic_row(ui: &mut egui::Ui, m: &mut photocraft_io::raw::Demosaic) {
-    use photocraft_io::raw::Demosaic;
+fn demosaic_row(ui: &mut egui::Ui, m: &mut magicpic_io::raw::Demosaic) {
+    use magicpic_io::raw::Demosaic;
     ui.horizontal(|ui| {
         ui.label(crate::i18n::tr_ctx(crate::i18n::current(), "cameraRaw", "Demosaic")).on_hover_text(tl!(
             "How the camera's color filter mosaic is filled in. It is applied when the file opens; the preview shows the method it was opened with."
@@ -109,7 +109,7 @@ fn tint_stops() -> Vec<Color32> {
 /// through its own to the next one's (Reds: magenta, red, orange; #9550); Saturation and Luminance
 /// run from grey to the band's colour.
 pub(super) fn mixer_gradient(tab: usize, k: usize) -> Vec<Color32> {
-    let bands = &photocraft_algo::camera_raw::HSL_BANDS;
+    let bands = &magicpic_algo::camera_raw::HSL_BANDS;
     let hue = |i: usize| widgets::hue_color(bands.get(i % bands.len()).copied().unwrap_or(0.0));
     if tab == 0 { vec![hue(k + bands.len() - 1), hue(k), hue(k + 1)] } else { vec![Color32::from_gray(128), hue(k)] }
 }
@@ -186,7 +186,7 @@ fn curve_editor(ui: &mut egui::Ui, p: &mut CameraRaw, dirty: &mut bool, state: &
     rect
 }
 
-pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn show(app: &mut MagicpicApp, ctx: &egui::Context) {
     if app.camera_raw.is_none()
         && !app.raw_shelf.is_empty()
         && let Err(e) = super::filmstrip::open_held(app, ctx, 0)
@@ -212,7 +212,7 @@ pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
         response
     });
     let window = egui::ViewportId::from_hash_of("camera-raw-window");
-    // Coming back to PhotoCraft (⌘Tab, the Dock) can bring the main window over Camera Raw,
+    // Coming back to MagicPic (⌘Tab, the Dock) can bring the main window over Camera Raw,
     // leaving only the dimmed window that takes no input: the main window gaining focus, or a
     // click on it, brings Camera Raw back to the front.
     let main_focused = ctx.input(|i| i.viewport().focused.unwrap_or(false));
@@ -263,7 +263,7 @@ impl CameraRawDialog {
 
 /// The dialog's contents over the whole of `ctx`'s window. `own_window`: the OS window already
 /// shows the title, so none is painted.
-fn draw(app: &mut PhotocraftApp, ctx: &egui::Context, own_window: bool) {
+fn draw(app: &mut MagicpicApp, ctx: &egui::Context, own_window: bool) {
     let t = Tokens::get(ctx);
     let screen = ctx.content_rect();
     let current_display = app.session.active().and_then(|st| app.session.color.canvas_display(&st.doc).ok());
@@ -376,7 +376,7 @@ fn draw(app: &mut PhotocraftApp, ctx: &egui::Context, own_window: bool) {
                 // Auto: Camera Raw's one-click tone from the histogram; the sliders show what it
                 // chose, so each can be adjusted afterwards.
                 if ui.button(tl!("Auto")).on_hover_text(tl!("Set the tone sliders from the image")).clicked() {
-                    photocraft_algo::camera_raw::auto_tone(proxy, p);
+                    magicpic_algo::camera_raw::auto_tone(proxy, p);
                     dirty = true;
                 }
                 tone_row(ui, &mut dirty, alt, ToneZone::Exposure, &mut p.exposure);
@@ -582,7 +582,7 @@ fn draw(app: &mut PhotocraftApp, ctx: &egui::Context, own_window: bool) {
 mod tests {
     use super::*;
 
-    /// Coming back to PhotoCraft can put the main window over Camera Raw's: the main window
+    /// Coming back to MagicPic can put the main window over Camera Raw's: the main window
     /// gaining focus brings Camera Raw's window to the front, once per activation, and so does a
     /// click on the dimmed main window.
     #[test]

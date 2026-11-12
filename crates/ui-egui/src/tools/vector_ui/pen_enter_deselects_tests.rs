@@ -11,10 +11,10 @@ use super::add_anchor_options_bar_tests::harness;
 use super::pen_draw_tests::click;
 use super::tests::overlay_shapes;
 use super::{PathRow, path_rows, work_path_shown};
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::state::Tool;
 
-fn draw_path(h: &mut Harness<'static, PhotocraftApp>, pts: [[f32; 2]; 2], key: Key) {
+fn draw_path(h: &mut Harness<'static, MagicpicApp>, pts: [[f32; 2]; 2], key: Key) {
     for p in pts {
         click(h, p);
     }
@@ -23,18 +23,18 @@ fn draw_path(h: &mut Harness<'static, PhotocraftApp>, pts: [[f32; 2]; 2], key: K
 }
 
 /// The anchors of each subpath of the Work Path.
-fn work_anchors(h: &Harness<'static, PhotocraftApp>) -> Vec<Vec<[f64; 2]>> {
+fn work_anchors(h: &Harness<'static, MagicpicApp>) -> Vec<Vec<[f64; 2]>> {
     let doc = &h.state().session.active().unwrap().doc;
     let work = doc.work_path.as_ref().expect("a work path");
     work.subpaths.iter().map(|s| s.knots.iter().map(|k| [k.anchor.x.round(), k.anchor.y.round()]).collect()).collect()
 }
 
-fn listed(h: &Harness<'static, PhotocraftApp>) -> bool {
+fn listed(h: &Harness<'static, MagicpicApp>) -> bool {
     let st = h.state().session.active().unwrap();
     path_rows(&st.doc, st.active_layer).iter().any(|r| r.kind == PathRow::Work)
 }
 
-fn make_buttons_enabled(h: &Harness<'static, PhotocraftApp>) -> [bool; 2] {
+fn make_buttons_enabled(h: &Harness<'static, MagicpicApp>) -> [bool; 2] {
     ["Selection…", "Shape"].map(|label| !h.get_by_label(label).accesskit_node().is_disabled())
 }
 
@@ -119,7 +119,7 @@ fn delete_after_enter_deletes_the_layer_not_the_work_path() {
     let mut h = harness(Tool::Pen);
     h.state_mut().run("layer.new.layer", json!({})).unwrap();
     h.run_steps(2);
-    let layers = |h: &Harness<'static, PhotocraftApp>| h.state().session.active().unwrap().doc.layers.len();
+    let layers = |h: &Harness<'static, MagicpicApp>| h.state().session.active().unwrap().doc.layers.len();
     let before = layers(&h);
     draw_path(&mut h, [[20.0, 20.0], [120.0, 20.0]], Key::Enter);
     h.key_press(Key::Delete);

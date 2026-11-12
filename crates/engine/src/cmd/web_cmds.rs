@@ -12,10 +12,10 @@
 //! `?x100 thumb.gif` is exported into `<document>-assets/` whenever the document is saved while
 //! the feature is on; a `default` layer (`default 50% low/ + 200% @2x`) adds variants.
 
-use photocraft_algo::quantize::{self, Dither, Forced, PaletteKind};
-use photocraft_doc::slices::{self, ResolvedSlice, SliceKind};
-use photocraft_doc::{DocId, Document, LayerContent, LayerId};
-use photocraft_geom::Rect;
+use magicpic_algo::quantize::{self, Dither, Forced, PaletteKind};
+use magicpic_doc::slices::{self, ResolvedSlice, SliceKind};
+use magicpic_doc::{DocId, Document, LayerContent, LayerId};
+use magicpic_geom::Rect;
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;

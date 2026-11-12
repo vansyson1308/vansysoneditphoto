@@ -1,5 +1,5 @@
 use super::*;
-use photocraft_color::{PixelFormat, SampleType};
+use magicpic_color::{PixelFormat, SampleType};
 mod adversarial_native;
 mod ext;
 mod mosaic;
@@ -165,10 +165,10 @@ fn nonpositive_tile_sizes_match_one_pixel_tiles() {
             for tile in [0, -64, i32::MIN] {
                 let actual = apply_tiled(&source, &params, area, area, None, tile, Some(area));
                 assert_eq!(actual.read_region(area), expected.read_region(area), "{}: {depth:?}, tile={tile}", params.label());
-                let cancellable = apply_tiled_with(&source, &params, area, area, None, tile, Some(area), &photocraft_raster::Interrupt::NONE)
+                let cancellable = apply_tiled_with(&source, &params, area, area, None, tile, Some(area), &magicpic_raster::Interrupt::NONE)
                     .expect("a nonpositive tile size is normalized, not rejected");
                 assert_eq!(cancellable.read_region(area), expected.read_region(area), "{}: {depth:?}, tile={tile}", params.label());
-                let cancelled = photocraft_raster::Interrupt::cancel_only(&|| true);
+                let cancelled = magicpic_raster::Interrupt::cancel_only(&|| true);
                 assert!(apply_tiled_with(&source, &params, area, area, None, tile, Some(area), &cancelled).is_none());
             }
         }

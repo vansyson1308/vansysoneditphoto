@@ -18,14 +18,14 @@ use craft_pdf::interpret::InterpreterSettings;
 #[cfg(not(target_arch = "wasm32"))]
 use craft_pdf::raster::{self, RenderCache};
 #[cfg(not(target_arch = "wasm32"))]
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
+use magicpic_color::{ColorMode, PixelFormat, SampleType};
 #[cfg(not(target_arch = "wasm32"))]
-use photocraft_doc::{Artboard, Document, Group, Layer, LayerContent};
+use magicpic_doc::{Artboard, Document, Group, Layer, LayerContent};
 #[cfg(not(target_arch = "wasm32"))]
-use photocraft_geom::{Rect, Size};
-use photocraft_raster::Interrupt;
+use magicpic_geom::{Rect, Size};
+use magicpic_raster::Interrupt;
 #[cfg(not(target_arch = "wasm32"))]
-use photocraft_raster::Surface;
+use magicpic_raster::Surface;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::Arc;
 #[cfg(not(target_arch = "wasm32"))]

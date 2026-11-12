@@ -11,21 +11,21 @@ use std::thread::JoinHandle;
 use std::time::Duration;
 use web_time::Instant;
 
-use photocraft_engine::paint::StrokePoint;
-use photocraft_geom::Rect;
+use magicpic_engine::paint::StrokePoint;
+use magicpic_geom::Rect;
 
 use super::strokes::EngineStroke;
 
 /// What painting one batch of points gave: the rectangle it changed, or why it failed.
-pub(super) type Step = photocraft_engine::Result<Rect>;
+pub(super) type Step = magicpic_engine::Result<Rect>;
 
 /// The stroke as last painted, for the canvas to show.
 #[derive(Clone)]
 pub(super) struct Shown {
-    pub(super) doc: Arc<photocraft_doc::Document>,
+    pub(super) doc: Arc<magicpic_doc::Document>,
     /// See `EngineStroke::wants_time`.
     pub(super) wants_time: bool,
-    /// The Brush's smoothing string (`photocraft_engine::brush_cmds::LiveStroke::smoothing_string`).
+    /// The Brush's smoothing string (`magicpic_engine::brush_cmds::LiveStroke::smoothing_string`).
     pub(super) smoothing_string: Option<([f64; 2], [f64; 2])>,
 }
 
@@ -273,8 +273,8 @@ impl Drop for PaintThread {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_engine::Session;
-    use photocraft_engine::brush_cmds::LiveStroke;
+    use magicpic_engine::Session;
+    use magicpic_engine::brush_cmds::LiveStroke;
     use serde_json::json;
 
     #[test]
@@ -333,7 +333,7 @@ mod tests {
         s.execute("file.new", json!({"width": 200, "height": 100, "background": "white"})).unwrap();
         s.execute("layer.new.layer", json!({"name": "paint"})).unwrap();
         let p = json!({"points": [[30, 50]], "size": 16});
-        let mixer = photocraft_engine::brush_cmds::mixer_live::LiveMixer::begin(&s, &p).unwrap();
+        let mixer = magicpic_engine::brush_cmds::mixer_live::LiveMixer::begin(&s, &p).unwrap();
         let mut thread = PaintThread::start(EngineStroke::Mixer(Box::new(mixer)));
         let good = thread.shown().doc.clone();
         // More samples than a live Mixer stroke takes, then one it would take.

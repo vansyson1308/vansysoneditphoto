@@ -2,7 +2,7 @@ use super::path_ops::active_path_name;
 use super::pen::path_operations_menu;
 use super::shapes::is_shape_tool;
 use super::{ArrowDefaultLink, arrow_default_link_id, copy_arrow_to_tool_defaults};
-use super::{GradientChoices, LayerContent, PaintChange, PhotocraftApp, Tokens, Tool, Value, json, paint_param, swatch};
+use super::{GradientChoices, LayerContent, PaintChange, MagicpicApp, Tokens, Tool, Value, json, paint_param, swatch};
 
 // ---------------------------------------------------------------------------------------------
 // Options bars
@@ -18,7 +18,7 @@ fn pen_gear(o: &mut crate::state::ToolOptions, ui: &mut egui::Ui) {
 }
 
 /// Options bar for vector tools; false for other tools.
-pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, tool: Tool) -> bool {
+pub fn options_bar(app: &mut MagicpicApp, ui: &mut egui::Ui, tool: Tool) -> bool {
     if !(is_shape_tool(tool)
         || matches!(
             tool,
@@ -170,7 +170,7 @@ pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, tool: Tool) -> bo
 
 /// Path mode's "Make:" row, as in Photoshop's options bar: Selection… (#5703), Mask (#12904) and
 /// Shape (#10934), from the path being drawn or the active path; all greyed without one.
-fn make_buttons(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+fn make_buttons(app: &mut MagicpicApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     ui.label(egui::RichText::new(tl!("Make:")).color(t.text_dim).size(12.0));
     let pending = app.ui.pen.as_ref().is_some_and(|p| p.knots.len() >= 2);
@@ -201,7 +201,7 @@ fn make_buttons(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
 /// Make: Mask (#12904): a vector mask on the active layer from the path being drawn (finished
 /// first, as the canvas menu's Create Vector Mask does) or the active path. The command records
 /// the History step Add Vector Mask and turns the Background into a normal layer in that edit.
-fn make_mask(app: &mut PhotocraftApp) -> Result<(), String> {
+fn make_mask(app: &mut MagicpicApp) -> Result<(), String> {
     if app.ui.pen.as_ref().is_some_and(|p| p.knots.len() >= 2) && !super::pen::pen_commit(app, false) {
         return Err(app.ui.status.clone());
     }
@@ -216,7 +216,7 @@ pub(crate) fn draws_path(o: &crate::state::ToolOptions) -> bool {
 }
 
 /// Whether the active layer supplies the selected-shape options.
-pub(super) fn selected_shape(session: &photocraft_engine::Session) -> Option<photocraft_doc::LayerId> {
+pub(super) fn selected_shape(session: &magicpic_engine::Session) -> Option<magicpic_doc::LayerId> {
     let st = session.active()?;
     let layer = st.active_layer?;
     matches!(st.doc.layer(layer)?.content, LayerContent::Shape(_)).then_some(layer)
@@ -225,8 +225,8 @@ pub(super) fn selected_shape(session: &photocraft_engine::Session) -> Option<pho
 // ---------------------------------------------------------------------------------------------
 // Properties (shape layers)
 
-pub(super) fn solid_paint(c: [f32; 4]) -> photocraft_doc::Fill {
-    photocraft_doc::Fill::Solid(photocraft_doc::Color::rgba(c[0], c[1], c[2], c[3]))
+pub(super) fn solid_paint(c: [f32; 4]) -> magicpic_doc::Fill {
+    magicpic_doc::Fill::Solid(magicpic_doc::Color::rgba(c[0], c[1], c[2], c[3]))
 }
 
 pub(crate) fn enabled_stroke_width(width: f32) -> f32 {
@@ -259,7 +259,7 @@ pub(crate) fn paint_gesture(ui: &egui::Ui, key: egui::Id) -> u64 {
 }
 
 /// Properties panel for a shape layer: Appearance (fill, stroke) and live shape geometry.
-pub fn shape_properties(app: &mut PhotocraftApp, ui: &mut egui::Ui, id: photocraft_doc::LayerId) {
+pub fn shape_properties(app: &mut MagicpicApp, ui: &mut egui::Ui, id: magicpic_doc::LayerId) {
     if app.session.active().is_some_and(|st| {
         let locks = st.doc.effective_locks(id);
         locks.all || locks.pixels
@@ -336,7 +336,7 @@ pub fn shape_properties(app: &mut PhotocraftApp, ui: &mut egui::Ui, id: photocra
             &style,
             &mut app.ui.stroke_editor,
             sh.path.subpaths.iter().all(|s| s.closed),
-            !matches!(sh.live, Some(photocraft_doc::LiveShape::Ellipse { .. })),
+            !matches!(sh.live, Some(magicpic_doc::LiveShape::Ellipse { .. })),
             app.session.active().map(|st| (st.doc.id, id)),
             stroke_enabled,
         ) {
@@ -365,9 +365,9 @@ pub fn shape_properties(app: &mut PhotocraftApp, ui: &mut egui::Ui, id: photocra
             crate::widgets::value_field(ui, v, range, unit, 64.0).accessible_name(tl!(&label)).changed()
         };
         match live {
-            photocraft_doc::vector::LiveShape::Rect { rect, .. }
-            | photocraft_doc::vector::LiveShape::Ellipse { rect }
-            | photocraft_doc::vector::LiveShape::Polygon { rect, .. } => {
+            magicpic_doc::vector::LiveShape::Rect { rect, .. }
+            | magicpic_doc::vector::LiveShape::Ellipse { rect }
+            | magicpic_doc::vector::LiveShape::Polygon { rect, .. } => {
                 ui.horizontal(|ui| {
                     let (mut w, mut h) = (rect[2] as f32, rect[3] as f32);
                     let cw = num(ui, "W", &mut w, 1.0..=300000.0, "px");
@@ -377,10 +377,10 @@ pub fn shape_properties(app: &mut PhotocraftApp, ui: &mut egui::Ui, id: photocra
                     }
                 });
             }
-            photocraft_doc::vector::LiveShape::Line { .. } | photocraft_doc::vector::LiveShape::ArrowLine { .. } => {}
+            magicpic_doc::vector::LiveShape::Line { .. } | magicpic_doc::vector::LiveShape::ArrowLine { .. } => {}
         }
         ui.vertical(|ui| match live {
-            photocraft_doc::vector::LiveShape::Rect { radii, .. } => {
+            magicpic_doc::vector::LiveShape::Rect { radii, .. } => {
                 // Keep the uniform workflow available after independent corner edits too.
                 ui.horizontal(|ui| {
                     let mut all = radii[0] as f32;
@@ -401,7 +401,7 @@ pub fn shape_properties(app: &mut PhotocraftApp, ui: &mut egui::Ui, id: photocra
                     });
                 }
             }
-            photocraft_doc::vector::LiveShape::Polygon { sides, star_ratio, corner_radius, .. } => {
+            magicpic_doc::vector::LiveShape::Polygon { sides, star_ratio, corner_radius, .. } => {
                 // One radius rounds every vertex of a triangle, polygon or star, as in Photoshop.
                 ui.horizontal(|ui| {
                     let mut r = *corner_radius as f32;
@@ -421,7 +421,7 @@ pub fn shape_properties(app: &mut PhotocraftApp, ui: &mut egui::Ui, id: photocra
                 })
                 .inner
             }
-            photocraft_doc::vector::LiveShape::ArrowLine { weight, start, end, width, length, concavity, .. } => {
+            magicpic_doc::vector::LiveShape::ArrowLine { weight, start, end, width, length, concavity, .. } => {
                 // This is a selected, saved Arrow; unlike the tool's defaults, edits update its geometry.
                 ui.horizontal(|ui| {
                     let mut value = *start;
@@ -474,7 +474,7 @@ pub fn shape_properties(app: &mut PhotocraftApp, ui: &mut egui::Ui, id: photocra
                     }
                 }
             }
-            photocraft_doc::vector::LiveShape::Line { weight, .. } => {
+            magicpic_doc::vector::LiveShape::Line { weight, .. } => {
                 ui.horizontal(|ui| {
                     let mut w = *weight as f32;
                     if num(ui, tl!("Weight"), &mut w, 1.0..=10000.0, "px") {

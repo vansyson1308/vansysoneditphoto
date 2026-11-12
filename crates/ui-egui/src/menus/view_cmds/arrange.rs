@@ -1,10 +1,10 @@
-use super::{LAYOUTS, PhotocraftApp, Value, json};
+use super::{LAYOUTS, MagicpicApp, Value, json};
 
 /// View › Fit Layer(s) on Screen: zoom and centre on the selected layers' bounds.
-pub(super) fn fit_layers(app: &mut PhotocraftApp) -> Result<Value, String> {
+pub(super) fn fit_layers(app: &mut MagicpicApp) -> Result<Value, String> {
     let i = app.session.active_index().ok_or("no document")?;
     let st = app.session.active().ok_or("no document")?;
-    let mut b = photocraft_geom::Rect::EMPTY;
+    let mut b = magicpic_geom::Rect::EMPTY;
     for id in st.selected_layers() {
         if let Some(r) = st.doc.layer(id).and_then(|l| l.surface()).map(|s| s.content_bounds()) {
             b = if b.is_empty() { r } else { b.union(&r) };
@@ -36,7 +36,7 @@ fn screen_position(v: &Value) -> Option<[f32; 2]> {
     Some([n(0)?, n(1)?])
 }
 
-pub(crate) fn float_window(app: &mut PhotocraftApp, doc: usize, offset: usize, floating: bool) -> u64 {
+pub(crate) fn float_window(app: &mut MagicpicApp, doc: usize, offset: usize, floating: bool) -> u64 {
     let wid = app.ui.alloc_id();
     let mut view = app.ui.views.get(doc).cloned().unwrap_or_default();
     view.zoom_animating = false;
@@ -55,7 +55,7 @@ pub(crate) fn float_window(app: &mut PhotocraftApp, doc: usize, offset: usize, f
 /// The Window › Arrange items: a layout (2-up, 4-up, Tiled…), which starts from even cells and
 /// refits every document, or one of the window commands beside them — Consolidate All to Tabs,
 /// New Window, Float in Window, Float All in Windows, Match Zoom and the rest.
-pub(super) fn arrange(app: &mut PhotocraftApp, k: &str, p: &Value) -> Result<Value, String> {
+pub(super) fn arrange(app: &mut MagicpicApp, k: &str, p: &Value) -> Result<Value, String> {
     if LAYOUTS.contains(&k) {
         app.ui.view.arrange = k.to_string();
         // A new arrangement starts from even cells.
@@ -149,7 +149,7 @@ pub(super) fn arrange(app: &mut PhotocraftApp, k: &str, p: &Value) -> Result<Val
     }
 }
 
-pub(crate) fn document_is_floating(app: &PhotocraftApp, doc: usize) -> bool {
+pub(crate) fn document_is_floating(app: &MagicpicApp, doc: usize) -> bool {
     app.ui.windows.iter().any(|w| w.open && w.floating && w.document == doc)
 }
 

@@ -2,8 +2,8 @@
 //! (an animation, a multi-size icon) is recorded so File › Save doesn't write over it (#5733).
 
 use crate::common::raster;
-use photocraft_codecs::web::{GifFrame, encode_gif_animated};
-use photocraft_io::import;
+use magicpic_codecs::web::{GifFrame, encode_gif_animated};
+use magicpic_io::import;
 
 /// A 3×2 animated GIF of `frames` identical frames.
 fn gif(frames: usize) -> Vec<u8> {
@@ -13,10 +13,10 @@ fn gif(frames: usize) -> Vec<u8> {
 
 /// An icon file whose `entries` directory entries all point at one PNG image.
 fn ico(entries: u16) -> Vec<u8> {
-    let mut d = photocraft_doc::Document::new("i", photocraft_geom::Size::new(4, 4), photocraft_color::ColorMode::Rgb, photocraft_color::SampleType::U8);
+    let mut d = magicpic_doc::Document::new("i", magicpic_geom::Size::new(4, 4), magicpic_color::ColorMode::Rgb, magicpic_color::SampleType::U8);
     let fmt = d.pixel_format();
     d.layers.push(raster("Layer 0", fmt, d.bounds(), 3, true));
-    let one = photocraft_io::export(&d, "i.ico", &Default::default()).unwrap().bytes;
+    let one = magicpic_io::export(&d, "i.ico", &Default::default()).unwrap().bytes;
     // ICONDIR (6 bytes) + one 16-byte ICONDIRENTRY whose last 4 bytes are the image offset.
     let (entry, image) = (&one[6..22], &one[22..]);
     let offset = 6 + 16 * u32::from(entries);

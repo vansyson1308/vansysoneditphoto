@@ -1,8 +1,8 @@
 //! A project file stores Liquify strokes as plain numbers, so a stroke may name any `f64` for its
 //! brush size or its points. Replaying one must never overflow, however absurd the values.
 
-use photocraft_algo::liquify::{LiquifyField, LiquifyStroke, LiquifyTool};
-use photocraft_geom::Rect;
+use magicpic_algo::liquify::{LiquifyField, LiquifyStroke, LiquifyTool};
+use magicpic_geom::Rect;
 
 const BRUSH_TOOLS: [LiquifyTool; 10] = [
     LiquifyTool::ForwardWarp,

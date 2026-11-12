@@ -2,17 +2,17 @@ use super::*;
 use egui::{Modifiers, PointerButton, Pos2, vec2};
 use egui_kittest::Harness;
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
     app.ui.tool = Tool::ContentAwareMove;
     app
 }
 
-fn harness(mut app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
+fn harness(mut app: MagicpicApp) -> Harness<'static, MagicpicApp> {
     app.sync_views();
     let mut h = Harness::builder().with_size(vec2(1000.0, 700.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut MagicpicApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
@@ -21,12 +21,12 @@ fn harness(mut app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
+    MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
     h.run_steps(4);
     h
 }
 
-fn right_click(h: &mut Harness<'static, PhotocraftApp>, p: Pos2) {
+fn right_click(h: &mut Harness<'static, MagicpicApp>, p: Pos2) {
     h.event(egui::Event::PointerMoved(p));
     h.run_steps(1);
     h.event(egui::Event::PointerButton { pos: p, button: PointerButton::Secondary, pressed: true, modifiers: Modifiers::NONE });
@@ -112,7 +112,7 @@ fn content_aware_move_inside_selection_opens_color_range_and_load_selection_only
 #[test]
 fn content_aware_move_boundary_modes_and_overlay_guards() {
     let ctx = Context::default();
-    let mut empty = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut empty = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     empty.ui.tool = Tool::ContentAwareMove;
     crate::color_hud::open(&mut empty, [12.0, 12.0], false);
     assert!(!open_at(&mut empty, &ctx, Tool::ContentAwareMove, [10.0, 10.0], Some([8.0, 8.0])));

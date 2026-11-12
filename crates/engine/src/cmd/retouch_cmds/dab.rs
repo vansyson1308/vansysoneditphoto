@@ -161,7 +161,7 @@ impl DabNeighborhood {
         }
     }
 
-    fn read_rect(self, rect: Rect, dab: &photocraft_paint::Dab) -> Rect {
+    fn read_rect(self, rect: Rect, dab: &magicpic_paint::Dab) -> Rect {
         match self {
             Self::Halo(radius) => rect.inflate(radius),
             Self::Smudge(radius) => {
@@ -268,9 +268,9 @@ impl DabTool {
                 })
             }
             Self::Smudge { strength, finger, max_size, mode } => {
-                let finger_px = finger.map(|fg| photocraft_raster::from_rgba(&fmt, fg));
+                let finger_px = finger.map(|fg| magicpic_raster::from_rgba(&fmt, fg));
                 // The Mode was measured in 8-bit RGB (#12959); other colour modes and depths smudge as Normal.
-                let measured = fmt.mode == photocraft_color::ColorMode::Rgb && fmt.sample == photocraft_color::SampleType::U8;
+                let measured = fmt.mode == magicpic_color::ColorMode::Rgb && fmt.sample == magicpic_color::SampleType::U8;
                 let mode = if measured { mode } else { BlendMode::Normal };
                 // Premultiplied mixing: transparent pixels carry no colour, so no dark fringes.
                 let mut sm = Smudge::new(strength, finger_px, max_size).with_alpha(alpha_index(&fmt)).with_mode(mode);
@@ -290,8 +290,8 @@ fn mode_refusal(s: &Session, cmd: &str) -> Result<()> {
         _ => return Ok(()),
     };
     let why = match s.active().map(|st| st.doc.mode) {
-        Some(photocraft_color::ColorMode::Indexed) => "it does not work with Indexed Color images (convert image to RGB Color mode to edit).",
-        Some(photocraft_color::ColorMode::Bitmap) => "it does not work with Bitmap images (convert image to Grayscale mode to edit).",
+        Some(magicpic_color::ColorMode::Indexed) => "it does not work with Indexed Color images (convert image to RGB Color mode to edit).",
+        Some(magicpic_color::ColorMode::Bitmap) => "it does not work with Bitmap images (convert image to Grayscale mode to edit).",
         _ => return Ok(()),
     };
     Err(EngineError::Other(format!("Could not use the {tool} because {why}")))
@@ -413,11 +413,11 @@ pub struct LiveDab {
     /// The active document with the stroke so far.
     pub doc: std::sync::Arc<Document>,
     cmd: String,
-    ctx: photocraft_paint::BrushContext,
-    generator: photocraft_paint::dynamics::DabGenerator,
+    ctx: magicpic_paint::BrushContext,
+    generator: magicpic_paint::dynamics::DabGenerator,
     /// Only the current batch is retained; sequential effects don't use accumulated coverage.
-    pending: Vec<photocraft_paint::Dab>,
-    dual_pending: Vec<photocraft_paint::Dab>,
+    pending: Vec<magicpic_paint::Dab>,
+    dual_pending: Vec<magicpic_paint::Dab>,
     done: usize,
     effect: DabEffect,
     neighborhood: DabNeighborhood,
@@ -443,7 +443,7 @@ pub struct LiveDab {
     tool: Option<(DabTool, Box<BrushSettings>)>,
     /// The document and revision the stroke started on, for strokes started from the session's
     /// active document ([`Self::with_effect`]); `None` for strokes on a prepared copy.
-    base: Option<(photocraft_doc::DocId, u64)>,
+    base: Option<(magicpic_doc::DocId, u64)>,
     /// Every point rendered so far, in order.
     points: Vec<StrokePoint>,
 }
@@ -533,8 +533,8 @@ impl LiveDab {
         let effect = effect(&pre_surf);
         // Generate the same dabs as `apply_dab_stroke` (zoom 1), without a StrokeRenderer:
         // its accumulated coverage isn't used here, and each effect rasterizes its own footprint.
-        let ctx = photocraft_paint::BrushContext::new(&stroke.brush);
-        let generator = photocraft_paint::dynamics::DabGenerator::new(&stroke.brush, 1.0);
+        let ctx = magicpic_paint::BrushContext::new(&stroke.brush);
+        let generator = magicpic_paint::dynamics::DabGenerator::new(&stroke.brush, 1.0);
         let mut live = Self {
             doc: std::sync::Arc::new(doc),
             cmd: cmd.into(),
@@ -612,7 +612,7 @@ impl LiveDab {
     /// Mix the working pixels of `r` back over the original into the shown document.
     fn show(&mut self, r: Rect, work: &Region) -> Result<()> {
         let (surf, _) = crate::channel_cmds::target_surface(std::sync::Arc::make_mut(&mut self.doc), self.id, &self.params)?;
-        photocraft_paint::retouch::mix_back(surf, &Region::read(&self.pre_surf, r), work, r, self.opacity, self.sel.as_ref(), self.lock);
+        magicpic_paint::retouch::mix_back(surf, &Region::read(&self.pre_surf, r), work, r, self.opacity, self.sel.as_ref(), self.lock);
         Ok(())
     }
 

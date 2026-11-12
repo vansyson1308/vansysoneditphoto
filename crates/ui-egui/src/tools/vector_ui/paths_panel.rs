@@ -1,6 +1,6 @@
 use super::overlay::path_lines;
 use super::shapes::hex;
-use super::{Color32, Document, LayerContent, Path, PhotocraftApp, Rect, Sense, Stroke, Tokens, Value, json, pos2, vec2};
+use super::{Color32, Document, LayerContent, Path, MagicpicApp, Rect, Sense, Stroke, Tokens, Value, json, pos2, vec2};
 
 // ---------------------------------------------------------------------------------------------
 // Paths panel
@@ -42,7 +42,7 @@ pub struct PathEntry {
 
 /// The Paths panel's rows, top to bottom: saved paths, the work path, then the selected layer's
 /// shape path ("<Layer> Shape Path") or vector mask ("<Layer> Vector Mask"), like Photoshop.
-pub fn path_rows(doc: &Document, active: Option<photocraft_doc::LayerId>) -> Vec<PathEntry> {
+pub fn path_rows(doc: &Document, active: Option<magicpic_doc::LayerId>) -> Vec<PathEntry> {
     let mut rows: Vec<_> = doc.paths.iter().map(|p| PathEntry { name: p.name.clone(), path: p.path.clone(), kind: PathRow::Saved }).collect();
     if let Some(wp) = &doc.work_path {
         rows.push(PathEntry { name: "Work Path".into(), path: wp.clone(), kind: PathRow::Work });
@@ -112,14 +112,14 @@ fn rename_id(doc: &Document) -> egui::Id {
 }
 
 /// Is a path's name being typed in the active document's Paths panel? Esc belongs to its field.
-pub(crate) fn path_renaming(app: &PhotocraftApp, ctx: &egui::Context) -> bool {
+pub(crate) fn path_renaming(app: &MagicpicApp, ctx: &egui::Context) -> bool {
     app.session.active().is_some_and(|st| ctx.data(|d| d.get_temp::<PathRename>(rename_id(&st.doc)).is_some()))
 }
 
 /// Commands offered by a Paths row's context menu. The row's path is passed explicitly so a
 /// right-click acts on that row even when another path is selected in the panel. `layer` is the
 /// layer a `PathRow::Layer` row belongs to (the active layer).
-pub(super) fn path_context_actions(entry: &PathEntry, doc: &Document, layer: Option<photocraft_doc::LayerId>) -> Vec<(&'static str, &'static str, Value)> {
+pub(super) fn path_context_actions(entry: &PathEntry, doc: &Document, layer: Option<magicpic_doc::LayerId>) -> Vec<(&'static str, &'static str, Value)> {
     let key = match entry.kind {
         PathRow::Work => "work".to_string(),
         PathRow::Layer => "layer".to_string(),
@@ -141,7 +141,7 @@ pub(super) fn path_context_actions(entry: &PathEntry, doc: &Document, layer: Opt
             }
         }
         let copy_name = format!("{} copy {n}", entry.name);
-        actions.push(("Duplicate Path", "path.set", json!({"name": copy_name, "path": photocraft_engine::vector_cmds::path_json(&entry.path)})));
+        actions.push(("Duplicate Path", "path.set", json!({"name": copy_name, "path": magicpic_engine::vector_cmds::path_json(&entry.path)})));
     }
     if entry.kind == PathRow::Saved {
         // No `to`: the panel asks for the new name in place.
@@ -158,7 +158,7 @@ pub(super) fn path_context_actions(entry: &PathEntry, doc: &Document, layer: Opt
     actions
 }
 
-pub fn paths_panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn paths_panel(app: &mut MagicpicApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     let Some(st) = app.session.active() else {
         ui.label(egui::RichText::new(tl!("No document")).color(t.text_faint));

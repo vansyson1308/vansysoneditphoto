@@ -1,9 +1,9 @@
 //! Synthetic only: no personal PSDs, paths, or copied descriptor payloads.
 
-use photocraft_psd::animation::{AnimationRecord, AnimationResource, frame_info, frame_sets, layer_frame_states, parse_descriptor};
-use photocraft_psd::descriptor::{Descriptor, Value, VersionedDescriptor};
-use photocraft_psd::metadata::{MetadataItem, parse_shmd, write_shmd};
-use photocraft_psd::{ImageResource, PsdBuilder, PsdFile, ResourceData, TaggedBlock, Version};
+use magicpic_psd::animation::{AnimationRecord, AnimationResource, frame_info, frame_sets, layer_frame_states, parse_descriptor};
+use magicpic_psd::descriptor::{Descriptor, Value, VersionedDescriptor};
+use magicpic_psd::metadata::{MetadataItem, parse_shmd, write_shmd};
+use magicpic_psd::{ImageResource, PsdBuilder, PsdFile, ResourceData, TaggedBlock, Version};
 use proptest::prelude::*;
 
 fn descriptor() -> VersionedDescriptor {

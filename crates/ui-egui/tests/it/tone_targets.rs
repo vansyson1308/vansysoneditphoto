@@ -3,12 +3,12 @@ use egui_kittest::{
     Harness,
     kittest::{NodeT, Queryable},
 };
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_doc::{AlphaChannel, Document, Layer, LayerContent, LayerMask};
-use photocraft_engine::{Session, channel_cmds::ChannelTarget};
-use photocraft_geom::Size;
-use photocraft_raster::Surface;
-use photocraft_ui_egui::{PhotocraftApp, adjust_dialog, adjust_preview, dialogs, filter_dialog};
+use magicpic_color::{ColorMode, PixelFormat, SampleType};
+use magicpic_doc::{AlphaChannel, Document, Layer, LayerContent, LayerMask};
+use magicpic_engine::{Session, channel_cmds::ChannelTarget};
+use magicpic_geom::Size;
+use magicpic_raster::Surface;
+use magicpic_ui_egui::{MagicpicApp, adjust_dialog, adjust_preview, dialogs, filter_dialog};
 use serde_json::{Value, json};
 
 const MODES: [ColorMode; 3] = [ColorMode::Rgb, ColorMode::Cmyk, ColorMode::Lab];
@@ -17,7 +17,7 @@ const DEPTHS: [SampleType; 3] = [SampleType::U8, SampleType::U16, SampleType::F3
 const TARGETS: [ChannelTarget; 3] = [ChannelTarget::Alpha(0), ChannelTarget::LayerMask, ChannelTarget::Composite];
 
 /// Build a native-depth document with distinct colour pixels, a named alpha, a layer mask and optional Quick Mask.
-fn fixture(mode: ColorMode, depth: SampleType, target: ChannelTarget) -> PhotocraftApp {
+fn fixture(mode: ColorMode, depth: SampleType, target: ChannelTarget) -> MagicpicApp {
     let mut doc = Document::new("Tone targets", Size::new(32, 32), mode, depth);
     let mut pixels = Surface::new(PixelFormat::new(mode, depth, true));
     pixels.fill_rect(
@@ -43,13 +43,13 @@ fn fixture(mode: ColorMode, depth: SampleType, target: ChannelTarget) -> Photocr
     session.add_document(doc, None);
     session.select_layer(id).unwrap();
     session.active_mut().unwrap().channel_view.target = target;
-    let mut app = PhotocraftApp::new(session, Default::default());
+    let mut app = MagicpicApp::new(session, Default::default());
     app.background_jobs = false;
     app
 }
 
 /// Read a representative sample from the fixture’s selected scalar plane.
-fn value(app: &PhotocraftApp, target: ChannelTarget) -> f32 {
+fn value(app: &MagicpicApp, target: ChannelTarget) -> f32 {
     let doc = &app.session.active().unwrap().doc;
     match target {
         ChannelTarget::Alpha(i) => doc.channels[i].surface.sample_channel(8, 8, 0),
@@ -60,14 +60,14 @@ fn value(app: &PhotocraftApp, target: ChannelTarget) -> f32 {
 }
 
 /// Render real modal controls with accessibility enabled for input-driven assertions.
-fn harness(app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
+fn harness(app: MagicpicApp) -> Harness<'static, MagicpicApp> {
     let h = Harness::builder().with_size(egui::vec2(1200.0, 900.0)).build_ui_state(|ui, app| dialogs::show(app, ui.ctx()), app);
-    PhotocraftApp::setup_context(&h.ctx, Default::default());
+    MagicpicApp::setup_context(&h.ctx, Default::default());
     h
 }
 
 /// Open a neutral tone dialog and settle its layout before interacting with controls.
-fn open(app: PhotocraftApp, kind: &str) -> Harness<'static, PhotocraftApp> {
+fn open(app: MagicpicApp, kind: &str) -> Harness<'static, MagicpicApp> {
     let mut h = harness(app);
     adjust_dialog::open(h.state_mut(), &format!("image.adjustments.{kind}")).unwrap();
     h.run_steps(4);
@@ -75,17 +75,17 @@ fn open(app: PhotocraftApp, kind: &str) -> Harness<'static, PhotocraftApp> {
 }
 
 /// Extract only the public command parameters from the top modal.
-fn params(h: &Harness<'static, PhotocraftApp>) -> Value {
+fn params(h: &Harness<'static, MagicpicApp>) -> Value {
     filter_dialog::params_of(&h.state().ui.dialogs.last().unwrap().fields)
 }
 
 /// Read the visible selected labels of the dialog’s channel dropdowns.
-fn names(h: &Harness<'static, PhotocraftApp>) -> Vec<String> {
+fn names(h: &Harness<'static, MagicpicApp>) -> Vec<String> {
     h.query_all_by_role(egui::accesskit::Role::ComboBox).filter_map(|n| n.value()).collect()
 }
 
 /// Type into the actual Levels gamma control and blur it to commit the value.
-fn edit_gamma(h: &mut Harness<'static, PhotocraftApp>, gamma: &str) {
+fn edit_gamma(h: &mut Harness<'static, MagicpicApp>, gamma: &str) {
     h.get_by_label("Gamma").click();
     h.run_steps(2);
     h.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::A);
@@ -156,7 +156,7 @@ fn levels_isolates_each_colour_channel_and_edits_its_matching_record() {
             ColorMode::Lab => &["Lightness", "a", "b"],
             _ => unreachable!(),
         };
-        let keys = photocraft_engine::adjust_params::channel_keys(photocraft_engine::adjust_params::default_space(mode));
+        let keys = magicpic_engine::adjust_params::channel_keys(magicpic_engine::adjust_params::default_space(mode));
         for depth in DEPTHS {
             for (k, label) in labels.iter().enumerate() {
                 let mut app = fixture(mode, depth, ChannelTarget::Color(k));
@@ -205,7 +205,7 @@ fn levels_uses_literal_spot_name_and_layers_panel_mask_name() {
         app.session
             .edit("Named spot", |doc, _| {
                 doc.channels[0].name = "Sky α — ink 1".into();
-                doc.channels[0].spot = Some((photocraft_color::Color::rgb(0.2, 0.4, 0.6), 0.8));
+                doc.channels[0].spot = Some((magicpic_color::Color::rgb(0.2, 0.4, 0.6), 0.8));
                 Ok(())
             })
             .unwrap();
@@ -292,12 +292,12 @@ fn grayscale_picker_controls_sample_the_plane_and_change_the_visible_curve() {
 }
 
 /// Replay a recorded tone step with its dialog enabled while a different channel is selected.
-fn action_dialog(mode: ColorMode, target: Value, panel: ChannelTarget, kind: &str) -> Harness<'static, PhotocraftApp> {
+fn action_dialog(mode: ColorMode, target: Value, panel: ChannelTarget, kind: &str) -> Harness<'static, MagicpicApp> {
     let mut app = fixture(mode, SampleType::U8, panel);
     app.run("actions.record", json!({"name": "Tone step"})).unwrap();
     // Imported/serialized steps can carry document-space defaults alongside their explicit
     // grayscale target. Those records must not leak back into the dialog after normalization.
-    let mut recorded = photocraft_engine::adjust_params::to_params(&photocraft_engine::adjust_params::default_for(kind, mode).unwrap());
+    let mut recorded = magicpic_engine::adjust_params::to_params(&magicpic_engine::adjust_params::default_for(kind, mode).unwrap());
     recorded["target"] = target;
     for key in ["red", "green", "blue"] {
         recorded[key] = if kind == "levels" { json!({"gamma": 4}) } else { json!([[0, 255], [255, 255]]) };
@@ -320,7 +320,7 @@ fn action_dialog_uses_recorded_alpha_instead_of_current_red_channel() {
             let mut h = action_dialog(mode, json!({"channel": 0}), ChannelTarget::Color(0), kind);
             assert_eq!(names(&h), ["Saved sky"]);
             assert_eq!(params(&h)["target"], json!({"channel": 0}));
-            let neutral = photocraft_engine::adjust_params::to_params(&photocraft_engine::adjust_params::default_for(kind, ColorMode::Grayscale).unwrap());
+            let neutral = magicpic_engine::adjust_params::to_params(&magicpic_engine::adjust_params::default_for(kind, ColorMode::Grayscale).unwrap());
             for key in ["red", "green", "blue"] {
                 assert_eq!(params(&h)[key], neutral[key], "hidden {key} starts neutral");
             }
@@ -396,7 +396,7 @@ fn explicit_pixels_action_bypasses_current_alpha_target() {
     for key in ["red", "green", "blue"] {
         raw[key] = json!([[0, 255], [255, 255]]);
     }
-    let mut action = photocraft_engine::actions_cmds::Action::new("Pixel edit", vec![("image.adjustments.curves".into(), raw)]);
+    let mut action = magicpic_engine::actions_cmds::Action::new("Pixel edit", vec![("image.adjustments.curves".into(), raw)]);
     action.dialogs.insert(0);
     app.session.actions.list.push(action);
     let mut h = harness(app);
@@ -409,16 +409,16 @@ fn explicit_pixels_action_bypasses_current_alpha_target() {
     h.get_by_label("Set White Point").click();
     h.run_steps(2);
     let base = params(&h);
-    let expected = photocraft_engine::adjust_params::adjustment_eyedropper(
+    let expected = magicpic_engine::adjust_params::adjustment_eyedropper(
         "curves",
         &base,
-        photocraft_engine::adjust_params::CurvesEyedropper::White,
+        magicpic_engine::adjust_params::CurvesEyedropper::White,
         [0.0; 3],
         ColorMode::Rgb,
     )
     .unwrap();
     assert!(adjust_dialog::sample_at(h.state_mut(), 8.0, 8.0));
-    let sampled = photocraft_engine::adjust_params::from_params("curves", &params(&h), None, ColorMode::Rgb).unwrap();
+    let sampled = magicpic_engine::adjust_params::from_params("curves", &params(&h), None, ColorMode::Rgb).unwrap();
     assert_eq!(sampled, expected, "the picker writes the curve for the committed black pixel");
     assert_ne!(params(&h)["points"], base["points"], "the sample cannot silently do nothing");
     assert_eq!(params(&h)["target"], "pixels");
@@ -497,7 +497,7 @@ fn scalar_action_gray_alias_seeds_the_visible_controls() {
     for kind in ["levels", "curves"] {
         let mut app = fixture(ColorMode::Lab, SampleType::U8, ChannelTarget::Color(0));
         let gray = if kind == "levels" { json!({"gamma":2}) } else { json!([[0, 255], [255, 0]]) };
-        let mut action = photocraft_engine::actions_cmds::Action::new(
+        let mut action = magicpic_engine::actions_cmds::Action::new(
             "Gray alias",
             vec![(format!("image.adjustments.{kind}"), json!({"target":{"channel":0},"gray":gray}))],
         );
@@ -529,7 +529,7 @@ fn invalid_scalar_action_gray_alias_cannot_commit() {
     for (kind, gray) in [("levels", json!({"gamma":"invalid"})), ("curves", json!("invalid")), ("curves", json!([[0, 0]]))] {
         let mut app = fixture(ColorMode::Lab, SampleType::U8, ChannelTarget::Color(0));
         let command = format!("image.adjustments.{kind}");
-        let mut action = photocraft_engine::actions_cmds::Action::new("Invalid alias", vec![(command.clone(), json!({"target":{"channel":0},"gray":gray}))]);
+        let mut action = magicpic_engine::actions_cmds::Action::new("Invalid alias", vec![(command.clone(), json!({"target":{"channel":0},"gray":gray}))]);
         action.dialogs.insert(0);
         app.session.actions.list.push(action);
         let mut h = harness(app);
@@ -546,12 +546,12 @@ fn invalid_scalar_action_gray_alias_cannot_commit() {
 }
 
 /// Play an actual recorded modal step while a different scalar channel is selected.
-fn colour_set_action(mode: ColorMode, depth: SampleType, kind: &str, recorded: Value) -> Harness<'static, PhotocraftApp> {
+fn colour_set_action(mode: ColorMode, depth: SampleType, kind: &str, recorded: Value) -> Harness<'static, MagicpicApp> {
     colour_set_action_with_selection(mode, depth, kind, recorded, false)
 }
 
 /// Set up selection before playback: a paused Action owns its captured document/history.
-fn colour_set_action_with_selection(mode: ColorMode, depth: SampleType, kind: &str, recorded: Value, feathered: bool) -> Harness<'static, PhotocraftApp> {
+fn colour_set_action_with_selection(mode: ColorMode, depth: SampleType, kind: &str, recorded: Value, feathered: bool) -> Harness<'static, MagicpicApp> {
     let mut app = fixture(mode, depth, ChannelTarget::Alpha(0));
     app.session
         .edit("Colour pattern", |doc, _| {
@@ -569,13 +569,13 @@ fn colour_set_action_with_selection(mode: ColorMode, depth: SampleType, kind: &s
             doc.layers[0].surface_mut().unwrap().write_region(bounds, &samples);
             if feathered {
                 let mut selection = Surface::new(PixelFormat::GRAY8);
-                selection.fill_rect(photocraft_geom::Rect::new(4, 4, 24, 24), &[0.5]);
+                selection.fill_rect(magicpic_geom::Rect::new(4, 4, 24, 24), &[0.5]);
                 doc.selection = Some(selection);
             }
             Ok(())
         })
         .unwrap();
-    let mut action = photocraft_engine::actions_cmds::Action::new("Colour set alias", vec![(format!("image.adjustments.{kind}"), recorded)]);
+    let mut action = magicpic_engine::actions_cmds::Action::new("Colour set alias", vec![(format!("image.adjustments.{kind}"), recorded)]);
     action.dialogs.insert(0);
     app.session.actions.list.push(action);
     let mut h = harness(app);
@@ -586,7 +586,7 @@ fn colour_set_action_with_selection(mode: ColorMode, depth: SampleType, kind: &s
 
 /// Build the original serialized Action records, independently of dialog normalization.
 fn colour_set_alias_params(mode: ColorMode, indices: &[usize], kind: &str, pencil: bool, native: bool) -> Value {
-    let keys = photocraft_engine::adjust_params::channel_keys(photocraft_engine::adjust_params::default_space(mode));
+    let keys = magicpic_engine::adjust_params::channel_keys(magicpic_engine::adjust_params::default_space(mode));
     let mut raw = if kind == "levels" { json!({"gamma":1.25,"gray":{"gamma":2}}) } else { json!({"gray":[[0,255],[100,30],[255,0]],"pencil":pencil}) };
     raw["target"] = json!({"colors":indices});
     if pencil {
@@ -753,11 +753,11 @@ fn last_tone_settings_follow_the_current_scalar_target() {
 /// Last-used colour records remain editable in their own space; incompatible spaces and malformed settings fall back to neutral.
 #[test]
 fn last_tone_settings_preserve_compatible_colour_controls_and_reject_bad_settings() {
-    use photocraft_engine::adjust_params::{default_for, from_params, to_params};
+    use magicpic_engine::adjust_params::{default_for, from_params, to_params};
     for mode in MODES {
         for kind in ["levels", "curves"] {
             let command = format!("image.adjustments.{kind}");
-            let key = photocraft_engine::adjust_params::channel_keys(photocraft_engine::adjust_params::default_space(mode))[0];
+            let key = magicpic_engine::adjust_params::channel_keys(magicpic_engine::adjust_params::default_space(mode))[0];
             let record = if kind == "levels" { json!({"gamma":2.0}) } else { json!([[0, 255], [255, 0]]) };
             let mut supplied = json!({});
             supplied[key] = record;
@@ -817,7 +817,7 @@ fn last_tone_settings_on_grayscale_pixels_drop_hidden_colour_records() {
 }
 
 /// Build a filtered smart object with a selected filter mask, optionally still the implicit reveal-all mask.
-fn filter_mask_fixture(mode: ColorMode, depth: SampleType, stored: bool) -> PhotocraftApp {
+fn filter_mask_fixture(mode: ColorMode, depth: SampleType, stored: bool) -> MagicpicApp {
     let mut app = fixture(mode, depth, ChannelTarget::Color(0));
     app.session.active_mut().unwrap().channel_view.target = ChannelTarget::Composite;
     app.run("layer.smartObjects.convertToSmartObject", json!({})).unwrap();
@@ -882,7 +882,7 @@ fn action_alpha_target_overrides_the_filter_mask_panel_target() {
             let mut app = filter_mask_fixture(mode, SampleType::U8, false);
             let before = app.session.active().unwrap().doc.clone();
             let values = if kind == "levels" { json!({"target":{"channel":0},"gamma":2}) } else { json!({"target":{"channel":0},"points":[[0,255],[255,0]]}) };
-            let mut action = photocraft_engine::actions_cmds::Action::new("Alpha over filter mask", vec![(format!("image.adjustments.{kind}"), values)]);
+            let mut action = magicpic_engine::actions_cmds::Action::new("Alpha over filter mask", vec![(format!("image.adjustments.{kind}"), values)]);
             action.dialogs.insert(0);
             app.session.actions.list.push(action);
             let mut h = harness(app);
@@ -948,7 +948,7 @@ fn colour_set_action_gray_alias_lab_recall_keeps_both_records() {
 fn scalar_action_gray_alias_does_not_repeat_pencil_smoothing() {
     let mut app = fixture(ColorMode::Lab, SampleType::F32, ChannelTarget::Alpha(0));
     let raw = json!({"target":{"channel":0},"gray":[[0,255],[100,30],[255,0]],"pencil":true,"smooth":2});
-    let mut action = photocraft_engine::actions_cmds::Action::new("Smoothed scalar", vec![("image.adjustments.curves".into(), raw.clone())]);
+    let mut action = magicpic_engine::actions_cmds::Action::new("Smoothed scalar", vec![("image.adjustments.curves".into(), raw.clone())]);
     action.dialogs.insert(0);
     app.session.actions.list.push(action);
     let mut h = harness(app);
@@ -973,7 +973,7 @@ fn review_unresolved_action_targets_do_not_fall_back_to_colour_controls() {
         for kind in ["levels", "curves"] {
             let mut app = fixture(ColorMode::Lab, SampleType::U16, ChannelTarget::Color(0));
             let command = format!("image.adjustments.{kind}");
-            let mut action = photocraft_engine::actions_cmds::Action::new("Missing target", vec![(command, json!({"target":target}))]);
+            let mut action = magicpic_engine::actions_cmds::Action::new("Missing target", vec![(command, json!({"target":target}))]);
             action.dialogs.insert(0);
             app.session.actions.list.push(action);
             let mut h = harness(app);
@@ -997,7 +997,7 @@ fn review_malformed_action_params_cannot_open_a_neutral_adjustment() {
     for value in [json!([]), json!([1]), json!(42), json!("bad"), json!(true)] {
         let mut app = fixture(ColorMode::Rgb, SampleType::U8, ChannelTarget::Alpha(0));
         let before = app.session.active().unwrap().doc.clone();
-        let mut action = photocraft_engine::actions_cmds::Action::new("Bad params", vec![("image.adjustments.levels".into(), value)]);
+        let mut action = magicpic_engine::actions_cmds::Action::new("Bad params", vec![("image.adjustments.levels".into(), value)]);
         action.dialogs.insert(0);
         app.session.actions.list.push(action);
         let result = app.run("actions.play", json!({"action":"Bad params"})).unwrap();
@@ -1007,7 +1007,7 @@ fn review_malformed_action_params_cannot_open_a_neutral_adjustment() {
     }
     for value in [Value::Null, json!({})] {
         let mut app = fixture(ColorMode::Rgb, SampleType::U8, ChannelTarget::Alpha(0));
-        let mut action = photocraft_engine::actions_cmds::Action::new("Default params", vec![("image.adjustments.levels".into(), value)]);
+        let mut action = magicpic_engine::actions_cmds::Action::new("Default params", vec![("image.adjustments.levels".into(), value)]);
         action.dialogs.insert(0);
         app.session.actions.list.push(action);
         let result = app.run("actions.play", json!({"action":"Default params"})).unwrap();
@@ -1039,7 +1039,7 @@ fn review_precise_action_settings_survive_last_used_recall() {
             oracle.execute(&format!("image.adjustments.{kind}"), expected.clone()).unwrap();
             let id = adjust_dialog::open_last(h.state_mut(), &format!("image.adjustments.{kind}")).unwrap();
             h.run_steps(4);
-            let parse = |p: &Value| photocraft_engine::adjust_params::from_params(kind, p, None, ColorMode::Grayscale).unwrap();
+            let parse = |p: &Value| magicpic_engine::adjust_params::from_params(kind, p, None, ColorMode::Grayscale).unwrap();
             assert_eq!(parse(&params(&h)), parse(&expected), "{mode:?} {kind}");
             dialogs::confirm(h.state_mut(), id).unwrap();
             assert_eq!(h.state().session.active().unwrap().doc.channels, oracle.active().unwrap().doc.channels);
@@ -1048,7 +1048,7 @@ fn review_precise_action_settings_survive_last_used_recall() {
 }
 
 /// Build distinct active and addressed masks, retaining the active layer and panel target.
-fn addressed_mask_app(mode: ColorMode, depth: SampleType, filter: bool) -> (PhotocraftApp, photocraft_doc::LayerId) {
+fn addressed_mask_app(mode: ColorMode, depth: SampleType, filter: bool) -> (MagicpicApp, magicpic_doc::LayerId) {
     let mut app = if filter { filter_mask_fixture(mode, depth, true) } else { fixture(mode, depth, ChannelTarget::Alpha(0)) };
     let mut other = app.session.active().unwrap().doc.layers[0].clone();
     other.id = Layer::new("id", other.content.clone()).id;
@@ -1086,13 +1086,13 @@ fn review_mask_action_context_matches_the_addressed_layer() {
                         let command = format!("image.adjustments.{kind}");
                         let target = if filter { "filterMask" } else { "mask" };
                         let raw = json!({"layer":selector,"target":target});
-                        let mut action = photocraft_engine::actions_cmds::Action::new("Other mask", vec![(command.clone(), raw)]);
+                        let mut action = magicpic_engine::actions_cmds::Action::new("Other mask", vec![(command.clone(), raw)]);
                         action.dialogs.insert(0);
                         app.session.actions.list.push(action);
                         let original = app.session.active().unwrap().doc.clone();
                         let active = app.session.active().unwrap().active_layer;
                         let expected =
-                            photocraft_engine::mask_view_cmds::viewed_mask(original.layer(layer).unwrap(), filter).unwrap().surface.sample_channel(8, 8, 0);
+                            magicpic_engine::mask_view_cmds::viewed_mask(original.layer(layer).unwrap(), filter).unwrap().surface.sample_channel(8, 8, 0);
                         let mut h = harness(app);
                         h.state_mut().run("actions.play", json!({"action":"Other mask"})).unwrap();
                         h.run_steps(4);
@@ -1101,15 +1101,15 @@ fn review_mask_action_context_matches_the_addressed_layer() {
                         h.state_mut().ui.dialog_mut(id).unwrap().fields.insert("__curvePicker".into(), json!("white"));
                         assert!(adjust_dialog::sample_at(h.state_mut(), 8.0, 8.0));
                         let p = params(&h);
-                        let want = photocraft_engine::adjust_params::adjustment_eyedropper(
+                        let want = magicpic_engine::adjust_params::adjustment_eyedropper(
                             kind,
                             &json!({}),
-                            photocraft_engine::adjust_params::CurvesEyedropper::White,
+                            magicpic_engine::adjust_params::CurvesEyedropper::White,
                             [expected; 3],
                             ColorMode::Grayscale,
                         )
                         .unwrap();
-                        let got = photocraft_engine::adjust_params::from_params(kind, &p, None, ColorMode::Grayscale).unwrap();
+                        let got = magicpic_engine::adjust_params::from_params(kind, &p, None, ColorMode::Grayscale).unwrap();
                         assert_eq!(got, want, "{mode:?} {depth:?} {kind} {target}");
                         let preview = filter_dialog::preview_document(&original, active, &command, &p, 1).unwrap();
                         dialogs::confirm(h.state_mut(), id).unwrap();
@@ -1118,7 +1118,7 @@ fn review_mask_action_context_matches_the_addressed_layer() {
                         assert_eq!(doc.layers[0], original.layers[0]);
                         assert_eq!(doc.channels, original.channels);
                         assert!(
-                            photocraft_engine::mask_view_cmds::viewed_mask(doc.layer(layer).unwrap(), filter).unwrap().surface.sample_channel(8, 8, 0) > 0.99
+                            magicpic_engine::mask_view_cmds::viewed_mask(doc.layer(layer).unwrap(), filter).unwrap().surface.sample_channel(8, 8, 0) > 0.99
                         );
                         assert_eq!(h.state().session.active().unwrap().active_layer, active);
                     }
@@ -1129,13 +1129,13 @@ fn review_mask_action_context_matches_the_addressed_layer() {
 }
 
 /// Copy the source document for independent Action cases without carrying modal/UI history.
-fn fixture_for_addressed_replay(app: &PhotocraftApp) -> PhotocraftApp {
+fn fixture_for_addressed_replay(app: &MagicpicApp) -> MagicpicApp {
     let st = app.session.active().unwrap();
     let mut s = Session::new();
     s.add_document((*st.doc).clone(), None);
     s.select_layer(st.active_layer.unwrap()).unwrap();
     s.active_mut().unwrap().channel_view = st.channel_view.clone();
-    let mut result = PhotocraftApp::new(s, Default::default());
+    let mut result = MagicpicApp::new(s, Default::default());
     result.background_jobs = false;
     result
 }
@@ -1184,7 +1184,7 @@ fn record_again_uses_recorded_alpha_settings_and_matches_its_preview() {
     for mode in MODES {
         for kind in ["levels", "curves"] {
             let mut app = fixture(mode, SampleType::U16, ChannelTarget::Color(0));
-            let mut recorded = photocraft_engine::adjust_params::to_params(&photocraft_engine::adjust_params::default_for(kind, mode).unwrap());
+            let mut recorded = magicpic_engine::adjust_params::to_params(&magicpic_engine::adjust_params::default_for(kind, mode).unwrap());
             for key in ["red", "green", "blue", "cyan", "magenta", "yellow", "black", "lightness", "a", "b"] {
                 if recorded.get(key).is_some() {
                     recorded[key] = if kind == "levels" { json!({"gamma":4}) } else { json!([[0, 255], [255, 255]]) };
@@ -1199,25 +1199,25 @@ fn record_again_uses_recorded_alpha_settings_and_matches_its_preview() {
             app.session
                 .actions
                 .list
-                .push(photocraft_engine::actions_cmds::Action::new("Recorded alpha", vec![(format!("image.adjustments.{kind}"), recorded)]));
+                .push(magicpic_engine::actions_cmds::Action::new("Recorded alpha", vec![(format!("image.adjustments.{kind}"), recorded)]));
             app.ui.actions.selected = Some(0);
             app.ui.actions.selected_step = Some(0);
             let original = app.session.active().unwrap().doc.clone();
             let mut h = Harness::builder().with_size(egui::vec2(1200.0, 900.0)).build_ui_state(
                 |ui, app| {
-                    photocraft_ui_egui::actions::panel_menu(app, ui);
+                    magicpic_ui_egui::actions::panel_menu(app, ui);
                     dialogs::show(app, ui.ctx());
                 },
                 app,
             );
-            PhotocraftApp::setup_context(&h.ctx, Default::default());
+            MagicpicApp::setup_context(&h.ctx, Default::default());
             h.run_steps(3);
             h.get_by_role_and_label(egui::accesskit::Role::Button, "Record Again").click();
             h.run_steps(3);
             assert_eq!(names(&h), ["Saved sky"], "{mode:?} {kind}");
             let values = params(&h);
             assert_eq!(values["target"], json!({"channel": 0}));
-            let neutral = photocraft_engine::adjust_params::to_params(&photocraft_engine::adjust_params::default_for(kind, ColorMode::Grayscale).unwrap());
+            let neutral = magicpic_engine::adjust_params::to_params(&magicpic_engine::adjust_params::default_for(kind, ColorMode::Grayscale).unwrap());
             for key in ["red", "green", "blue", "cyan", "magenta", "yellow", "black", "lightness", "a", "b"] {
                 assert_eq!(values.get(key), neutral.get(key), "{mode:?} {kind}: hidden colour record {key}");
             }

@@ -5,18 +5,18 @@
 
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::burn_default_tip_tests::{app, invoke, pick};
 use crate::state::Tool;
 
 /// Size, hardness and spacing of the live brush, as `brush.get` reports them.
-fn tip(app: &mut PhotocraftApp) -> [f64; 3] {
+fn tip(app: &mut MagicpicApp) -> [f64; 3] {
     let b = app.run("brush.get", json!({})).unwrap();
     ["size", "hardness", "spacing"].map(|k| (b[k].as_f64().unwrap() * 1e4).round() / 1e4)
 }
 
 /// A brush no tool starts with, so a reset or a first use has something to change.
-fn scramble(app: &mut PhotocraftApp) {
+fn scramble(app: &mut MagicpicApp) {
     let b = &mut app.session.tools.brush;
     (b.size, b.hardness, b.spacing) = (57.0, 0.4, 0.6);
 }

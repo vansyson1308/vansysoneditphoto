@@ -256,8 +256,8 @@ impl Session {
         // through this entry; the requesting session's authority must reach those renders.
         let _authorization = crate::jobs::render_authorization_scope(self.authorize);
         let _document = crate::doc_path::scope(self.active().and_then(|d| d.path.as_deref()).map(std::path::Path::new));
-        photocraft_compose::discard_unreadable_pixel_caches();
-        let scratch_generation = photocraft_raster::spill::read_error_generation();
+        magicpic_compose::discard_unreadable_pixel_caches();
+        let scratch_generation = magicpic_raster::spill::read_error_generation();
         let restrict = self.color_restrict;
         let filter_mask_layer = self.filter_mask_layer;
         let sampler_map = self.sampler_map.take();
@@ -280,7 +280,7 @@ impl Session {
         if let Some(id) = filter_mask_layer {
             smart_cmds::refresh_after_filter_mask_edit(&mut doc, id)?;
         }
-        if let Err(error) = photocraft_raster::spill::check_since(scratch_generation).and_then(|()| before.scratch_health()).and_then(|()| doc.scratch_health())
+        if let Err(error) = magicpic_raster::spill::check_since(scratch_generation).and_then(|()| before.scratch_health()).and_then(|()| doc.scratch_health())
         {
             st.active_layer = previous_active_layer;
             return Err(EngineError::Other(error));
@@ -300,7 +300,7 @@ impl Session {
             let bounds = st.doc.bounds();
             let n = st.color_samplers.len();
             st.color_samplers.retain_mut(|p| {
-                let q = a.apply(photocraft_geom::Point::new(p[0], p[1]));
+                let q = a.apply(magicpic_geom::Point::new(p[0], p[1]));
                 *p = [q.x, q.y];
                 bounds.contains(q.x.floor() as i32, q.y.floor() as i32)
             });
@@ -363,7 +363,7 @@ impl Session {
     /// a change (by a mask's feather and by effects, `grow_hint`), so the intersection keeps a
     /// dab's soft ring and shadow. In debug and test builds, a hint that misses a tile the edit
     /// changed is counted in [`Session::damage_misses`] and logged; it never panics.
-    pub fn hint_damage(&mut self, rect: photocraft_geom::Rect) {
+    pub fn hint_damage(&mut self, rect: magicpic_geom::Rect) {
         #[cfg(any(test, debug_assertions))]
         if let Some(before) = self.hint_before.take()
             && let Some(st) = self.active()
@@ -391,7 +391,7 @@ fn bitmap_mode_refusal(s: &Session, id: &str, params: &Value) -> Option<&'static
         && !id.ends_with(".list")
         // Only the Filter Gallery answers `{"list": true}` with its catalogue; other commands ignore it.
         && !(id == "filter.filterGallery" && params.get("list").and_then(Value::as_bool) == Some(true));
-    (edits && s.active().is_some_and(|st| st.doc.mode == photocraft_color::ColorMode::Bitmap)).then_some("not available in Bitmap mode")
+    (edits && s.active().is_some_and(|st| st.doc.mode == magicpic_color::ColorMode::Bitmap)).then_some("not available in Bitmap mode")
 }
 
 #[cfg(test)]
@@ -407,7 +407,7 @@ mod bitmap_mode_tests {
         let mut s = Session::new();
         s.execute("file.new", json!({"width": 16, "height": 16, "mode": "grayscale"})).unwrap();
         s.edit("mode", |doc, _| {
-            doc.mode = photocraft_color::ColorMode::Bitmap;
+            doc.mode = magicpic_color::ColorMode::Bitmap;
             Ok(())
         })
         .unwrap();
@@ -421,7 +421,7 @@ mod bitmap_mode_tests {
         assert!(s.execute("filter.filterGallery", json!({"list": true})).is_ok(), "a catalogue query still answers");
         // Grayscale again: the filters are back.
         s.edit("mode", |doc, _| {
-            doc.mode = photocraft_color::ColorMode::Grayscale;
+            doc.mode = magicpic_color::ColorMode::Grayscale;
             Ok(())
         })
         .unwrap();

@@ -1,5 +1,5 @@
 //! Develop's stages resolved for one image: every constant and table the per-pixel ones use, so
-//! another implementation of them (the GPU preview, `photocraft_gpu::CameraRawDevelop`) runs the
+//! another implementation of them (the GPU preview, `magicpic_gpu::CameraRawDevelop`) runs the
 //! same maths. [`develop`](super::develop) builds its own constants with the same functions.
 //! The spatial stages other than Detail come as their parameters: Dehaze, Clarity and Texture
 //! (see [`spatial`](super::spatial)), Shadows and Highlights as a [`LocalTone`].

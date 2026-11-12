@@ -9,7 +9,7 @@
 //! A missing or malformed file gives empty tables (or no names) and a warning.
 //!
 //! - `CRAFT_I18N_DIR`, a craft-i18n checkout (storytold/craft-i18n, at the SHA in
-//!   `craft-i18n.rev`): `craft_i18n.rs` holds `CRAFT_I18N`, one (locale, shared catalog, PhotoCraft
+//!   `craft-i18n.rev`): `craft_i18n.rs` holds `CRAFT_I18N`, one (locale, shared catalog, MagicPic
 //!   catalog) entry per locale that has a `photocraft.tsv`, embedded raw. Unset, or not a checkout
 //!   (a warning), it is empty and the interface is English only; with `CRAFT_I18N_REQUIRED=1` (CI
 //!   and releases) that is an error instead. Recipe: craft-i18n's `docs/integration.md`.
@@ -60,7 +60,7 @@ fn craft_i18n() -> String {
             Vec::new()
         }
     };
-    let mut o = String::from("/// (locale, shared catalog, PhotoCraft's catalog), one entry per locale; `\"\"` for a missing file.\n");
+    let mut o = String::from("/// (locale, shared catalog, MagicPic's catalog), one entry per locale; `\"\"` for a missing file.\n");
     o.push_str("pub static CRAFT_I18N: &craft_i18n::Embedded = &[\n");
     for (code, shared, app) in entries {
         // `{:?}` escapes the path (Windows backslashes) as a Rust string literal.
@@ -71,10 +71,10 @@ fn craft_i18n() -> String {
     o
 }
 
-/// One embedded locale: its code, its `common.tsv` if it has one, and its PhotoCraft catalog.
+/// One embedded locale: its code, its `common.tsv` if it has one, and its MagicPic catalog.
 type Locale = (String, Option<std::path::PathBuf>, std::path::PathBuf);
 
-/// Every locale under `dir` with PhotoCraft's catalog, by code. An error when `dir` isn't a
+/// Every locale under `dir` with MagicPic's catalog, by code. An error when `dir` isn't a
 /// craft-i18n `locales/` directory.
 fn locales(dir: &std::path::Path) -> Result<Vec<Locale>, String> {
     // Build scripts run in the crate's directory and `include_str!` resolves against the

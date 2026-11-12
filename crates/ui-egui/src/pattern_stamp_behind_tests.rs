@@ -4,11 +4,11 @@
 //! The Clone Stamp's and the History Brush's lists are not changed here.
 
 use egui::{Context, Event, Key, Modifiers, RawInput};
-use photocraft_doc::BlendMode;
+use magicpic_doc::BlendMode;
 use serde_json::{Value, json};
 
 use super::{Item, current, enabled, engine_call, items, labels, pattern_stamp_choices, pattern_stamp_pick};
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::control::{ControlRequest, Outcome, handle};
 use crate::state::Tool;
 
@@ -46,8 +46,8 @@ const MODES: [&str; 28] = [
 
 /// A 64 × 64 document with the Pattern Stamp; with `layer`, a layer above the Background whose
 /// left half is red and whose right half is transparent.
-fn app(layer: bool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app(layer: bool) -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 64, "height": 64, "background": "white"})).unwrap();
     if layer {
         app.run("layer.new.layer", json!({})).unwrap();
@@ -62,7 +62,7 @@ fn app(layer: bool) -> PhotocraftApp {
 }
 
 /// One control-channel call, answered at once.
-fn call(app: &mut PhotocraftApp, ctx: &Context, method: &str, params: Value) -> Value {
+fn call(app: &mut MagicpicApp, ctx: &Context, method: &str, params: Value) -> Value {
     let (req, _rx) = ControlRequest::new(method, params);
     match handle(app, ctx, &req) {
         Outcome::Done(v) => v,
@@ -71,7 +71,7 @@ fn call(app: &mut PhotocraftApp, ctx: &Context, method: &str, params: Value) -> 
 }
 
 /// Shift+right-click on the canvas: the tool's Mode menu.
-fn open_menu(app: &mut PhotocraftApp, ctx: &Context) {
+fn open_menu(app: &mut MagicpicApp, ctx: &Context) {
     call(
         app,
         ctx,
@@ -82,13 +82,13 @@ fn open_menu(app: &mut PhotocraftApp, ctx: &Context) {
 }
 
 /// Opens the menu and chooses the row `label`; the call's reply.
-fn choose(app: &mut PhotocraftApp, ctx: &Context, label: &str) -> Value {
+fn choose(app: &mut MagicpicApp, ctx: &Context, label: &str) -> Value {
     open_menu(app, ctx);
     call(app, ctx, "ui.context.choose", json!({"id": label}))
 }
 
 /// Shift+Alt+`key` through the shortcut handler.
-fn key(app: &mut PhotocraftApp, ctx: &Context, key: Key) {
+fn key(app: &mut MagicpicApp, ctx: &Context, key: Key) {
     let modifiers = Modifiers::SHIFT | Modifiers::ALT;
     let events = vec![Event::ModifiersChanged(modifiers), Event::Key { key, physical_key: Some(key), pressed: true, repeat: false, modifiers }];
     ctx.begin_pass(RawInput { events, ..Default::default() });
@@ -97,18 +97,18 @@ fn key(app: &mut PhotocraftApp, ctx: &Context, key: Key) {
 }
 
 /// The last journaled command.
-fn last_call(app: &PhotocraftApp) -> (String, Value) {
+fn last_call(app: &MagicpicApp) -> (String, Value) {
     app.session.journal.last().cloned().unwrap()
 }
 
 /// The active layer's pixel as straight RGBA.
-fn pixel(app: &PhotocraftApp, x: i32, y: i32) -> [f32; 4] {
+fn pixel(app: &MagicpicApp, x: i32, y: i32) -> [f32; 4] {
     let st = app.session.active().unwrap();
     st.doc.layer(st.active_layer.unwrap()).unwrap().surface().unwrap().rgba(x, y)
 }
 
 /// One Pattern Stamp stroke across both halves of the layer, as a drag commits it.
-fn stamp(app: &mut PhotocraftApp) {
+fn stamp(app: &mut MagicpicApp) {
     assert!(crate::retouch_ui::finish_stroke(app, Tool::PatternStamp, &[[12.0, 32.0, 1.0], [52.0, 32.0, 1.0]], Modifiers::default(), false));
 }
 
@@ -236,10 +236,10 @@ fn a_behind_stroke_paints_only_the_transparent_half() {
 
 /// The whole app drawn, with the Pattern Stamp on a new document; with `layer`, on a transparent
 /// layer above the Background.
-fn harness(layer: bool) -> egui_kittest::Harness<'static, PhotocraftApp> {
+fn harness(layer: bool) -> egui_kittest::Harness<'static, MagicpicApp> {
     let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(1440.0, 900.0)).with_max_steps(64).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        MagicpicApp::setup_context(&cc.egui_ctx, Default::default());
+        let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 64, "height": 48})).unwrap();
         if layer {
             app.run("layer.new.layer", json!({})).unwrap();
@@ -252,7 +252,7 @@ fn harness(layer: bool) -> egui_kittest::Harness<'static, PhotocraftApp> {
 }
 
 /// The options bar's Mode dropdown: the highest one showing `Normal` (the Layers panel's is lower).
-fn mode_dropdown(h: &egui_kittest::Harness<'_, PhotocraftApp>) -> egui::Rect {
+fn mode_dropdown(h: &egui_kittest::Harness<'_, MagicpicApp>) -> egui::Rect {
     use egui_kittest::kittest::Queryable;
     h.query_all_by_role(egui::accesskit::Role::ComboBox)
         .filter(|n| n.value().as_deref() == Some("Normal"))
@@ -262,7 +262,7 @@ fn mode_dropdown(h: &egui_kittest::Harness<'_, PhotocraftApp>) -> egui::Rect {
 }
 
 /// Opens the options bar's Mode dropdown with a click.
-fn open_dropdown(h: &mut egui_kittest::Harness<'_, PhotocraftApp>) {
+fn open_dropdown(h: &mut egui_kittest::Harness<'_, MagicpicApp>) {
     use egui_kittest::kittest::Queryable;
     let top = mode_dropdown(h).top();
     h.query_all_by_role(egui::accesskit::Role::ComboBox).find(|n| n.value().as_deref() == Some("Normal") && n.rect().top() == top).unwrap().click();
@@ -270,12 +270,12 @@ fn open_dropdown(h: &mut egui_kittest::Harness<'_, PhotocraftApp>) {
 }
 
 /// One wheel notch down (the next mode) over the point `at`.
-fn wheel_down(h: &mut egui_kittest::Harness<'_, PhotocraftApp>, at: egui::Pos2) {
+fn wheel_down(h: &mut egui_kittest::Harness<'_, MagicpicApp>, at: egui::Pos2) {
     wheel_notches_down(h, at, 1.0);
 }
 
 /// `notches` wheel notches down in one event over the point `at`.
-fn wheel_notches_down(h: &mut egui_kittest::Harness<'_, PhotocraftApp>, at: egui::Pos2, notches: f32) {
+fn wheel_notches_down(h: &mut egui_kittest::Harness<'_, MagicpicApp>, at: egui::Pos2, notches: f32) {
     h.hover_at(at);
     h.run_steps(1);
     h.event(Event::MouseWheel {

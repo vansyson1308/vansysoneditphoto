@@ -5,10 +5,10 @@
 //! The prompt is an ordinary dialog in the UI state: `ui.dialog.confirm` replaces the file and
 //! `ui.dialog.cancel` keeps it. Recorded actions and automation saves don't ask.
 
-use photocraft_doc::DocId;
+use magicpic_doc::DocId;
 use serde_json::{Map, Value, json};
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::state::DialogKind;
 
 const MARK: &str = "__diskChanged";
@@ -19,8 +19,8 @@ pub fn owns(fields: &Map<String, Value>) -> bool {
 
 /// Opens the prompt instead of saving `doc` to its own file at `path` when another app changed
 /// that file; `None` saves as usual. `flat` is a flat file confirmed in the Save dialog, which
-/// is saved (and recorded) the way [`PhotocraftApp::save_dialog_flow`] does it.
-pub(crate) fn intercept(app: &mut PhotocraftApp, doc: DocId, path: &str, flat: bool, choices: crate::FormatChoices) -> Option<Result<Value, String>> {
+/// is saved (and recorded) the way [`MagicpicApp::save_dialog_flow`] does it.
+pub(crate) fn intercept(app: &mut MagicpicApp, doc: DocId, path: &str, flat: bool, choices: crate::FormatChoices) -> Option<Result<Value, String>> {
     if !app.changed_on_disk(doc, path) {
         return None;
     }
@@ -43,7 +43,7 @@ pub fn body(ui: &mut egui::Ui, fields: &Map<String, Value>) {
 }
 
 /// Replace: the save the prompt held back.
-pub fn confirm(app: &mut PhotocraftApp, fields: &Map<String, Value>) -> Result<Value, String> {
+pub fn confirm(app: &mut MagicpicApp, fields: &Map<String, Value>) -> Result<Value, String> {
     let doc = fields.get("document").and_then(Value::as_u64).map(DocId).ok_or(tl!("The document is closed"))?;
     let path = fields.get("path").and_then(Value::as_str).unwrap_or_default().to_string();
     let flat = fields.get("flat").and_then(Value::as_bool) == Some(true);
@@ -57,7 +57,7 @@ pub fn confirm(app: &mut PhotocraftApp, fields: &Map<String, Value>) -> Result<V
         } else if app.session.active().is_some_and(|st| crate::saves_flat_in_place(&st.doc, &path)) {
             // Its own flat file: a JPEG, TIFF, Targa or DDS texture asks its format's options next (#2223).
             app.save_flat_in_place(path, choices)
-        } else if app.session.active().is_some_and(|st| photocraft_engine::file_cmds::holds_at(&st.doc, &path)) {
+        } else if app.session.active().is_some_and(|st| magicpic_engine::file_cmds::holds_at(&st.doc, &path)) {
             app.save_in_place(path, crate::FormatChoices::default())
         } else {
             // The document changed while the prompt was open and its file can't keep it any more:

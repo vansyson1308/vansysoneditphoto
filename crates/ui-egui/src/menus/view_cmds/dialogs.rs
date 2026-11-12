@@ -1,5 +1,5 @@
 use super::dispatch::no_params;
-use super::{DialogKind, Map, PhotocraftApp, Value, json};
+use super::{DialogKind, Map, MagicpicApp, Value, json};
 
 // ---------- dialogs and pickers in front of engine commands ----------
 
@@ -7,7 +7,7 @@ use super::{DialogKind, Map, PhotocraftApp, Value, json};
 /// File › Open EXR Parts…: pick an EXR, then choose the parts and channel groups that become
 /// the layers of one document (a Maya/Arnold render writes one part per AOV). The dialog is
 /// a plain command form, so the control channel can drive the same selection headlessly.
-fn open_exr_parts_dialog(app: &mut PhotocraftApp) -> Option<Result<Value, String>> {
+fn open_exr_parts_dialog(app: &mut MagicpicApp) -> Option<Result<Value, String>> {
     Some(app.pick_file_bytes_filtered(&["exr"], |app, name, _bytes| {
         let info = app.run("file.exrParts", json!({"path": name})).map_err(|e| e.to_string())?;
         let entries = info.as_array().cloned().unwrap_or_default();
@@ -57,7 +57,7 @@ fn open_exr_parts_dialog(app: &mut PhotocraftApp) -> Option<Result<Value, String
     }))
 }
 
-pub(super) fn form(app: &mut PhotocraftApp, command: &str, label: &str, fields: Value, choices: Value) -> u64 {
+pub(super) fn form(app: &mut MagicpicApp, command: &str, label: &str, fields: Value, choices: Value) -> u64 {
     let mut f = Map::new();
     f.insert("__command".into(), json!(command));
     f.insert("__label".into(), json!(label));
@@ -300,7 +300,7 @@ fn camera_data(ui: &mut egui::Ui, f: &Map<String, Value>) {
     ui.label(egui::RichText::new(tl!("Camera Data")).font(crate::theme::semibold(13.0)));
     ui.add_space(4.0);
     egui::Grid::new("form-camera-data").num_columns(2).spacing([12.0, 4.0]).show(ui, |ui| {
-        for (key, label) in photocraft_engine::file_cmds::CAMERA_FIELDS {
+        for (key, label) in magicpic_engine::file_cmds::CAMERA_FIELDS {
             if let Some(v) = camera.get(key).and_then(Value::as_str) {
                 ui.label(crate::i18n::tr_ctx(crate::i18n::current(), "cameraData", label));
                 ui.add(egui::Label::new(v).selectable(true));
@@ -311,12 +311,12 @@ fn camera_data(ui: &mut egui::Ui, f: &Map<String, Value>) {
 }
 
 /// Folder the batch dialogs start from: next to the active document, else the working directory.
-fn default_dir(app: &PhotocraftApp) -> String {
+fn default_dir(app: &MagicpicApp) -> String {
     app.session.active().and_then(|d| d.path.as_deref()).and_then(|p| p.rfind(['/', '\\']).map(|i| p[..i].to_string())).unwrap_or_else(|| ".".into())
 }
 
 /// Handle menu commands that need a shell action or a parameter dialog before execution.
-pub(super) fn front(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, params: &Value) -> Option<Result<Value, String>> {
+pub(super) fn front(app: &mut MagicpicApp, ctx: &egui::Context, id: &str, params: &Value) -> Option<Result<Value, String>> {
     if id == "file.closeAll" || id == "file.closeOthers" {
         // Keep the remaining document's view (views are index-aligned with documents).
         let keep = app.session.active_index().and_then(|i| app.ui.views.get(i).cloned());
@@ -347,8 +347,8 @@ pub(super) fn front(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, para
     }
     let doc = app.session.active().map(|d| (d.doc.size.width, d.doc.size.height, d.doc.name.clone()));
     let dir = default_dir(app);
-    let label = photocraft_engine::commands::find(id).map_or(id, |c| c.label);
-    let dialog = |app: &mut PhotocraftApp, fields: Value, choices: Value| Some(Ok(json!({"dialog": form(app, id, label, fields, choices)})));
+    let label = magicpic_engine::commands::find(id).map_or(id, |c| c.label);
+    let dialog = |app: &mut MagicpicApp, fields: Value, choices: Value| Some(Ok(json!({"dialog": form(app, id, label, fields, choices)})));
     match id {
         "file.openAs" => Some(app.open_dialog_file()),
         "file.openAsSmartObject" => Some(app.open_dialog_as_smart_object()),
@@ -383,7 +383,7 @@ pub(super) fn front(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, para
             let (doc, layer) = (st.doc.id, st.active_layer?);
             Some(app.pick_file_bytes(move |app, name, bytes| {
                 app.with_document(doc, |app| {
-                    let r = photocraft_engine::smart_cmds::replace_contents_bytes(&mut app.session, layer, &name, bytes).map_err(|e| e.to_string());
+                    let r = magicpic_engine::smart_cmds::replace_contents_bytes(&mut app.session, layer, &name, bytes).map_err(|e| e.to_string());
                     app.sync_views();
                     r
                 })
@@ -405,7 +405,7 @@ pub(super) fn front(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, para
         "layer.smartObjects.convertToLinked" => {
             let st = app.session.active()?;
             let (doc, layer) = (st.doc.id, st.active_layer?);
-            let (name, _) = match photocraft_engine::smart_cmds::contents_of(&st.doc, layer) {
+            let (name, _) = match magicpic_engine::smart_cmds::contents_of(&st.doc, layer) {
                 Ok(c) => c,
                 Err(e) => return Some(Err(e.to_string())),
             };
@@ -516,7 +516,7 @@ pub(super) fn front(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, para
         }
         "layer.new.artboard" => {
             let (w, h, _) = doc?;
-            let presets: Vec<&str> = std::iter::once("").chain(photocraft_engine::artboard_cmds::PRESETS.iter().map(|p| p.0)).collect();
+            let presets: Vec<&str> = std::iter::once("").chain(magicpic_engine::artboard_cmds::PRESETS.iter().map(|p| p.0)).collect();
             dialog(
                 app,
                 json!({"name": "", "preset": "", "width": w, "height": h, "background": "white"}),
@@ -533,7 +533,7 @@ pub(super) fn front(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, para
                 !chosen.is_empty()
                     && chosen.iter().all(|id| {
                         st.doc.layers.iter().any(|root| root.id == *id)
-                            && st.doc.layer(*id).is_some_and(|layer| layer.visible && matches!(layer.content, photocraft_doc::LayerContent::Adjustment(_)))
+                            && st.doc.layer(*id).is_some_and(|layer| layer.visible && matches!(layer.content, magicpic_doc::LayerContent::Adjustment(_)))
                     })
             });
             let scope = if selected_adjustments { "selected" } else { "all" };
@@ -592,9 +592,9 @@ pub(super) fn front(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, para
             let st = app.session.active()?;
             let d = &st.doc;
             let mode = d.pixel_format().mode;
-            let mut chans: Vec<String> = vec![photocraft_engine::channel_cmds::composite_name(mode).to_string()];
+            let mut chans: Vec<String> = vec![magicpic_engine::channel_cmds::composite_name(mode).to_string()];
             if mode.color_channels() > 1 {
-                chans.extend(photocraft_engine::channel_cmds::color_names(mode).iter().map(|n| n.to_string()));
+                chans.extend(magicpic_engine::channel_cmds::color_names(mode).iter().map(|n| n.to_string()));
             }
             chans.extend(d.channels.iter().map(|c| c.name.clone()));
             let alphas: Vec<String> = std::iter::once("new".to_string()).chain(d.channels.iter().map(|c| c.name.clone())).collect();
@@ -673,7 +673,7 @@ pub(super) fn front(app: &mut PhotocraftApp, ctx: &egui::Context, id: &str, para
 /// File › Save a Copy: pick a name, encode with the export service, write; the document's path
 /// and saved state are untouched. An action being recorded keeps it as a `file.saveACopy` step
 /// with its path (#4373).
-fn save_a_copy(app: &mut PhotocraftApp) -> Result<Value, String> {
+fn save_a_copy(app: &mut MagicpicApp) -> Result<Value, String> {
     let doc = app.session.active().ok_or("no document")?.doc.clone();
     let stem = doc.name.rsplit_once('.').map_or(doc.name.as_str(), |(a, _)| a);
     // "<name> copy.psd", or with Preferences › File Handling › Do not append "copy" to filename
@@ -709,7 +709,7 @@ fn save_a_copy(app: &mut PhotocraftApp) -> Result<Value, String> {
         }
         let r = write_copy(app, &doc, &path, crate::FormatChoices::default())?;
         let step = json!({"path": path});
-        photocraft_engine::actions_cmds::note_automation_step(&mut app.session, "file.saveACopy", &step);
+        magicpic_engine::actions_cmds::note_automation_step(&mut app.session, "file.saveACopy", &step);
         app.session.journal.push(("file.saveACopy".into(), step));
         Ok(r)
     })
@@ -718,7 +718,7 @@ fn save_a_copy(app: &mut PhotocraftApp) -> Result<Value, String> {
 /// Writes `doc` to `path` as a copy (Save a Copy, and its replayed action step): the document's
 /// path and saved state are untouched. `choices` are the Targa, DDS and JPEG answers, when there
 /// are any.
-pub(crate) fn write_copy(app: &mut PhotocraftApp, doc: &photocraft_doc::Document, path: &str, choices: crate::FormatChoices) -> Result<Value, String> {
+pub(crate) fn write_copy(app: &mut MagicpicApp, doc: &magicpic_doc::Document, path: &str, choices: crate::FormatChoices) -> Result<Value, String> {
     let settings = choices.apply(app.save_settings());
     crate::app::ensure_memory_to_save(doc, path)?;
     let export = app.services.export.as_ref().ok_or("no exporter configured")?;
@@ -735,11 +735,11 @@ pub(crate) fn write_copy(app: &mut PhotocraftApp, doc: &photocraft_doc::Document
 }
 
 /// Layer › Smart Objects › Export Contents: saves the contents file under its own name by default.
-fn export_contents(app: &mut PhotocraftApp) -> Result<Value, String> {
+fn export_contents(app: &mut MagicpicApp) -> Result<Value, String> {
     let st = app.session.active().ok_or("no document")?;
     let layer = st.active_layer.ok_or("no layer selected")?;
     // The contents as they were when asked, like Save a Copy.
-    let (name, bytes) = photocraft_engine::smart_cmds::contents_of(&st.doc, layer).map_err(|e| e.to_string())?;
+    let (name, bytes) = magicpic_engine::smart_cmds::contents_of(&st.doc, layer).map_err(|e| e.to_string())?;
     app.pick_save(&name.clone(), move |app, path| {
         let write = app.services.write.as_mut().ok_or("no writer configured")?;
         write(&path, &bytes)?;

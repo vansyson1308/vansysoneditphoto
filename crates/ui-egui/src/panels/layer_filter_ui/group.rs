@@ -3,7 +3,7 @@
 
 use std::collections::HashSet;
 
-use photocraft_doc::{Document, Layer, LayerContent, LayerId};
+use magicpic_doc::{Document, Layer, LayerContent, LayerId};
 
 /// The ids of the layers the Group filter lists. The tree is walked once, with a stack rather
 /// than recursion, so a deep document can't overflow it.

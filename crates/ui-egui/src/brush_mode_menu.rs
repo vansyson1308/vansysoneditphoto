@@ -5,10 +5,10 @@
 //! the same command (`tools.setBrush` for a brush-based tool's mode) or tool option.
 
 use egui::{Context, Id};
-use photocraft_doc::BlendMode;
+use magicpic_doc::BlendMode;
 use serde_json::{Value, json};
 
-use crate::{PhotocraftApp, state::Tool, theme::Tokens};
+use crate::{MagicpicApp, state::Tool, theme::Tokens};
 
 /// One row of the menu.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -136,7 +136,7 @@ pub(crate) fn labels(tool: Tool) -> Vec<&'static str> {
 }
 
 /// Is a row available? Behind and Clear need transparency: greyed on the Background layer.
-pub(crate) fn enabled(app: &PhotocraftApp, item: Item) -> bool {
+pub(crate) fn enabled(app: &MagicpicApp, item: Item) -> bool {
     match item {
         Item::Separator => false,
         Item::Behind | Item::Clear => !app
@@ -148,7 +148,7 @@ pub(crate) fn enabled(app: &PhotocraftApp, item: Item) -> bool {
 }
 
 /// The checked row: `tool`'s current mode, as its options bar shows it.
-pub(crate) fn current(app: &PhotocraftApp, tool: Tool) -> Option<Item> {
+pub(crate) fn current(app: &MagicpicApp, tool: Tool) -> Option<Item> {
     let o = &app.ui.tool_options;
     let brush = &app.session.tools.brush;
     let painting = |clear: bool| {
@@ -174,7 +174,7 @@ pub(crate) fn current(app: &PhotocraftApp, tool: Tool) -> Option<Item> {
 }
 
 /// Whether a tool-option row (Eraser, Range, Sponge) is the current value; `None` for other rows.
-fn ui_value(app: &PhotocraftApp, item: Item) -> Option<bool> {
+fn ui_value(app: &MagicpicApp, item: Item) -> Option<bool> {
     let o = &app.ui.tool_options;
     Some(match item {
         Item::Eraser(m) => o.eraser_mode == m,
@@ -194,7 +194,7 @@ pub(crate) fn is_gesture(tool: Tool, mods: egui::Modifiers) -> bool {
 /// Hardness mean nothing (#11937, as in the reference application).
 /// A plain right-click opens it only where it would otherwise open the picker: with the Erase
 /// preference it still erases.
-pub(crate) fn opens_on(app: &PhotocraftApp, tool: Tool, mods: egui::Modifiers) -> bool {
+pub(crate) fn opens_on(app: &MagicpicApp, tool: Tool, mods: egui::Modifiers) -> bool {
     let plain = !mods.shift && !mods.alt && !mods.ctrl && !mods.command && !mods.mac_cmd;
     let block = tool == Tool::Eraser && app.ui.tool_options.eraser_mode == "block";
     is_gesture(tool, mods) || (plain && block && !crate::paint_mouse::right_erases(app, tool))
@@ -229,7 +229,7 @@ pub(crate) fn menu_id() -> Id {
 }
 
 /// Opens the active tool's menu at screen point `pos`.
-pub(crate) fn open(app: &mut PhotocraftApp, ctx: &Context, pos: [f32; 2]) {
+pub(crate) fn open(app: &mut MagicpicApp, ctx: &Context, pos: [f32; 2]) {
     if !pos.iter().all(|v| v.is_finite()) || items(app.ui.tool).is_empty() {
         return;
     }
@@ -243,18 +243,18 @@ pub(crate) fn open(app: &mut PhotocraftApp, ctx: &Context, pos: [f32; 2]) {
     crate::canvas_popup::mark_open(ctx, menu_id());
 }
 
-fn close(app: &mut PhotocraftApp) {
+fn close(app: &mut MagicpicApp) {
     app.ui.brush_mode_menu = None;
     app.ui.brush_mode_menu_tool = None;
 }
 
 /// Is the open menu still the active tool's? A tool change closes it.
-fn current_tool(app: &PhotocraftApp) -> bool {
+fn current_tool(app: &MagicpicApp) -> bool {
     app.ui.brush_mode_menu_tool == Some(app.ui.tool)
 }
 
 /// A press outside dismisses the popup, and consumes that entire canvas gesture through Up.
-pub(crate) fn blocks_canvas(app: &PhotocraftApp, ctx: &Context) -> bool {
+pub(crate) fn blocks_canvas(app: &MagicpicApp, ctx: &Context) -> bool {
     let key = menu_id().with("dismiss-pointer");
     if ctx.data(|d| d.get_temp::<bool>(key)).unwrap_or(false) {
         if !ctx.input(|i| i.pointer.any_down()) {
@@ -275,7 +275,7 @@ pub(crate) fn blocks_canvas(app: &PhotocraftApp, ctx: &Context) -> bool {
 
 /// Document-coordinate control pointers dismiss; menu rows are chosen with screen-space ui.click
 /// or `ui.context.choose`.
-pub(crate) fn blocks_control(app: &mut PhotocraftApp, ctx: &Context, ev: crate::canvas::ToolEvent) -> bool {
+pub(crate) fn blocks_control(app: &mut MagicpicApp, ctx: &Context, ev: crate::canvas::ToolEvent) -> bool {
     use crate::canvas::ToolEvent;
     let key = menu_id().with("control-dismiss");
     let blocked = ctx.data(|d| d.get_temp::<bool>(key)).unwrap_or(false);
@@ -302,7 +302,7 @@ pub(crate) fn blocks_control(app: &mut PhotocraftApp, ctx: &Context, ev: crate::
 /// The engine command a row runs, if any: a brush-based tool's mode goes through
 /// `tools.setBrush`, as its options-bar dropdown does. The Brush, Pencil and Pattern Stamp also
 /// set or clear Behind (Clear keeps the underlying mode, as the options bar does).
-pub(crate) fn engine_call(app: &PhotocraftApp, tool: Tool, item: Item) -> Option<(&'static str, Value)> {
+pub(crate) fn engine_call(app: &MagicpicApp, tool: Tool, item: Item) -> Option<(&'static str, Value)> {
     let brush = match (tool, item) {
         (Tool::Brush | Tool::Pencil | Tool::PatternStamp, Item::Blend(m)) => json!({"mode": m, "behind": false}),
         (Tool::Brush | Tool::Pencil | Tool::PatternStamp, Item::Behind) => json!({"mode": BlendMode::Normal, "behind": true}),
@@ -314,7 +314,7 @@ pub(crate) fn engine_call(app: &PhotocraftApp, tool: Tool, item: Item) -> Option
 }
 
 /// The row of the open menu whose English label is `label`, if it can be chosen now.
-pub(crate) fn find(app: &PhotocraftApp, label: &str) -> Result<Item, String> {
+pub(crate) fn find(app: &MagicpicApp, label: &str) -> Result<Item, String> {
     if app.ui.brush_mode_menu.is_none() || !current_tool(app) {
         return Err("no Shift+right-click menu is open".into());
     }
@@ -326,7 +326,7 @@ pub(crate) fn find(app: &PhotocraftApp, label: &str) -> Result<Item, String> {
 }
 
 /// Chooses `item` for the active tool and closes the menu.
-pub(crate) fn choose(app: &mut PhotocraftApp, ctx: &Context, item: Item) {
+pub(crate) fn choose(app: &mut MagicpicApp, ctx: &Context, item: Item) {
     let tool = app.ui.tool;
     let pos = app.ui.brush_mode_menu;
     close(app);
@@ -364,7 +364,7 @@ pub(crate) fn choose(app: &mut PhotocraftApp, ctx: &Context, item: Item) {
     }
 }
 
-pub(crate) fn show(app: &mut PhotocraftApp, ctx: &Context) {
+pub(crate) fn show(app: &mut MagicpicApp, ctx: &Context) {
     let Some([x, y]) = app.ui.brush_mode_menu else { return };
     if !current_tool(app) || ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
         let same_tool = current_tool(app);

@@ -19,7 +19,7 @@ fn paint(s: &mut Session, f: impl Fn(i32, i32) -> [u8; 3]) {
         for y in b.y0..b.y1 {
             for x in b.x0..b.x1 {
                 let px = f(x, y);
-                data.extend(photocraft_raster::from_rgba(&fmt, [px[0] as f32 / 255.0, px[1] as f32 / 255.0, px[2] as f32 / 255.0, 1.0]));
+                data.extend(magicpic_raster::from_rgba(&fmt, [px[0] as f32 / 255.0, px[1] as f32 / 255.0, px[2] as f32 / 255.0, 1.0]));
             }
         }
         surf.write_region(b, &data);

@@ -1,8 +1,8 @@
 //! Paint helpers: bucket fill and the gradient tool.
 
-use photocraft_color::blend::{self, BlendMode};
-use photocraft_geom::Rect;
-use photocraft_raster::{Surface, from_rgba_into};
+use magicpic_color::blend::{self, BlendMode};
+use magicpic_geom::Rect;
+use magicpic_raster::{Surface, from_rgba_into};
 use serde::{Deserialize, Serialize};
 
 /// How a fill lays down its colour: blended with a mode, or Clear, which erases what it covers
@@ -96,7 +96,7 @@ fn composite_area(
                 }
                 let i = ((y - r.y0) as usize * w + (x - r.x0) as usize) * n;
                 let px = &mut region[i..i + n];
-                let d = photocraft_raster::to_rgba(&fmt, px);
+                let d = magicpic_raster::to_rgba(&fmt, px);
                 let o = match mode {
                     FillMode::Blend(m) if lock_transparency => blend::composite_atop(m, d, color(x, y), k),
                     FillMode::Blend(m) => blend::composite(m, d, color(x, y), k),
@@ -107,7 +107,7 @@ fn composite_area(
                 from_rgba_into(&fmt, o, &mut enc);
                 // A colour picked as CMYK inks replaces fully covered pixels of a CMYK target as it is.
                 if let Some(i) = inks
-                    && fmt.mode == photocraft_color::ColorMode::Cmyk
+                    && fmt.mode == magicpic_color::ColorMode::Cmyk
                     && mode == FillMode::Blend(BlendMode::Normal)
                     && k >= 1.0
                 {
@@ -157,7 +157,7 @@ pub fn paint_gradient(
             let mut c = sample_stops(stops, if reverse { 1.0 - t } else { t });
             if dither {
                 // One quantisation step of monochromatic noise breaks 8-bit banding without speckle.
-                let n = (photocraft_color::dither_noise(x, y) - 0.5) / 255.0;
+                let n = (magicpic_color::dither_noise(x, y) - 0.5) / 255.0;
                 for ch in c.iter_mut().take(3) {
                     *ch = (*ch + n).clamp(0.0, 1.0);
                 }
@@ -270,7 +270,7 @@ mod paint_gradient_sample_tests;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_color::PixelFormat;
+    use magicpic_color::PixelFormat;
 
     #[test]
     fn gradient_t_shapes() {

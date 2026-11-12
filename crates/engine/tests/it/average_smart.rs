@@ -1,8 +1,8 @@
 //! Exercise Average through the smart-filter renderer, not an imported cache.
-use photocraft_doc::LayerContent;
-use photocraft_engine::{Session, filters, smart_cmds};
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use magicpic_doc::LayerContent;
+use magicpic_engine::{Session, filters, smart_cmds};
+use magicpic_geom::Rect;
+use magicpic_raster::Surface;
 use serde_json::json;
 
 fn image(s: &Session) -> Surface {
@@ -96,13 +96,13 @@ fn average_rejects_bad_params_without_an_edit() {
 }
 
 /// Optional local oracle: generate a 16×16 red/blue Smart Object in Photoshop, apply Average,
-/// save as PSD, then set PHOTOCRAFT_AVERAGE_PSD to that file. Never accept cached pixels as proof.
+/// save as PSD, then set MAGICPIC_AVERAGE_PSD to that file. Never accept cached pixels as proof.
 #[test]
 #[ignore = "requires a locally generated Photoshop Average PSD; see docs/average-filter.md"]
 fn average_photoshop_psd_rerenders_from_source() {
-    let path = std::env::var("PHOTOCRAFT_AVERAGE_PSD").expect("set PHOTOCRAFT_AVERAGE_PSD");
+    let path = std::env::var("MAGICPIC_AVERAGE_PSD").expect("set MAGICPIC_AVERAGE_PSD");
     let bytes = std::fs::read(&path).unwrap();
-    let mut doc = photocraft_io::import(&path, &bytes).unwrap().document;
+    let mut doc = magicpic_io::import(&path, &bytes).unwrap().document;
     let snapshot = doc.clone();
     let ids: Vec<_> = snapshot
         .walk()

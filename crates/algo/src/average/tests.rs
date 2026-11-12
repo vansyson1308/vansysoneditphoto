@@ -1,6 +1,6 @@
 use super::*;
 use crate::{Ctx, Image};
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
+use magicpic_color::{ColorMode, PixelFormat, SampleType};
 
 #[test]
 /// Long, thin images are admitted by their pixel/workspace budgets rather than an unrelated edge limit.

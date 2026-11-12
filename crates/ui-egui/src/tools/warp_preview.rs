@@ -5,7 +5,7 @@
 //! grid cell gets as many samples as its control points are spread wide, so every triangle stays
 //! a few screen pixels across wherever the surface is stretched.
 
-use photocraft_geom::warp::BezierMesh;
+use magicpic_geom::warp::BezierMesh;
 
 /// Target screen pixels per preview segment.
 const SEGMENT_PX: f64 = 6.0;
@@ -59,11 +59,11 @@ pub fn triangle_order(pos: &[[f32; 2]], rest: &[[f32; 2]], row: usize) -> Vec<u3
     if row < 2 || pos.len() != rest.len() {
         return Vec::new();
     }
-    // The render's own order (`photocraft_algo::warp::cell_order`), so preview and result stack
+    // The render's own order (`magicpic_algo::warp::cell_order`), so preview and result stack
     // a fold alike.
     let wide = |v: &[[f32; 2]]| -> Vec<[f64; 2]> { v.iter().map(|p| [f64::from(p[0]), f64::from(p[1])]).collect() };
     let mut out = Vec::with_capacity(pos.len() * 6);
-    for a in photocraft_algo::warp::cell_order(&wide(pos), &wide(rest), row) {
+    for a in magicpic_algo::warp::cell_order(&wide(pos), &wide(rest), row) {
         out.extend([a, a + 1, a + row + 1, a, a + row + 1, a + row].map(|k| k as u32));
     }
     out

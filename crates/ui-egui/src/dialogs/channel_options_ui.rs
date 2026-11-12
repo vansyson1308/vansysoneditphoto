@@ -9,10 +9,10 @@
 //! The Channels panel's New Channel… is the same dialog for a channel still to be made (name,
 //! Masked / Selected Areas, colour, opacity); OK runs `channel.new` (#11451).
 
-use photocraft_doc::ColorIndicates;
+use magicpic_doc::ColorIndicates;
 use serde_json::{Map, Value, json};
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 
 pub const COMMAND: &str = "channel.options";
 const MARK: &str = "__channelOptions";
@@ -34,7 +34,7 @@ fn layer_mask(f: &Map<String, Value>) -> bool {
 
 /// The dialog's fields for `channel` (an alpha/spot channel index, `"quickMask"`, or `"mask"` for
 /// Layer Mask Display Options), or `None` when there's no document or no such channel.
-pub fn fields(app: &PhotocraftApp, channel: &Value) -> Option<Map<String, Value>> {
+pub fn fields(app: &MagicpicApp, channel: &Value) -> Option<Map<String, Value>> {
     let doc = &app.session.active()?.doc;
     let kind = |i: ColorIndicates| if i == ColorIndicates::SelectedAreas { "selected" } else { "masked" };
     if channel.as_str() == Some("mask") {
@@ -73,21 +73,21 @@ pub fn fields(app: &PhotocraftApp, channel: &Value) -> Option<Map<String, Value>
 }
 
 /// Opens Channel Options on `channel`, or `None` if it doesn't exist.
-pub fn open(app: &mut PhotocraftApp, channel: &Value) -> Option<u64> {
+pub fn open(app: &mut MagicpicApp, channel: &Value) -> Option<u64> {
     let f = fields(app, channel)?;
     Some(app.ui.open_dialog(crate::state::DialogKind::Command, f))
 }
 
 /// The New Channel fields: Channel Options' for a channel still to be made (the next "Alpha N"
 /// name, Masked Areas, red at 50%), or `None` without a document. OK runs `channel.new`.
-pub fn new_channel_fields(app: &PhotocraftApp) -> Option<Map<String, Value>> {
+pub fn new_channel_fields(app: &MagicpicApp) -> Option<Map<String, Value>> {
     let doc = &app.session.active()?.doc;
     let mut f = Map::new();
     f.insert(MARK.into(), json!(true));
     f.insert(NEW_CHANNEL_MARK.into(), json!(true));
     f.insert("__command".into(), json!(NEW_CHANNEL));
     f.insert("__label".into(), json!("New Channel…"));
-    f.insert("name".into(), json!(photocraft_engine::channel_cmds::next_alpha_name(doc, "Alpha")));
+    f.insert("name".into(), json!(magicpic_engine::channel_cmds::next_alpha_name(doc, "Alpha")));
     f.insert("indicates".into(), json!("masked"));
     f.insert("color".into(), json!("#ff0000"));
     f.insert("opacity".into(), json!(50.0));
@@ -95,7 +95,7 @@ pub fn new_channel_fields(app: &PhotocraftApp) -> Option<Map<String, Value>> {
 }
 
 /// Opens New Channel, or `None` without a document.
-pub fn open_new_channel(app: &mut PhotocraftApp) -> Option<u64> {
+pub fn open_new_channel(app: &mut MagicpicApp) -> Option<u64> {
     let f = new_channel_fields(app)?;
     Some(app.ui.open_dialog(crate::state::DialogKind::Command, f))
 }
@@ -117,7 +117,7 @@ pub fn params(f: &Map<String, Value>) -> Value {
 }
 
 /// OK: runs `channel.options` with the dialog's settings ([`params`]).
-pub fn confirm(app: &mut PhotocraftApp, f: &Map<String, Value>) -> Result<Value, String> {
+pub fn confirm(app: &mut MagicpicApp, f: &Map<String, Value>) -> Result<Value, String> {
     app.run(if f.contains_key(NEW_CHANNEL_MARK) { NEW_CHANNEL } else { COMMAND }, params(f))
 }
 
@@ -216,7 +216,7 @@ pub fn owns_new_spot(fields: &Map<String, Value>) -> bool {
 
 /// The New Spot Channel fields: the next "Spot Color N" name and the last ink and solidity
 /// (red and 0% at first), or `None` without a document.
-pub fn new_spot_fields(app: &PhotocraftApp) -> Option<Map<String, Value>> {
+pub fn new_spot_fields(app: &MagicpicApp) -> Option<Map<String, Value>> {
     let doc = &app.session.active()?.doc;
     let saved = app.session.prefs().dialogs.get(NEW_SPOT).cloned().unwrap_or_default();
     let color = saved.get("color").and_then(Value::as_str).filter(|h| crate::color_picker_ui::parse_hex(h).is_some()).unwrap_or("#ff0000");
@@ -225,14 +225,14 @@ pub fn new_spot_fields(app: &PhotocraftApp) -> Option<Map<String, Value>> {
     f.insert(NEW_SPOT_MARK.into(), json!(true));
     f.insert("__command".into(), json!(NEW_SPOT));
     f.insert("__label".into(), json!("New Spot Channel…"));
-    f.insert("name".into(), json!(photocraft_engine::channel_cmds::next_alpha_name(doc, "Spot Color")));
+    f.insert("name".into(), json!(magicpic_engine::channel_cmds::next_alpha_name(doc, "Spot Color")));
     f.insert("color".into(), json!(color));
     f.insert("solidity".into(), json!(solidity));
     Some(f)
 }
 
 /// Opens New Spot Channel, or `None` without a document.
-pub fn open_new_spot(app: &mut PhotocraftApp) -> Option<u64> {
+pub fn open_new_spot(app: &mut MagicpicApp) -> Option<u64> {
     let f = new_spot_fields(app)?;
     Some(app.ui.open_dialog(crate::state::DialogKind::Command, f))
 }
@@ -247,7 +247,7 @@ pub fn new_spot_params(f: &Map<String, Value>) -> Value {
     Value::Object(p)
 }
 
-pub fn confirm_new_spot(app: &mut PhotocraftApp, f: &Map<String, Value>) -> Result<Value, String> {
+pub fn confirm_new_spot(app: &mut MagicpicApp, f: &Map<String, Value>) -> Result<Value, String> {
     let p = new_spot_params(f);
     let result = app.run(NEW_SPOT, p.clone());
     if result.is_ok() {

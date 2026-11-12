@@ -8,11 +8,11 @@ use egui::{Modifiers, PointerButton, Pos2, vec2};
 use egui_kittest::Harness;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::state::Tool;
 
-fn harness(tool: Tool) -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn harness(tool: Tool) -> Harness<'static, MagicpicApp> {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 400, "height": 300, "background": "white"})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     app.sync_views();
@@ -20,7 +20,7 @@ fn harness(tool: Tool) -> Harness<'static, PhotocraftApp> {
     app.ui.tool = tool;
     crate::paint_mouse::sync_tool_brush(&mut app);
     let mut h = Harness::builder().with_size(vec2(900.0, 600.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut MagicpicApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
@@ -29,7 +29,7 @@ fn harness(tool: Tool) -> Harness<'static, PhotocraftApp> {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     let v = &mut h.state_mut().ui.views[0];
     v.zoom = 1.0;
@@ -39,15 +39,15 @@ fn harness(tool: Tool) -> Harness<'static, PhotocraftApp> {
     h
 }
 
-fn has_fonts(h: &Harness<'static, PhotocraftApp>) -> bool {
+fn has_fonts(h: &Harness<'static, MagicpicApp>) -> bool {
     h.ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into())))
 }
 
-fn centre(h: &Harness<'static, PhotocraftApp>) -> Pos2 {
+fn centre(h: &Harness<'static, MagicpicApp>) -> Pos2 {
     h.state().last_canvas_rect.center()
 }
 
-fn hover(h: &mut Harness<'static, PhotocraftApp>, m: Modifiers) {
+fn hover(h: &mut Harness<'static, MagicpicApp>, m: Modifiers) {
     h.event(egui::Event::ModifiersChanged(m));
     let p = centre(h);
     h.hover_at(p);
@@ -55,12 +55,12 @@ fn hover(h: &mut Harness<'static, PhotocraftApp>, m: Modifiers) {
 }
 
 /// The Eyedropper's pipette: the OS bitmap where one uploads, else drawn (#12523).
-fn pipette_shown(h: &Harness<'static, PhotocraftApp>) -> bool {
+fn pipette_shown(h: &Harness<'static, MagicpicApp>) -> bool {
     crate::tool_cursor::pipette_shown(&h.ctx, &h.output().platform_output)
 }
 
 /// The OS cursor bitmap's size, hotspot and alpha channel.
-fn bitmap(h: &Harness<'static, PhotocraftApp>) -> Option<([u16; 2], [u16; 2], Vec<u8>)> {
+fn bitmap(h: &Harness<'static, MagicpicApp>) -> Option<([u16; 2], [u16; 2], Vec<u8>)> {
     h.output().platform_output.cursor_image.as_ref().map(|i| (i.size, i.hotspot, i.rgba.as_chunks::<4>().0.iter().map(|p| p[3]).collect()))
 }
 
@@ -81,7 +81,7 @@ fn asymmetry(size: [u16; 2], alpha: &[u8], mirror: impl Fn(usize, usize) -> (usi
 }
 
 /// Whether the Eyedropper's comparison ring is painted: its circles have the ring's 17 pt band.
-fn ring_drawn(h: &Harness<'static, PhotocraftApp>) -> bool {
+fn ring_drawn(h: &Harness<'static, MagicpicApp>) -> bool {
     fn ring(shape: &egui::Shape) -> bool {
         match shape {
             egui::Shape::Circle(c) => (c.stroke.width - 17.0).abs() < 0.5 && c.radius > 50.0,

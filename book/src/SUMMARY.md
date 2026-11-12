@@ -1,6 +1,6 @@
 # Summary
 
-[PhotoCraft Documentation](README.md)
+[MagicPic Documentation](README.md)
 
 # Getting started
 

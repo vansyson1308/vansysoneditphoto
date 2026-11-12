@@ -1,9 +1,9 @@
 //! Native5×5 channel-selective convolution with explicit edge and alpha support rules.
 pub use crate::coverage::Error;
 use crate::{Ctx, image::Image};
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_geom::Rect;
-use photocraft_raster::{Interrupt, Surface};
+use magicpic_color::{ColorMode, PixelFormat, SampleType};
+use magicpic_geom::Rect;
+use magicpic_raster::{Interrupt, Surface};
 use serde::{Deserialize, Serialize};
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

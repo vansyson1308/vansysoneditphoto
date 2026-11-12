@@ -8,11 +8,11 @@ type Open = Rc<RefCell<Vec<(FileDialogRequest, FileDialogReply)>>>;
 
 /// An app with an untitled document, whose file dialogs stay open until the test answers them, and
 /// whose writer records the paths it wrote.
-fn app() -> (PhotocraftApp, Open, Rc<RefCell<Vec<String>>>) {
+fn app() -> (MagicpicApp, Open, Rc<RefCell<Vec<String>>>) {
     let (open, written): (Open, Rc<RefCell<Vec<String>>>) = Default::default();
     let (held, w) = (open.clone(), written.clone());
     let services = Services {
-        export: Some(Box::new(|_: &photocraft_doc::Document, _: &str, _: &crate::ExportSettings| Ok((b"out".to_vec(), Vec::new())))),
+        export: Some(Box::new(|_: &magicpic_doc::Document, _: &str, _: &crate::ExportSettings| Ok((b"out".to_vec(), Vec::new())))),
         write: Some(Box::new(move |path: &str, _: &[u8]| {
             w.borrow_mut().push(path.to_string());
             Ok(())
@@ -20,7 +20,7 @@ fn app() -> (PhotocraftApp, Open, Rc<RefCell<Vec<String>>>) {
         file_dialog: Some(Box::new(move |request, _parent, reply| held.borrow_mut().push((request, reply)))),
         ..Default::default()
     };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), services);
     app.run("file.new", json!({"width": 4, "height": 4})).unwrap();
     (app, open, written)
 }
@@ -42,10 +42,10 @@ fn pdn_save_requests_a_native_copy_without_overwriting_the_source() {
 
 /// A real flat JPEG import, optionally edited to contain another layer. A filename without a
 /// path is the web/download case; desktop opens also retain their source location.
-fn jpeg_app(path: Option<&str>, layered: bool) -> (PhotocraftApp, Open, Rc<RefCell<Vec<String>>>) {
+fn jpeg_app(path: Option<&str>, layered: bool) -> (MagicpicApp, Open, Rc<RefCell<Vec<String>>>) {
     let (mut app, open, written) = app();
-    let bytes = photocraft_io::export(&app.session.active().unwrap().doc, "My image.JPEG", &Default::default()).unwrap().bytes;
-    let doc = photocraft_io::import("My image.JPEG", &bytes).unwrap().document;
+    let bytes = magicpic_io::export(&app.session.active().unwrap().doc, "My image.JPEG", &Default::default()).unwrap().bytes;
+    let doc = magicpic_io::import("My image.JPEG", &bytes).unwrap().document;
     app.session.add_document(doc, path.map(str::to_string));
     if layered {
         app.run("layer.new.layer", json!({})).unwrap();
@@ -157,8 +157,8 @@ fn a_jpeg_with_transparency_is_offered_as_png() {
 /// A Grayscale layer without an alpha channel is opaque, never read past its colour samples.
 #[test]
 fn a_layer_without_alpha_is_opaque() {
-    let doc = photocraft_doc::Document::new("gray", photocraft_geom::Size::new(3, 3), photocraft_doc::ColorMode::Grayscale, photocraft_color::SampleType::U8);
-    let layer = photocraft_doc::Layer::raster("gray", photocraft_color::PixelFormat::GRAY8);
+    let doc = magicpic_doc::Document::new("gray", magicpic_geom::Size::new(3, 3), magicpic_doc::ColorMode::Grayscale, magicpic_color::SampleType::U8);
+    let layer = magicpic_doc::Layer::raster("gray", magicpic_color::PixelFormat::GRAY8);
     assert!(crate::opaque_layer(&doc, &layer));
 }
 
@@ -166,8 +166,8 @@ fn a_layer_without_alpha_is_opaque() {
 fn transparent_png_keeps_its_format_until_its_lone_layer_becomes_smart() {
     let (mut app, open, written) = app();
     std::sync::Arc::make_mut(&mut app.session.active_mut().unwrap().doc).layers[0].surface_mut().unwrap().write_pixel(0, 0, &[1.0, 0.0, 0.0, 0.0]);
-    let bytes = photocraft_io::export(&app.session.active().unwrap().doc, "transparent.PNG", &Default::default()).unwrap().bytes;
-    let doc = photocraft_io::import("transparent.PNG", &bytes).unwrap().document;
+    let bytes = magicpic_io::export(&app.session.active().unwrap().doc, "transparent.PNG", &Default::default()).unwrap().bytes;
+    let doc = magicpic_io::import("transparent.PNG", &bytes).unwrap().document;
     assert_eq!(doc.layers.len(), 1);
     assert!(!doc.layers[0].locks.transparency, "transparent PNG imports as an unlocked raster layer");
     assert_eq!(doc.layers[0].surface().unwrap().pixel(0, 0)[3], 0.0);
@@ -180,7 +180,7 @@ fn transparent_png_keeps_its_format_until_its_lone_layer_becomes_smart() {
     app.poll_file_dialog(&ctx, None);
     app.run("layer.smartObjects.convertToSmartObject", json!({})).unwrap();
     assert_eq!(app.session.active().unwrap().doc.layers.len(), 1);
-    assert!(matches!(app.session.active().unwrap().doc.layers[0].content, photocraft_doc::LayerContent::Smart(_)));
+    assert!(matches!(app.session.active().unwrap().doc.layers[0].content, magicpic_doc::LayerContent::Smart(_)));
     menus::invoke(&mut app, &ctx, "file.saveAs", json!({})).unwrap();
     app.poll_file_dialog(&ctx, None);
     assert!(matches!(open.borrow().as_slice(), [(FileDialogRequest::Save { suggested }, _)] if suggested == "/pics/transparent.psd"));
@@ -254,7 +254,7 @@ fn plain_save_of_a_flat_jpeg_records_and_replays_a_changed_quality() {
     let (mut app, open, written) = jpeg_app(Some("/pics/photo.jpg"), false);
     let qualities: Rc<RefCell<Vec<Option<u8>>>> = Rc::default();
     let q = qualities.clone();
-    app.services.export = Some(Box::new(move |_: &photocraft_doc::Document, _: &str, s: &crate::ExportSettings| {
+    app.services.export = Some(Box::new(move |_: &magicpic_doc::Document, _: &str, s: &crate::ExportSettings| {
         q.borrow_mut().push(s.jpeg_quality);
         Ok((b"out".to_vec(), Vec::new()))
     }));
@@ -270,13 +270,13 @@ fn plain_save_of_a_flat_jpeg_records_and_replays_a_changed_quality() {
     app.poll_file_dialog(&ctx, None);
     let prompt = app.jpeg_options.as_mut().expect("JPEG Options");
     prompt.quality = 3;
-    prompt.format = photocraft_codecs::JpegFormat::Progressive;
+    prompt.format = magicpic_codecs::JpegFormat::Progressive;
     crate::jpeg_options_ui::confirm(&mut app, &ctx);
     app.run("actions.stop", json!({})).unwrap();
     assert_eq!(app.session.actions.list[0].steps, [("file.save".to_string(), json!({"quality": 3, "jpegFormat": "progressive"}))]);
     // Played on another flat JPEG: written over itself at quality 3, with no dialog or prompt.
-    let bytes = photocraft_io::export(&app.session.active().unwrap().doc, "other.jpg", &Default::default()).unwrap().bytes;
-    let index = app.session.add_document(photocraft_io::import("other.jpg", &bytes).unwrap().document, Some("/pics/other.jpg".into()));
+    let bytes = magicpic_io::export(&app.session.active().unwrap().doc, "other.jpg", &Default::default()).unwrap().bytes;
+    let index = app.session.add_document(magicpic_io::import("other.jpg", &bytes).unwrap().document, Some("/pics/other.jpg".into()));
     app.session.set_active(index);
     written.borrow_mut().clear();
     let played = app.run("actions.play", json!({"action": 0})).unwrap();
@@ -284,7 +284,7 @@ fn plain_save_of_a_flat_jpeg_records_and_replays_a_changed_quality() {
     assert!(app.jpeg_options.is_none(), "playback does not ask");
     assert!(open.borrow().is_empty(), "no Save dialog");
     assert_eq!(*written.borrow(), ["/pics/other.jpg"]);
-    assert_eq!(qualities.borrow().last().copied().flatten(), Some(photocraft_engine::file_cmds::jpeg_quality(3.0)));
+    assert_eq!(qualities.borrow().last().copied().flatten(), Some(magicpic_engine::file_cmds::jpeg_quality(3.0)));
 }
 
 /// The user answers the open dialog, from the dialog's own thread.
@@ -297,9 +297,9 @@ fn answer(open: &Open, answer: Option<FileDialogAnswer>) {
 fn menu_open_exr_parts_asks_for_a_file_then_shows_the_parts_dialog() {
     // Before the fix the menu ran the bare command: `missing "path"`, and no dialog (#7169).
     let (mut app, open, _) = app();
-    let bytes = photocraft_io::export(&app.session.active().unwrap().doc, "render.exr", &Default::default()).unwrap().bytes;
+    let bytes = magicpic_io::export(&app.session.active().unwrap().doc, "render.exr", &Default::default()).unwrap().bytes;
     let unique = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
-    let dir = std::env::temp_dir().join(format!("photocraft-menu-exr-parts-{}-{unique}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("magicpic-menu-exr-parts-{}-{unique}", std::process::id()));
     std::fs::create_dir(&dir).unwrap();
     let path = dir.join("render.exr");
     std::fs::write(&path, &bytes).unwrap();
@@ -329,13 +329,13 @@ fn menu_place_starts_transform_for_each_chosen_image() {
     for command in ["file.placeEmbedded", "file.placeLinked"] {
         let (mut app, open, _) = app();
         app.run("edit.fill", json!({"color": "#ff0000"})).unwrap();
-        let bytes = photocraft_io::export(&app.session.active().unwrap().doc, "source.png", &Default::default()).unwrap().bytes;
+        let bytes = magicpic_io::export(&app.session.active().unwrap().doc, "source.png", &Default::default()).unwrap().bytes;
         let ctx = egui::Context::default();
         let initial_layers = app.session.active().unwrap().doc.layer_count();
         let initial_history = app.session.active().unwrap().history.past_len();
         let linked_dir = (command == "file.placeLinked").then(|| {
             let unique = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
-            let dir = std::env::temp_dir().join(format!("photocraft-menu-place-{}-{unique}", std::process::id()));
+            let dir = std::env::temp_dir().join(format!("magicpic-menu-place-{}-{unique}", std::process::id()));
             std::fs::create_dir(&dir).unwrap();
             dir
         });
@@ -358,7 +358,7 @@ fn menu_place_starts_transform_for_each_chosen_image() {
             assert_eq!(transform.made, Some(crate::state::MadeLayer::Place));
             if index == 0 {
                 let layer = st.active_layer.unwrap();
-                let photocraft_doc::LayerContent::Smart(smart) = &st.doc.layer(layer).unwrap().content else { panic!("placed Smart Object") };
+                let magicpic_doc::LayerContent::Smart(smart) = &st.doc.layer(layer).unwrap().content else { panic!("placed Smart Object") };
                 let original_scale = smart.transform.m[0];
                 let transform = app.ui.transform.as_mut().unwrap();
                 let left = transform.quad[0][0];
@@ -368,7 +368,7 @@ fn menu_place_starts_transform_for_each_chosen_image() {
                 crate::transform_tool::commit(&mut app);
                 assert!(app.ui.transform.is_none(), "resizing the placed image must commit");
                 let st = app.session.active().unwrap();
-                let photocraft_doc::LayerContent::Smart(smart) = &st.doc.layer(layer).unwrap().content else { panic!("placed Smart Object") };
+                let magicpic_doc::LayerContent::Smart(smart) = &st.doc.layer(layer).unwrap().content else { panic!("placed Smart Object") };
                 assert!((smart.transform.m[0] - original_scale * 2.0).abs() < 1e-8, "placement width must double");
                 assert_eq!(app.session.active().unwrap().history.past_len(), initial_history + 1);
             } else {
@@ -392,7 +392,7 @@ fn menu_place_starts_transform_for_each_chosen_image() {
 fn menu_place_runs_in_the_background_and_starts_transform_when_it_lands() {
     let (mut app, open, _) = app();
     app.run("edit.fill", json!({"color": "#ff0000"})).unwrap();
-    let bytes = photocraft_io::export(&app.session.active().unwrap().doc, "source.png", &Default::default()).unwrap().bytes;
+    let bytes = magicpic_io::export(&app.session.active().unwrap().doc, "source.png", &Default::default()).unwrap().bytes;
     app.background_jobs = true;
     let ctx = egui::Context::default();
     let layers = app.session.active().unwrap().doc.layer_count();
@@ -444,7 +444,7 @@ fn menu_place_preserves_an_unfinished_transform() {
         let (mut app, open, _) = app();
         app.run("edit.fill", json!({"color": "#ff0000"})).unwrap();
         app.run("layer.new.layerFromBackground", json!({})).unwrap();
-        let bytes = photocraft_io::export(&app.session.active().unwrap().doc, "source.png", &Default::default()).unwrap().bytes;
+        let bytes = magicpic_io::export(&app.session.active().unwrap().doc, "source.png", &Default::default()).unwrap().bytes;
         let ctx = egui::Context::default();
         if !start_before_picker {
             menus::invoke(&mut app, &ctx, "file.placeEmbedded", json!({})).unwrap();
@@ -630,12 +630,12 @@ fn save_paths_without_an_extension_get_the_suggested_one() {
 }
 
 /// The question whether to replace a file (`replace_prompt`), when one is open.
-fn replace_prompt(app: &PhotocraftApp) -> Option<u64> {
+fn replace_prompt(app: &MagicpicApp) -> Option<u64> {
     app.ui.dialogs.iter().find(|d| crate::replace_prompt::owns(&d.fields)).map(|d| d.id)
 }
 
 /// File › Save As, answered with `path`.
-fn save_as(app: &mut PhotocraftApp, open: &Open, path: &str) {
+fn save_as(app: &mut MagicpicApp, open: &Open, path: &str) {
     let ctx = egui::Context::default();
     menus::invoke(app, &ctx, "file.saveAs", json!({})).unwrap();
     app.poll_file_dialog(&ctx, None);
@@ -735,7 +735,7 @@ fn a_save_writes_at_once_when_the_dialog_asked_about_the_file() {
 fn save_and_export_dialogs_start_beside_the_document() {
     let (mut app, open, _) = app();
     let ctx = egui::Context::default();
-    let dir = std::env::temp_dir().join("PhotoCraft projects").join("图像");
+    let dir = std::env::temp_dir().join("MagicPic projects").join("图像");
     let source = dir.join("original.psd");
     app.session.active_mut().unwrap().path = Some(source.to_string_lossy().into_owned());
     for command in ["file.saveAs", "file.export.exportAs", "file.export.saveForWebLegacy"] {
@@ -963,24 +963,24 @@ fn an_answer_of_the_wrong_kind_is_an_error_not_a_crash() {
 }
 
 /// The app with a painted layer converted to a smart object and a duplicate instance of it.
-fn smart_app() -> (PhotocraftApp, Open, Rc<RefCell<Vec<String>>>, [u64; 2]) {
+fn smart_app() -> (MagicpicApp, Open, Rc<RefCell<Vec<String>>>, [u64; 2]) {
     let (mut app, open, written) = app();
     app.run("layer.new.layer", json!({})).unwrap();
     app.session
         .edit("paint", |doc, active| {
-            doc.layer_mut(active.unwrap()).unwrap().surface_mut().unwrap().fill_rect(photocraft_geom::Rect::new(0, 0, 4, 4), &[0.0, 0.0, 1.0, 1.0]);
+            doc.layer_mut(active.unwrap()).unwrap().surface_mut().unwrap().fill_rect(magicpic_geom::Rect::new(0, 0, 4, 4), &[0.0, 0.0, 1.0, 1.0]);
             Ok(())
         })
         .unwrap();
     let a = app.run("layer.smartObjects.convertToSmartObject", json!({})).unwrap()["layer"].as_u64().unwrap();
     let b = app.run("layer.duplicate", json!({"layer": a})).unwrap()["layer"].as_u64().unwrap();
-    app.session.select_layer(photocraft_doc::LayerId(a)).unwrap();
+    app.session.select_layer(magicpic_doc::LayerId(a)).unwrap();
     (app, open, written, [a, b])
 }
 
-fn smart_source(app: &PhotocraftApp, id: u64) -> photocraft_doc::SmartSource {
-    match &app.session.active().unwrap().doc.layer(photocraft_doc::LayerId(id)).unwrap().content {
-        photocraft_doc::LayerContent::Smart(sm) => sm.source.clone(),
+fn smart_source(app: &MagicpicApp, id: u64) -> magicpic_doc::SmartSource {
+    match &app.session.active().unwrap().doc.layer(magicpic_doc::LayerId(id)).unwrap().content {
+        magicpic_doc::LayerContent::Smart(sm) => sm.source.clone(),
         other => panic!("not a smart object: {}", other.kind_name()),
     }
 }
@@ -990,7 +990,7 @@ fn place_embedded_uses_the_single_file_picker_and_accepts_contents() {
     let (mut app, open, _) = app();
     let ctx = egui::Context::default();
     assert!(menus::is_enabled(&app, "file.placeEmbedded"));
-    let source = photocraft_io::export(&app.session.active().unwrap().doc, "source.png", &Default::default()).unwrap().bytes;
+    let source = magicpic_io::export(&app.session.active().unwrap().doc, "source.png", &Default::default()).unwrap().bytes;
     let layers_before = app.session.active().unwrap().doc.layers.len();
 
     // Cancel leaves the document alone and does not report an error.
@@ -1015,8 +1015,8 @@ fn place_embedded_uses_the_single_file_picker_and_accepts_contents() {
     assert_eq!(app.ui.transform.as_ref().and_then(|t| t.made), Some(crate::state::MadeLayer::Place));
     assert!(matches!(
         &layer.content,
-        photocraft_doc::LayerContent::Smart(sm)
-            if matches!(&sm.source, photocraft_doc::SmartSource::Embedded { file_name, .. } if file_name == "source.png")
+        magicpic_doc::LayerContent::Smart(sm)
+            if matches!(&sm.source, magicpic_doc::SmartSource::Embedded { file_name, .. } if file_name == "source.png")
     ));
 
     // Finish the successful placement before starting the next picker.
@@ -1045,14 +1045,14 @@ fn replace_contents_picks_a_file_for_every_instance() {
     app.poll_file_dialog(&ctx, None);
     assert_eq!(ids.map(|id| smart_source(&app, id)), before);
     // A picked file (by contents, as on the web) replaces the contents of both instances.
-    let png = photocraft_io::export(&app.session.active().unwrap().doc, "png", &Default::default()).unwrap().bytes;
+    let png = magicpic_io::export(&app.session.active().unwrap().doc, "png", &Default::default()).unwrap().bytes;
     menus::invoke(&mut app, &ctx, "layer.smartObjects.replaceContents", json!({})).unwrap();
     app.poll_file_dialog(&ctx, None);
     answer(&open, Some(FileDialogAnswer::Contents("art.png".into(), png)));
     app.poll_file_dialog(&ctx, None);
     assert!(!app.ui.status_error, "{}", app.ui.status);
     for id in ids {
-        assert!(matches!(smart_source(&app, id), photocraft_doc::SmartSource::Embedded { ref file_name, .. } if file_name == "art.png"));
+        assert!(matches!(smart_source(&app, id), magicpic_doc::SmartSource::Embedded { ref file_name, .. } if file_name == "art.png"));
     }
     // A file that isn't an image is an error, and the contents stay.
     menus::invoke(&mut app, &ctx, "layer.smartObjects.replaceContents", json!({})).unwrap();
@@ -1060,7 +1060,7 @@ fn replace_contents_picks_a_file_for_every_instance() {
     answer(&open, Some(FileDialogAnswer::Contents("notes.png".into(), b"not an image".to_vec())));
     app.poll_file_dialog(&ctx, None);
     assert!(app.ui.status_error);
-    assert!(matches!(smart_source(&app, ids[1]), photocraft_doc::SmartSource::Embedded { ref file_name, .. } if file_name == "art.png"));
+    assert!(matches!(smart_source(&app, ids[1]), magicpic_doc::SmartSource::Embedded { ref file_name, .. } if file_name == "art.png"));
 }
 
 /// Layer › Smart Objects › Relink to File… (and the layer context menu item) asks for a file and
@@ -1078,7 +1078,7 @@ fn relink_to_file_picks_a_file_for_every_instance() {
     app.poll_file_dialog(&ctx, None);
     assert_eq!(ids.map(|id| smart_source(&app, id)), before);
     // The web picker answers only a name and bytes: nothing to link to, so the contents stay.
-    let png = photocraft_io::export(&app.session.active().unwrap().doc, "png", &Default::default()).unwrap().bytes;
+    let png = magicpic_io::export(&app.session.active().unwrap().doc, "png", &Default::default()).unwrap().bytes;
     menus::invoke(&mut app, &ctx, "layer.smartObjects.relinkToFile", json!({})).unwrap();
     app.poll_file_dialog(&ctx, None);
     answer(&open, Some(FileDialogAnswer::Contents("art.png".into(), png.clone())));
@@ -1098,7 +1098,7 @@ fn relink_to_file_picks_a_file_for_every_instance() {
     assert!(!app.ui.status_error, "{}", app.ui.status);
     std::fs::remove_dir_all(&dir).ok();
     for id in ids {
-        assert_eq!(smart_source(&app, id), photocraft_doc::SmartSource::Linked { path: path.clone() });
+        assert_eq!(smart_source(&app, id), magicpic_doc::SmartSource::Linked { path: path.clone() });
     }
 }
 
@@ -1134,7 +1134,7 @@ fn convert_to_linked_asks_where_to_write_the_contents() {
     assert!(std::fs::metadata(&path).is_ok_and(|m| m.len() > 0));
     std::fs::remove_dir_all(&dir).ok();
     for id in ids {
-        assert_eq!(smart_source(&app, id), photocraft_doc::SmartSource::Linked { path: path.clone() });
+        assert_eq!(smart_source(&app, id), magicpic_doc::SmartSource::Linked { path: path.clone() });
     }
 }
 
@@ -1152,7 +1152,7 @@ fn quick_export_selected_layers_writes_separate_pngs_with_one_prompt() {
     let capture = sources.clone();
     app.services.export = Some(Box::new(move |doc, path, _| {
         assert_eq!(doc.layers.len(), 1, "each PNG must contain just its source layer");
-        let png = photocraft_io::export(doc, path, &Default::default()).unwrap();
+        let png = magicpic_io::export(doc, path, &Default::default()).unwrap();
         assert!(png.bytes.starts_with(b"\x89PNG\r\n\x1a\n"));
         capture.borrow_mut().push(doc.name.clone());
         Ok((png.bytes, Vec::new()))
@@ -1179,7 +1179,7 @@ fn quick_export_selected_layers_writes_separate_pngs_with_one_prompt() {
 /// own file (a document opened from photo.png), and keeps writing beside a PSD without a prompt.
 #[test]
 fn same_folder_quick_export_asks_before_replacing_the_documents_own_file() {
-    let dir = std::env::temp_dir().join(format!("photocraft-quick-own-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("magicpic-quick-own-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     let own = dir.join("photo.png").to_string_lossy().into_owned();
@@ -1211,10 +1211,10 @@ fn same_folder_quick_export_asks_before_replacing_the_documents_own_file() {
 /// asks for a name), and a notice says so. Documents bound to other files are left alone.
 #[test]
 fn saving_over_the_file_of_another_open_document_detaches_it() {
-    let dir = std::env::temp_dir().join(format!("photocraft-save-over-tab-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("magicpic-save-over-tab-{}", std::process::id()));
     let (a, d) = (dir.join("a.psd").to_string_lossy().into_owned(), dir.join("d.psd").to_string_lossy().into_owned());
     let (mut app, open, written) = app();
-    let saved_as = |app: &mut PhotocraftApp, path: &str| {
+    let saved_as = |app: &mut MagicpicApp, path: &str| {
         let st = app.session.active_mut().unwrap();
         st.path = Some(path.to_string());
         st.saved_revision = st.revision;
@@ -1295,7 +1295,7 @@ fn export_as_with_several_artboards_selected_writes_one_file_each() {
     assert_eq!(app.session.active().unwrap().selected_layers().len(), 2);
     let sizes = Rc::new(RefCell::new(Vec::new()));
     let capture = sizes.clone();
-    app.services.export = Some(Box::new(move |doc: &photocraft_doc::Document, _: &str, _: &crate::ExportSettings| {
+    app.services.export = Some(Box::new(move |doc: &magicpic_doc::Document, _: &str, _: &crate::ExportSettings| {
         capture.borrow_mut().push((doc.name.clone(), doc.size.width, doc.size.height));
         Ok((b"out".to_vec(), Vec::new()))
     }));
@@ -1422,7 +1422,7 @@ fn render_video_menu_asks_for_directory_and_writes_frames_only_after_confirmatio
 type Disk = Rc<RefCell<std::collections::HashMap<String, u64>>>;
 
 /// Gives `app` file stamps from a fake disk that its own writes update too.
-fn on_disk(app: &mut PhotocraftApp) -> Disk {
+fn on_disk(app: &mut MagicpicApp) -> Disk {
     let disk = Disk::default();
     let (read, wrote) = (disk.clone(), disk.clone());
     app.services.file_stamp = Some(Box::new(move |path| read.borrow().get(path).map(|&n| crate::FileStamp { len: n, modified: None })));
@@ -1439,7 +1439,7 @@ fn changed_by_another_app(disk: &Disk, path: &str) {
     *disk.borrow_mut().entry(path.to_string()).or_default() += 1;
 }
 
-fn disk_prompt(app: &PhotocraftApp) -> Option<&crate::state::Dialog> {
+fn disk_prompt(app: &MagicpicApp) -> Option<&crate::state::Dialog> {
     app.ui.dialogs.iter().find(|d| crate::disk_change_prompt::owns(&d.fields))
 }
 
@@ -1546,11 +1546,11 @@ type Qualities = Rc<RefCell<Vec<Option<u8>>>>;
 
 /// [`jpeg_app`] opened from `path` and edited, whose exporter records the JPEG quality of each
 /// save (#2223).
-fn flat_jpeg_app(path: &str) -> (PhotocraftApp, Open, Rc<RefCell<Vec<String>>>, Qualities) {
+fn flat_jpeg_app(path: &str) -> (MagicpicApp, Open, Rc<RefCell<Vec<String>>>, Qualities) {
     let (mut app, open, written) = jpeg_app(Some(path), false);
     let qualities = Qualities::default();
     let q = qualities.clone();
-    app.services.export = Some(Box::new(move |_: &photocraft_doc::Document, _: &str, s: &crate::ExportSettings| {
+    app.services.export = Some(Box::new(move |_: &magicpic_doc::Document, _: &str, s: &crate::ExportSettings| {
         q.borrow_mut().push(s.jpeg_quality);
         Ok((b"out".to_vec(), Vec::new()))
     }));
@@ -1589,11 +1589,11 @@ fn save_asks_jpeg_options_then_writes_a_flat_jpeg_over_itself() {
     menus::invoke(&mut app, &ctx, "file.save", json!({})).unwrap();
     if let Some(p) = app.jpeg_options.as_mut() {
         p.quality = 3;
-        p.format = photocraft_codecs::JpegFormat::Progressive;
+        p.format = magicpic_codecs::JpegFormat::Progressive;
     }
     crate::jpeg_options_ui::confirm(&mut app, &ctx);
     assert_eq!(*written.borrow(), ["/pics/photo.jpg", "/pics/photo.jpg"]);
-    assert_eq!(qualities.borrow().last().copied().flatten(), Some(photocraft_engine::file_cmds::jpeg_quality(3.0)));
+    assert_eq!(qualities.borrow().last().copied().flatten(), Some(magicpic_engine::file_cmds::jpeg_quality(3.0)));
     assert_eq!(app.session.journal.last(), Some(&("file.save".to_string(), json!({"quality": 3, "jpegFormat": "progressive"}))));
     assert_eq!(app.session.active().unwrap().path.as_deref(), Some("/pics/photo.jpg"));
     // A script's `quality` answers it: no prompt.
@@ -1601,7 +1601,7 @@ fn save_asks_jpeg_options_then_writes_a_flat_jpeg_over_itself() {
     menus::invoke(&mut app, &ctx, "file.save", json!({"quality": 12})).unwrap();
     assert!(app.jpeg_options.is_none());
     assert_eq!(written.borrow().len(), 3);
-    assert_eq!(qualities.borrow().last().copied().flatten(), Some(photocraft_engine::file_cmds::jpeg_quality(12.0)));
+    assert_eq!(qualities.borrow().last().copied().flatten(), Some(magicpic_engine::file_cmds::jpeg_quality(12.0)));
     // Once a layer is added, Save asks where to save a PSD instead (#2234).
     app.run("layer.new.layer", json!({})).unwrap();
     menus::invoke(&mut app, &ctx, "file.save", json!({})).unwrap();
@@ -1613,9 +1613,9 @@ fn save_asks_jpeg_options_then_writes_a_flat_jpeg_over_itself() {
 }
 
 /// Adds another flat JPEG, opened from `path`, and makes it active.
-fn add_flat_jpeg(app: &mut PhotocraftApp, path: &str) {
-    let bytes = photocraft_io::export(&app.session.active().unwrap().doc, "other.jpg", &Default::default()).unwrap().bytes;
-    let doc = photocraft_io::import("other.jpg", &bytes).unwrap().document;
+fn add_flat_jpeg(app: &mut MagicpicApp, path: &str) {
+    let bytes = magicpic_io::export(&app.session.active().unwrap().doc, "other.jpg", &Default::default()).unwrap().bytes;
+    let doc = magicpic_io::import("other.jpg", &bytes).unwrap().document;
     let index = app.session.add_document(doc, Some(path.to_string()));
     app.session.set_active(index);
 }
@@ -1643,7 +1643,7 @@ fn flat_jpeg_saves_are_recorded_and_replay_over_the_open_file() {
     assert!(played.get("failed").is_none(), "{played}");
     assert!(app.jpeg_options.is_none(), "playback does not ask");
     assert_eq!(*written.borrow(), ["/pics/other.jpg"]);
-    assert_eq!(qualities.borrow().last().copied().flatten(), Some(photocraft_engine::file_cmds::jpeg_quality(5.0)));
+    assert_eq!(qualities.borrow().last().copied().flatten(), Some(magicpic_engine::file_cmds::jpeg_quality(5.0)));
     assert!(open.borrow().is_empty(), "no Save dialog");
 }
 
@@ -1698,7 +1698,7 @@ fn a_scripted_quality_survives_the_changed_on_disk_prompt() {
     let (mut app, open, written) = jpeg_app(None, false);
     let qualities: Rc<RefCell<Vec<Option<u8>>>> = Rc::default();
     let q = qualities.clone();
-    app.services.export = Some(Box::new(move |_: &photocraft_doc::Document, _: &str, s: &crate::ExportSettings| {
+    app.services.export = Some(Box::new(move |_: &magicpic_doc::Document, _: &str, s: &crate::ExportSettings| {
         q.borrow_mut().push(s.jpeg_quality);
         Ok((b"out".to_vec(), Vec::new()))
     }));
@@ -1716,7 +1716,7 @@ fn a_scripted_quality_survives_the_changed_on_disk_prompt() {
     crate::dialogs::confirm(&mut app, id).unwrap();
     assert!(app.jpeg_options.is_none(), "the script answered JPEG Options");
     assert_eq!(*written.borrow(), [path]);
-    assert_eq!(qualities.borrow().last().copied().flatten(), Some(photocraft_engine::file_cmds::jpeg_quality(5.0)));
+    assert_eq!(qualities.borrow().last().copied().flatten(), Some(magicpic_engine::file_cmds::jpeg_quality(5.0)));
     // Recorded as a plain Save keeping the answer, so a replay writes the file it's played on.
     assert_eq!(app.session.journal.last(), Some(&("file.save".to_string(), json!({"quality": 5}))));
 }
@@ -1786,7 +1786,7 @@ fn exports_start_in_the_last_exported_folder() {
         FileDialogRequest::Save { suggested } => suggested.clone(),
         other => panic!("save dialog expected, got {other:?}"),
     };
-    let remembered = |app: &PhotocraftApp| app.session.prefs().export.last_folder.clone();
+    let remembered = |app: &MagicpicApp| app.session.prefs().export.last_folder.clone();
     // No export yet: beside the document. Cancelled, nothing is remembered.
     app.pick_export("a.png", |_, _| Ok(Value::Null)).unwrap();
     app.poll_file_dialog(&ctx, None);
@@ -1839,14 +1839,14 @@ fn exports_start_in_the_last_exported_folder() {
 
 #[test]
 fn the_last_export_folder_is_a_preference_that_old_files_lack() {
-    let prefs = photocraft_engine::prefs::Preferences::default();
+    let prefs = magicpic_engine::prefs::Preferences::default();
     assert_eq!(prefs.export.last_folder, "");
     let mut json = serde_json::to_value(&prefs).unwrap();
     json["export"]["lastFolder"] = "/renders".into();
-    let loaded: photocraft_engine::prefs::Preferences = serde_json::from_value(json.clone()).unwrap();
+    let loaded: magicpic_engine::prefs::Preferences = serde_json::from_value(json.clone()).unwrap();
     assert_eq!(loaded.export.last_folder, "/renders");
     // Settings saved before the field existed still load.
     json["export"].as_object_mut().unwrap().remove("lastFolder");
-    let old: photocraft_engine::prefs::Preferences = serde_json::from_value(json).unwrap();
+    let old: magicpic_engine::prefs::Preferences = serde_json::from_value(json).unwrap();
     assert_eq!(old.export.last_folder, "");
 }

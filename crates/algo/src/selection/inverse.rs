@@ -3,9 +3,9 @@
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
 
-use photocraft_color::{PixelFormat, read_sample};
-use photocraft_geom::{Rect, TILE_SIZE, TileCoord};
-use photocraft_raster::{Surface, Tile};
+use magicpic_color::{PixelFormat, read_sample};
+use magicpic_geom::{Rect, TILE_SIZE, TileCoord};
+use magicpic_raster::{Surface, Tile};
 
 use crate::photo_util::par_map;
 

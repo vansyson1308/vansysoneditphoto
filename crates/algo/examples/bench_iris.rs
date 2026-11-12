@@ -1,10 +1,10 @@
 //! End-to-end Iris Blur timings; fixture construction and output drop are untimed.
-//! `cargo run --release -p photocraft-algo --example bench_iris -- 6000 4000 3`
+//! `cargo run --release -p magicpic-algo --example bench_iris -- 6000 4000 3`
 //! An optional fourth argument models the UI's proxy factor (e.g. 1500 1000 5 4).
-use photocraft_algo::{FilterParams, IrisPin, apply_in};
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use magicpic_algo::{FilterParams, IrisPin, apply_in};
+use magicpic_color::{ColorMode, PixelFormat, SampleType};
+use magicpic_geom::Rect;
+use magicpic_raster::Surface;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();

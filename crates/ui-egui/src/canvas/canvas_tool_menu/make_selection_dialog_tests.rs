@@ -11,7 +11,7 @@ use serde_json::{Value, json};
 
 use super::make_selection;
 use super::tests::choose_open;
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::state::Tool;
 
 const OPERATIONS: [&str; 4] = ["New Selection", "Add to Selection", "Subtract from Selection", "Intersect with Selection"];
@@ -19,8 +19,8 @@ const MODES: [&str; 4] = ["replace", "add", "subtract", "intersect"];
 
 /// A document with the reference's closed triangle as the Work Path, with or without a selection
 /// (a rectangle the triangle overlaps).
-fn app(selection: bool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app(selection: bool) -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 400, "height": 500})).unwrap();
     let knots = json!([[100, 300], [300, 300], [200, 450]]);
     app.run("path.set", json!({"name": "work", "path": {"subpaths": [{"closed": true, "knots": knots}]}})).unwrap();
@@ -31,52 +31,52 @@ fn app(selection: bool) -> PhotocraftApp {
     app
 }
 
-fn draw(ui: &mut egui::Ui, app: &mut PhotocraftApp) {
+fn draw(ui: &mut egui::Ui, app: &mut MagicpicApp) {
     if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
         crate::dialogs::show(app, ui.ctx());
     }
 }
 
 /// The Pen canvas menu's Make Selection… dialog, drawn as the window shows it.
-fn dialog(mut app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
+fn dialog(mut app: MagicpicApp) -> Harness<'static, MagicpicApp> {
     choose_open(&mut app, "path.toSelection");
     assert_eq!(app.ui.dialogs.len(), 1, "Make Selection… opened its dialog");
     let mut h = Harness::builder().with_size(egui::vec2(900.0, 700.0)).build_ui_state(draw, app);
-    PhotocraftApp::setup_context(&h.ctx, Default::default());
+    MagicpicApp::setup_context(&h.ctx, Default::default());
     h.run_steps(4);
     h
 }
 
-fn click(h: &mut Harness<'_, PhotocraftApp>, label: &str) {
+fn click(h: &mut Harness<'_, MagicpicApp>, label: &str) {
     h.get_by_label(label).click();
     h.run_steps(3);
 }
 
-fn steps(app: &PhotocraftApp) -> Vec<String> {
+fn steps(app: &MagicpicApp) -> Vec<String> {
     app.session.active().unwrap().history.entries().iter().map(|e| e.to_string()).collect()
 }
 
-fn last_step(app: &PhotocraftApp) -> Option<String> {
+fn last_step(app: &MagicpicApp) -> Option<String> {
     steps(app).last().cloned()
 }
 
-fn selection_bounds(app: &PhotocraftApp) -> Option<[i32; 4]> {
+fn selection_bounds(app: &MagicpicApp) -> Option<[i32; 4]> {
     let r = app.session.active().unwrap().doc.selection.as_ref()?.content_bounds();
     Some([r.x0, r.y0, r.x1, r.y1])
 }
 
 /// The params of the last command run.
-fn last_params(app: &PhotocraftApp) -> Value {
+fn last_params(app: &MagicpicApp) -> Value {
     let (id, params) = app.session.journal.last().cloned().unwrap();
     assert_eq!(id, "path.toSelection");
     params
 }
 
-fn enabled(h: &Harness<'_, PhotocraftApp>, label: &str) -> bool {
+fn enabled(h: &Harness<'_, MagicpicApp>, label: &str) -> bool {
     !h.get_by_label(label).accesskit_node().is_disabled()
 }
 
-fn feather_field<'h>(h: &'h Harness<'_, PhotocraftApp>) -> Node<'h> {
+fn feather_field<'h>(h: &'h Harness<'_, MagicpicApp>) -> Node<'h> {
     h.get_all_by_label("Feather Radius:").find(|n| n.accesskit_node().role() == Role::SpinButton).expect("the Feather Radius number field")
 }
 

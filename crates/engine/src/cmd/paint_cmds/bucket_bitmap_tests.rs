@@ -10,7 +10,7 @@ fn bitmap() -> Session {
     s.execute("file.new", json!({"width": 64, "height": 64, "background": "white"})).unwrap();
     s.execute("image.mode.grayscale", json!({})).unwrap();
     s.execute("image.mode.bitmap", json!({})).unwrap();
-    assert_eq!(s.active().unwrap().doc.mode, photocraft_color::ColorMode::Bitmap);
+    assert_eq!(s.active().unwrap().doc.mode, magicpic_color::ColorMode::Bitmap);
     s.execute("tools.setColors", json!({"foreground": "#00ff00"})).unwrap();
     s
 }
@@ -69,7 +69,7 @@ fn other_modes_still_fill() {
         s.execute("file.new", json!({"width": 64, "height": 64, "mode": new_mode, "depth": depth, "background": "white"})).unwrap();
         if mode == "indexed" {
             s.execute("image.mode.indexedColor", json!({})).unwrap();
-            assert_eq!(s.active().unwrap().doc.mode, photocraft_color::ColorMode::Indexed);
+            assert_eq!(s.active().unwrap().doc.mode, magicpic_color::ColorMode::Indexed);
         }
         s.execute("tools.setColors", json!({"foreground": "#000000"})).unwrap();
         let steps = s.active().unwrap().history.past_len();
@@ -87,7 +87,7 @@ fn unmeasured_modes_are_not_refused() {
     let mut duotone = Session::new();
     duotone.execute("file.new", json!({"width": 64, "height": 64, "mode": "grayscale", "background": "white"})).unwrap();
     duotone.execute("image.mode.duotone", json!({"type": "monotone"})).unwrap();
-    for (mut s, mode) in [(multi, photocraft_color::ColorMode::Multichannel), (duotone, photocraft_color::ColorMode::Duotone)] {
+    for (mut s, mode) in [(multi, magicpic_color::ColorMode::Multichannel), (duotone, magicpic_color::ColorMode::Duotone)] {
         assert_eq!(s.active().unwrap().doc.mode, mode);
         let r = s.execute("paint.bucket", json!({"x": 32, "y": 32}));
         assert!(r.as_ref().err().is_none_or(|e| e.to_string() != BITMAP_REFUSAL), "{mode:?}: {r:?}");

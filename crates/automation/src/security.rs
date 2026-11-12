@@ -145,8 +145,8 @@ pub enum ProofRole {
 /// as 64 lowercase hexadecimal characters. `docs/control-protocol.md` gives the exact message.
 pub fn handshake_proof(token: &str, role: ProofRole, client_nonce: &str, server_nonce: &str) -> Result<String, AutomationError> {
     let label: &[u8] = match role {
-        ProofRole::Server => b"photocraft-control-v1 server",
-        ProofRole::Client => b"photocraft-control-v1 client",
+        ProofRole::Server => b"magicpic-control-v1 server",
+        ProofRole::Client => b"magicpic-control-v1 client",
     };
     let mut mac = Hmac::<Sha256>::new_from_slice(token.to_ascii_lowercase().as_bytes())
         .map_err(|e| AutomationError::Other(format!("cannot key the authentication proof: {e}")))?;
@@ -324,7 +324,7 @@ pub fn client_token(supplied: Option<&str>, token_file: Option<&Path>) -> Result
     token_file.map_or_else(
         || {
             Err(AutomationError::BadRequest(
-                "bridge mode needs --control-token, --control-token-file, PHOTOCRAFT_CONTROL_TOKEN, or PHOTOCRAFT_CONTROL_TOKEN_FILE".into(),
+                "bridge mode needs --control-token, --control-token-file, MAGICPIC_CONTROL_TOKEN, or MAGICPIC_CONTROL_TOKEN_FILE".into(),
             ))
         },
         |path| read_token_file(path).map(|v| v.to_ascii_lowercase()),
@@ -569,7 +569,7 @@ mod tests {
     /// #6425: the same for a token file whose contents are uppercase.
     #[test]
     fn an_uppercase_token_file_authenticates_its_exact_contents() {
-        let path = std::env::temp_dir().join(format!("photocraft-control-token-upper-{}-{}.txt", std::process::id(), generate_token().unwrap()));
+        let path = std::env::temp_dir().join(format!("magicpic-control-token-upper-{}-{}.txt", std::process::id(), generate_token().unwrap()));
         let contents = generate_token().unwrap().to_ascii_uppercase();
         create_token_file(&path, &contents).unwrap();
         let expected = server_token(None, Some(&path));
@@ -595,7 +595,7 @@ mod tests {
 
     #[test]
     fn token_file_round_trips_between_server_and_client() {
-        let path = std::env::temp_dir().join(format!("photocraft-control-token-{}-{}.txt", std::process::id(), generate_token().unwrap()));
+        let path = std::env::temp_dir().join(format!("magicpic-control-token-{}-{}.txt", std::process::id(), generate_token().unwrap()));
         let server = server_token(None, Some(&path)).unwrap();
         let client = client_token(None, Some(&path)).unwrap();
         assert_eq!(server, client);
@@ -678,7 +678,7 @@ mod tests {
     #[test]
     fn an_existing_token_file_must_be_owner_only() {
         use std::os::unix::fs::PermissionsExt;
-        let dir = std::env::temp_dir().join(format!("photocraft-token-perm-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("magicpic-token-perm-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("token.txt");
         let token = "0123456789abcdef".repeat(4); // 64 hex chars, passes validate_token

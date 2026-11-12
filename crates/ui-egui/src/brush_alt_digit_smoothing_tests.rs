@@ -5,11 +5,11 @@
 use egui::{Key, Modifiers};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::state::Tool;
 
-fn app(tool: Tool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app(tool: Tool) -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     app.ui.tool = tool;
@@ -17,7 +17,7 @@ fn app(tool: Tool) -> PhotocraftApp {
 }
 
 /// One key press with `modifiers` through the app's shortcut handling.
-fn key(app: &mut PhotocraftApp, ctx: &egui::Context, key: Key, modifiers: Modifiers) {
+fn key(app: &mut MagicpicApp, ctx: &egui::Context, key: Key, modifiers: Modifiers) {
     let raw = egui::RawInput {
         events: vec![egui::Event::ModifiersChanged(modifiers), egui::Event::Key { key, physical_key: Some(key), pressed: true, repeat: false, modifiers }],
         ..Default::default()
@@ -28,14 +28,14 @@ fn key(app: &mut PhotocraftApp, ctx: &egui::Context, key: Key, modifiers: Modifi
 }
 
 /// Several key presses in one frame, in this order.
-fn keys(app: &mut PhotocraftApp, ctx: &egui::Context, presses: &[(Key, Modifiers)]) {
+fn keys(app: &mut MagicpicApp, ctx: &egui::Context, presses: &[(Key, Modifiers)]) {
     let events = presses.iter().map(|&(key, modifiers)| egui::Event::Key { key, physical_key: Some(key), pressed: true, repeat: false, modifiers }).collect();
     ctx.begin_pass(egui::RawInput { events, ..Default::default() });
     crate::shortcuts::handle(app, ctx);
     ctx.end_pass().textures_delta.clear();
 }
 
-fn brush(app: &PhotocraftApp) -> (f32, f32, f32) {
+fn brush(app: &MagicpicApp) -> (f32, f32, f32) {
     let b = &app.session.tools.brush;
     (b.smoothing.amount, b.opacity, b.flow)
 }
@@ -96,7 +96,7 @@ fn tools_without_a_smoothing_field_ignore_alt_digits() {
         let ctx = egui::Context::default();
         let mut a = app(tool);
         let before = (brush(&a), a.ui.tool_options.fill_opacity);
-        let layer = |a: &PhotocraftApp| {
+        let layer = |a: &MagicpicApp| {
             let st = a.session.active().unwrap();
             st.doc.layer(st.active_layer.unwrap()).unwrap().opacity
         };

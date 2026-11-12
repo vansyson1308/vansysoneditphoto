@@ -3,13 +3,13 @@
 use egui::Modifiers;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::canvas::Drag;
 use crate::state::Tool;
 use crate::tool_feedback::{Badge, badge, badge_glyph};
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 100, "height": 100})).unwrap();
     app.run("select.rect", json!({"x": 20, "y": 20, "width": 30, "height": 30})).unwrap();
     app

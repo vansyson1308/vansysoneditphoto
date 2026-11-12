@@ -1,7 +1,7 @@
 use std::fmt;
 
-use photocraft_color::SampleType;
-use photocraft_raster::Interrupt;
+use magicpic_color::SampleType;
+use magicpic_raster::Interrupt;
 
 use super::textures::Stats;
 use super::{Compositor, Document, Rect, Unsupported};

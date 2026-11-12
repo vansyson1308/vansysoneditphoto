@@ -3,7 +3,7 @@
 //! One fragment pass (`camera_raw.wgsl`) runs the stages that read only their own pixel: white
 //! balance and exposure, Contrast without Texture or Clarity, Whites and Blacks, Vibrance and
 //! Saturation, the tone curves, the Color Mixer, Color Grading, the vignette and grain. Their
-//! constants and tables come from [`photocraft_algo::camera_raw::per_pixel`], which the CPU
+//! constants and tables come from [`magicpic_algo::camera_raw::per_pixel`], which the CPU
 //! develop builds its own from, so both evaluate the same maths; the curves and the Whites and
 //! Blacks rows are rows of one `R32Float` texture. Shadows and Highlights run before it as the
 //! passes of `camera_raw_tone.rs`, which then also measure the image's points for Whites and
@@ -16,9 +16,9 @@
 //! (#6419). They render into `Rgba32Float`, `R32Float` and `Rgba32Uint`;
 //! [`CameraRawDevelop::supported`] says whether the adapter can.
 
-use photocraft_algo::camera_raw::local_tone::LOG_FLOOR;
-use photocraft_algo::camera_raw::spatial::{DEHAZE_T_FLOOR, TEXTURE_LIMIT};
-use photocraft_algo::camera_raw::{CURVE_LUT, Dehaze, PerPixel, VignetteStyle, WB_STEPS};
+use magicpic_algo::camera_raw::local_tone::LOG_FLOOR;
+use magicpic_algo::camera_raw::spatial::{DEHAZE_T_FLOOR, TEXTURE_LIMIT};
+use magicpic_algo::camera_raw::{CURVE_LUT, Dehaze, PerPixel, VignetteStyle, WB_STEPS};
 
 use crate::Unsupported;
 use crate::camera_raw_tone::{Segment, ToneFrame, TonePipelines, WB_ROW};

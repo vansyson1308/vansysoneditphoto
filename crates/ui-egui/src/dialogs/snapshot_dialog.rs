@@ -5,7 +5,7 @@
 
 use serde_json::{Map, Value, json};
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 
 pub const COMMAND: &str = "history.newSnapshot";
 const MARK: &str = "__newSnapshot";
@@ -17,11 +17,11 @@ pub fn owns(fields: &Map<String, Value>) -> bool {
 /// Open the dialog on the active document, suggesting the name the camera button would give.
 /// Not while a Free Transform is open: it owns the document until committed or cancelled, so the
 /// camera button does nothing then either (#6087).
-pub fn open(app: &mut PhotocraftApp) -> Option<u64> {
+pub fn open(app: &mut MagicpicApp) -> Option<u64> {
     if app.ui.transform.is_some() {
         return None;
     }
-    let name = photocraft_engine::history_cmds::next_snapshot_name(app.session.active()?);
+    let name = magicpic_engine::history_cmds::next_snapshot_name(app.session.active()?);
     let mut f = Map::new();
     f.insert(MARK.into(), json!(true));
     f.insert("__command".into(), json!(COMMAND));
@@ -33,7 +33,7 @@ pub fn open(app: &mut PhotocraftApp) -> Option<u64> {
 
 /// Takes the snapshot. A cleared Name gets the next default name, as the camera button would give
 /// (#6087); agents calling the command with an empty name still get an error.
-pub fn confirm(app: &mut PhotocraftApp, f: &Map<String, Value>) -> Result<Value, String> {
+pub fn confirm(app: &mut MagicpicApp, f: &Map<String, Value>) -> Result<Value, String> {
     let mut p = Map::new();
     if let Some(name) = f.get("name").and_then(Value::as_str).map(str::trim).filter(|n| !n.is_empty()) {
         p.insert("name".into(), json!(name));
@@ -88,10 +88,10 @@ pub fn body(ui: &mut egui::Ui, f: &mut Map<String, Value>) {
 mod tests {
     use serde_json::json;
 
-    use crate::PhotocraftApp;
+    use crate::MagicpicApp;
 
-    fn app() -> PhotocraftApp {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    fn app() -> MagicpicApp {
+        let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 200, "height": 150})).unwrap();
         app.run("layer.new.layer", json!({})).unwrap();
         app.run("edit.fill", json!({"color": "#ff0000"})).unwrap();

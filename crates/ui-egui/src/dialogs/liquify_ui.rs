@@ -9,13 +9,13 @@
 //! OK runs `filter.liquify` with the same strokes and gets the same field.
 
 use egui::{Align2, Color32, FontId, Pos2, Rect as ERect, Sense, Stroke, TextureHandle, pos2, vec2};
-use photocraft_algo::liquify::{LiquifyField, LiquifyStroke, LiquifyTool, MAX_LIVE_MS, ProxyImage, auto_cell};
-use photocraft_doc::{DocId, Document, LayerId};
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use magicpic_algo::liquify::{LiquifyField, LiquifyStroke, LiquifyTool, MAX_LIVE_MS, ProxyImage, auto_cell};
+use magicpic_doc::{DocId, Document, LayerId};
+use magicpic_geom::Rect;
+use magicpic_raster::Surface;
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::canvas::ToolEvent;
 use crate::theme::Tokens;
 use crate::widgets;
@@ -40,7 +40,7 @@ fn render_components(
     dirty: Rect,
     out: &mut [[u8; 4]],
 ) -> bool {
-    let Ok(Some(colors)) = photocraft_engine::color_channels::explicit(&json!({"target":target}), source.format().mode.color_channels()) else { return false };
+    let Ok(Some(colors)) = magicpic_engine::color_channels::explicit(&json!({"target":target}), source.format().mode.color_channels()) else { return false };
     let width = bounds.width() as usize;
     if source_bounds.is_empty() || bounds.is_empty() || !scale.is_finite() || scale <= 0.0 || width.checked_mul(bounds.height() as usize) != Some(out.len()) {
         return false;
@@ -77,7 +77,7 @@ fn render_components(
                     source.sample_channel(x, y, channel)
                 };
             }
-            let rgba = photocraft_raster::to_rgba(&fmt, &native);
+            let rgba = magicpic_raster::to_rgba(&fmt, &native);
             let a = rgba[3].clamp(0.0, 1.0);
             let encoded = [rgba[0] * a, rgba[1] * a, rgba[2] * a, a].map(|v| (v.clamp(0.0, 1.0) * 255.0 + 0.5) as u8);
             let index = (y - bounds.y0) as usize * width + (x - bounds.x0) as usize;
@@ -283,7 +283,7 @@ pub struct LiquifyDialog {
 /// (`distort_cmds::mix_by_selection`): the result over the original by its coverage. On a smart
 /// object with a filter mask it is that mask, which the engine shows every filter through.
 struct PreviewSelection {
-    mask: photocraft_doc::LayerMask,
+    mask: magicpic_doc::LayerMask,
     /// Coverage at each proxy pixel (row-major, the proxy's size).
     proxy: Vec<f32>,
     /// What shows where the mask hides the result, when that isn't the dialog's source: a filter
@@ -295,7 +295,7 @@ struct PreviewSelection {
 impl PreviewSelection {
     /// `sel` with its coverage sampled at `proxy`'s pixels. Kept even when every proxy pixel is
     /// selected: a gap narrower than a proxy pixel still shows in the source-resolution crop.
-    fn new(mask: photocraft_doc::LayerMask, proxy: &ProxyImage, base: Option<Surface>) -> Self {
+    fn new(mask: magicpic_doc::LayerMask, proxy: &ProxyImage, base: Option<Surface>) -> Self {
         let (bx, by, s) = (f64::from(proxy.bounds.x0), f64::from(proxy.bounds.y0), proxy.scale);
         let mut cov = Vec::with_capacity(proxy.w * proxy.h);
         for y in 0..proxy.h {
@@ -688,15 +688,15 @@ impl LiquifyDialog {
 }
 
 /// Opens the dialog on the active layer.
-pub fn open(app: &mut PhotocraftApp, ctx: &egui::Context) -> Result<(), String> {
+pub fn open(app: &mut MagicpicApp, ctx: &egui::Context) -> Result<(), String> {
     let (layer, mut surf, _) = crate::distort_ui::active_filter_target(app)?;
     let doc = &app.session.active().ok_or("no document")?.doc;
     let canvas = doc.bounds();
     // A smart object's pixels are its filters mixed through its filter mask; OK adds the Liquify
     // above the filters themselves, so that is what it edits.
-    if let Some(photocraft_doc::LayerContent::Smart(sm)) = doc.layer(layer).map(|l| &l.content)
+    if let Some(magicpic_doc::LayerContent::Smart(sm)) = doc.layer(layer).map(|l| &l.content)
         && sm.filter_mask.is_some()
-        && let Ok(Some(filtered)) = photocraft_engine::smart_cmds::render_below_filter(doc, sm, sm.smart_filters.len())
+        && let Ok(Some(filtered)) = magicpic_engine::smart_cmds::render_below_filter(doc, sm, sm.smart_filters.len())
     {
         surf = filtered;
     }
@@ -706,10 +706,10 @@ pub fn open(app: &mut PhotocraftApp, ctx: &egui::Context) -> Result<(), String> 
 /// Re-opens Liquify smart filter `index` of smart object `layer` with its recorded strokes and
 /// mesh size, previewing on the pixels below it; OK updates that filter
 /// (`layer.smartFilter.setParams`).
-pub fn open_smart_filter(app: &mut PhotocraftApp, ctx: &egui::Context, layer: LayerId, index: usize) -> Result<(), String> {
-    use photocraft_engine::distort_cmds::{LIQUIFY, liquify_params};
+pub fn open_smart_filter(app: &mut MagicpicApp, ctx: &egui::Context, layer: LayerId, index: usize) -> Result<(), String> {
+    use magicpic_engine::distort_cmds::{LIQUIFY, liquify_params};
     let st = app.session.active().ok_or("no document")?;
-    let Some(photocraft_doc::LayerContent::Smart(sm)) = st.doc.layer(layer).map(|l| &l.content) else {
+    let Some(magicpic_doc::LayerContent::Smart(sm)) = st.doc.layer(layer).map(|l| &l.content) else {
         return Err("the layer is not a smart object".into());
     };
     let filter = sm.smart_filters.get(index).ok_or("no such smart filter")?;
@@ -717,14 +717,14 @@ pub fn open_smart_filter(app: &mut PhotocraftApp, ctx: &egui::Context, layer: La
         return Err("the smart filter is not a Liquify filter".into());
     }
     let (strokes, cell) = liquify_params(LIQUIFY, &filter.params, st.doc.bounds()).map_err(|e| e.to_string())?;
-    let surf = photocraft_engine::smart_cmds::render_below_filter(&st.doc, sm, index)
+    let surf = magicpic_engine::smart_cmds::render_below_filter(&st.doc, sm, index)
         .map_err(|e| e.to_string())?
         .ok_or("the smart object's contents are unavailable (missing linked file?)")?;
     open_on(app, ctx, layer, surf, strokes, cell, Some(index))
 }
 
 fn open_on(
-    app: &mut PhotocraftApp,
+    app: &mut MagicpicApp,
     ctx: &egui::Context,
     layer: LayerId,
     surf: Surface,
@@ -737,15 +737,15 @@ fn open_on(
     let name = st.doc.layer(layer).map(|l| l.name.clone()).unwrap_or_default();
     let proxy = ProxyImage::new(&surf, canvas, PROXY_SIDE);
     let target = if smart_filter.is_some() { json!("pixels") } else { crate::distort_ui::colour_set_target(app) };
-    let colors = photocraft_engine::color_channels::explicit(&json!({"target":target}), surf.format().mode.color_channels()).map_err(|e| e.to_string())?;
+    let colors = magicpic_engine::color_channels::explicit(&json!({"target":target}), surf.format().mode.color_channels()).map_err(|e| e.to_string())?;
     let native_proxy = colors.map(|_| crate::gallery_ui::reduce(&surf, canvas, proxy.scale as u32));
     let out = vec![[0u8; 4]; proxy.w * proxy.h];
     // A smart object's filter mask shows every filter through it, a new Liquify too, whatever is
     // selected (`smart_cmds::add_smart_filter`), over the placed pixels without any filter.
     // Otherwise a new Liquify goes through the selection; a smart filter being edited has none.
     let selection = match st.doc.layer(layer).map(|l| &l.content) {
-        Some(photocraft_doc::LayerContent::Smart(sm)) if sm.filter_mask.is_some() => sm.filter_mask.clone().map(|mask| {
-            let placed = photocraft_engine::smart_cmds::render_below_filter(&st.doc, sm, 0).ok().flatten();
+        Some(magicpic_doc::LayerContent::Smart(sm)) if sm.filter_mask.is_some() => sm.filter_mask.clone().map(|mask| {
+            let placed = magicpic_engine::smart_cmds::render_below_filter(&st.doc, sm, 0).ok().flatten();
             PreviewSelection::new(mask, &proxy, placed)
         }),
         _ => st
@@ -753,7 +753,7 @@ fn open_on(
             .selection
             .clone()
             .filter(|_| smart_filter.is_none())
-            .map(|sel| PreviewSelection::new(photocraft_doc::LayerMask { surface: sel, ..photocraft_doc::LayerMask::reveal_all() }, &proxy, None)),
+            .map(|sel| PreviewSelection::new(magicpic_doc::LayerMask { surface: sel, ..magicpic_doc::LayerMask::reveal_all() }, &proxy, None)),
     };
     let center = [f64::from(canvas.x0 + canvas.x1) / 2.0, f64::from(canvas.y0 + canvas.y1) / 2.0];
     let mut d = LiquifyDialog {
@@ -814,14 +814,14 @@ fn open_on(
 }
 
 /// Keeps the brush settings for the next time Liquify opens, also after a restart.
-fn remember(app: &mut PhotocraftApp, opts: &LiquifyOpts) {
+fn remember(app: &mut MagicpicApp, opts: &LiquifyOpts) {
     let v = opts.to_json();
     app.session.prefs.edit(|p| p.dialogs.insert(REMEMBERED.into(), v));
 }
 
 /// Cancel (button, Esc or the control channel): the document is untouched; the brush settings
 /// are kept.
-pub fn cancel(app: &mut PhotocraftApp) {
+pub fn cancel(app: &mut MagicpicApp) {
     if let Some(d) = app.distort.liquify.take() {
         remember(app, &d.opts);
     }
@@ -831,7 +831,7 @@ pub fn cancel(app: &mut PhotocraftApp) {
 /// a smart filter, OK updates that filter instead (also when Restore All left no strokes). The
 /// dialog closes either way. `app.run` shows a failed command's error in the status bar, and
 /// `commit` returns it.
-pub fn commit(app: &mut PhotocraftApp) -> Result<(), String> {
+pub fn commit(app: &mut MagicpicApp) -> Result<(), String> {
     let Some(mut d) = app.distort.liquify.take() else { return Ok(()) };
     remember(app, &d.opts);
     d.end();
@@ -847,7 +847,7 @@ pub fn commit(app: &mut PhotocraftApp) -> Result<(), String> {
 }
 
 /// Control channel: `filter.liquify {"ui": {...}}` while the dialog is open.
-pub fn control(app: &mut PhotocraftApp, ui: &Value) -> Result<Value, String> {
+pub fn control(app: &mut MagicpicApp, ui: &Value) -> Result<Value, String> {
     if ui.get("commit").and_then(Value::as_bool) == Some(true) {
         commit(app)?;
         return Ok(json!({"committed": true}));
@@ -931,7 +931,7 @@ fn resized_brush(start_size: f32, start_density: f32, dx: f32, dy: f32, zoom: f3
 /// Pointer in document coordinates (from the preview or the control channel). Alt at
 /// pointer-down subtracts from the freeze mask (lasso), reverses a twirl and swaps Pucker/Bloat;
 /// Shift adds to the mask, same as no modifier.
-pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifiers) {
+pub fn pointer(app: &mut MagicpicApp, ev: ToolEvent, mods: egui::Modifiers) {
     pointer_at(app, ev, mods, crate::gpu_canvas::now_ms());
 }
 
@@ -940,7 +940,7 @@ pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifiers) {
 /// after another, so reading the clock for each gave the first move nearly the whole frame and
 /// the rest only processing time, which changed the stationary tools' strength and where it
 /// landed. After a stall the frame counts for at most [`MAX_LIVE_MS`] in all, as one point would.
-fn dispatch_frame(app: &mut PhotocraftApp, events: Vec<ToolEvent>, mods: egui::Modifiers, now: f64) {
+fn dispatch_frame(app: &mut MagicpicApp, events: Vec<ToolEvent>, mods: egui::Modifiers, now: f64) {
     let moves = events.iter().filter(|e| matches!(e, ToolEvent::Move { .. })).count();
     let mut start = now;
     if let Some(d) = app.distort.liquify.as_mut().filter(|d| d.cur.is_some()) {
@@ -962,7 +962,7 @@ fn dispatch_frame(app: &mut PhotocraftApp, events: Vec<ToolEvent>, mods: egui::M
 }
 
 /// [`pointer`] at time `now` (ms).
-fn pointer_at(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifiers, now: f64) {
+fn pointer_at(app: &mut MagicpicApp, ev: ToolEvent, mods: egui::Modifiers, now: f64) {
     let Some(d) = app.distort.liquify.as_mut() else { return };
     match ev {
         ToolEvent::Down { x, y, pressure } => {
@@ -998,7 +998,7 @@ fn pointer_at(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifiers, now
 }
 
 /// Ctrl+Z / Ctrl+Shift+Z inside Liquify, including while a slider's text field is focused.
-pub fn history_keys(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn history_keys(app: &mut MagicpicApp, ctx: &egui::Context) {
     let Some(d) = app.distort.liquify.as_mut() else { return };
     let cmd_shift = egui::Modifiers::COMMAND | egui::Modifiers::SHIFT;
     if ctx.input_mut(|i| i.consume_key(cmd_shift, egui::Key::Z)) {
@@ -1008,7 +1008,7 @@ pub fn history_keys(app: &mut PhotocraftApp, ctx: &egui::Context) {
     }
 }
 
-pub fn keys(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn keys(app: &mut MagicpicApp, ctx: &egui::Context) {
     history_keys(app, ctx);
     // ⌘+ / ⌘− / ⌘0 / ⌘1 (or their overrides) zoom the preview, not the canvas behind it (#7210).
     let nav = if app.distort.liquify.is_some() { crate::shortcuts::nav_shortcut(app, ctx) } else { None };
@@ -1099,10 +1099,10 @@ fn shortcut(t: LiquifyTool) -> &'static str {
 /// The backdrop for Show Backdrop › Use `of`: the document as it is (All Layers, the liquified
 /// layer's own pixels included, as in Photoshop) or that one layer alone. A layer that is gone
 /// shows All Layers.
-fn load_backdrop(app: &PhotocraftApp, ctx: &egui::Context, of: Option<u64>, canvas: Rect) -> Option<TextureHandle> {
+fn load_backdrop(app: &MagicpicApp, ctx: &egui::Context, of: Option<u64>, canvas: Rect) -> Option<TextureHandle> {
     let st = app.session.active()?;
-    let buf = photocraft_compose::render(&backdrop_doc(&st.doc, of), canvas);
-    let mut s = photocraft_raster::Surface::new(photocraft_color::PixelFormat::RGBA8);
+    let buf = magicpic_compose::render(&backdrop_doc(&st.doc, of), canvas);
+    let mut s = magicpic_raster::Surface::new(magicpic_color::PixelFormat::RGBA8);
     let flat: Vec<f32> = buf.px.iter().flat_map(|p| *p).collect();
     s.write_region(canvas, &flat);
     Some(ctx.load_texture("liquify-backdrop", crate::distort_ui::surface_image(&s, canvas, PROXY_SIDE), egui::TextureOptions::LINEAR))
@@ -1123,11 +1123,11 @@ fn backdrop_doc(doc: &Document, of: Option<u64>) -> std::borrow::Cow<'_, Documen
 }
 
 /// Makes layer `id` and the groups holding it visible; whether it was found.
-fn reveal(layers: &mut [photocraft_doc::Layer], id: LayerId) -> bool {
+fn reveal(layers: &mut [magicpic_doc::Layer], id: LayerId) -> bool {
     layers.iter_mut().any(|l| {
         let found = l.id == id
             || match &mut l.content {
-                photocraft_doc::LayerContent::Group(g) => reveal(&mut g.children, id),
+                magicpic_doc::LayerContent::Group(g) => reveal(&mut g.children, id),
                 _ => false,
             };
         if found {
@@ -1222,7 +1222,7 @@ fn apply_preview_wheel(
     }
 }
 
-pub fn show(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn show(app: &mut MagicpicApp, ctx: &egui::Context) {
     let t = Tokens::get(ctx);
     let screen = ctx.content_rect();
     // The backdrop is built when it's first shown and again when its Use changes.

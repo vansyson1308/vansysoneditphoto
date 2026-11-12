@@ -9,15 +9,15 @@ use super::*;
 
 const SHIFT_ALT: Modifiers = Modifiers { alt: true, ctrl: false, shift: true, mac_cmd: false, command: false };
 
-fn app(tool: Tool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app(tool: Tool) -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     app.ui.tool = tool;
     app
 }
 
-fn key(app: &mut PhotocraftApp, ctx: &egui::Context, key: Key, modifiers: Modifiers) {
+fn key(app: &mut MagicpicApp, ctx: &egui::Context, key: Key, modifiers: Modifiers) {
     let raw = egui::RawInput {
         events: vec![egui::Event::ModifiersChanged(modifiers), egui::Event::Key { key, physical_key: None, pressed: true, repeat: false, modifiers }],
         ..Default::default()
@@ -27,12 +27,12 @@ fn key(app: &mut PhotocraftApp, ctx: &egui::Context, key: Key, modifiers: Modifi
     ctx.end_pass().textures_delta.clear();
 }
 
-fn layer_blend(app: &PhotocraftApp) -> BlendMode {
+fn layer_blend(app: &MagicpicApp) -> BlendMode {
     let st = app.session.active().unwrap();
     st.doc.layer(st.active_layer.unwrap()).unwrap().blend
 }
 
-fn steps(app: &PhotocraftApp) -> usize {
+fn steps(app: &MagicpicApp) -> usize {
     app.session.active().unwrap().history.past_len()
 }
 

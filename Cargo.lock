@@ -5323,7 +5323,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "photocraft"
+name = "magicpic"
 version = "0.23.0"
 dependencies = [
  "arboard",
@@ -5345,19 +5345,19 @@ dependencies = [
  "objc2-app-kit 0.3.2",
  "objc2-foundation 0.3.2",
  "open",
- "photocraft-automation",
- "photocraft-cms",
- "photocraft-codecs",
- "photocraft-color",
- "photocraft-compose",
- "photocraft-doc",
- "photocraft-engine",
- "photocraft-format",
- "photocraft-geom",
- "photocraft-io",
- "photocraft-raster",
- "photocraft-tablet",
- "photocraft-ui-egui",
+ "magicpic-automation",
+ "magicpic-cms",
+ "magicpic-codecs",
+ "magicpic-color",
+ "magicpic-compose",
+ "magicpic-doc",
+ "magicpic-engine",
+ "magicpic-format",
+ "magicpic-geom",
+ "magicpic-io",
+ "magicpic-raster",
+ "magicpic-tablet",
+ "magicpic-ui-egui",
  "plist",
  "resvg",
  "rfd",
@@ -5378,7 +5378,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "photocraft-affinity"
+name = "magicpic-affinity"
 version = "0.23.0"
 dependencies = [
  "crc32fast",
@@ -5388,14 +5388,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "photocraft-algo"
+name = "magicpic-algo"
 version = "0.23.0"
 dependencies = [
  "criterion",
- "photocraft-color",
- "photocraft-geom",
- "photocraft-raster",
- "photocraft-testkit",
+ "magicpic-color",
+ "magicpic-geom",
+ "magicpic-raster",
+ "magicpic-testkit",
  "rayon",
  "rustfft",
  "serde",
@@ -5403,7 +5403,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "photocraft-automation"
+name = "magicpic-automation"
 version = "0.23.0"
 dependencies = [
  "base64 0.23.1",
@@ -5411,18 +5411,18 @@ dependencies = [
  "clap",
  "getrandom 0.3.4",
  "hmac",
- "photocraft-codecs",
- "photocraft-color",
- "photocraft-compose",
- "photocraft-doc",
- "photocraft-engine",
- "photocraft-format",
- "photocraft-geom",
- "photocraft-gpu",
- "photocraft-io",
- "photocraft-psd",
- "photocraft-raster",
- "photocraft-raw",
+ "magicpic-codecs",
+ "magicpic-color",
+ "magicpic-compose",
+ "magicpic-doc",
+ "magicpic-engine",
+ "magicpic-format",
+ "magicpic-geom",
+ "magicpic-gpu",
+ "magicpic-io",
+ "magicpic-psd",
+ "magicpic-raster",
+ "magicpic-raw",
  "pollster 1.0.1",
  "rmcp",
  "rustix 1.1.5",
@@ -5436,22 +5436,22 @@ dependencies = [
 ]
 
 [[package]]
-name = "photocraft-cli"
+name = "magicpic-cli"
 version = "0.23.0"
 dependencies = [
  "clap",
  "clap_complete",
  "clap_mangen",
- "photocraft-automation",
- "photocraft-cms",
- "photocraft-codecs",
- "photocraft-doc",
- "photocraft-engine",
- "photocraft-format",
- "photocraft-io",
- "photocraft-psd",
- "photocraft-raster",
- "photocraft-raw",
+ "magicpic-automation",
+ "magicpic-cms",
+ "magicpic-codecs",
+ "magicpic-doc",
+ "magicpic-engine",
+ "magicpic-format",
+ "magicpic-io",
+ "magicpic-psd",
+ "magicpic-raster",
+ "magicpic-raw",
  "serde",
  "serde_json",
  "tempfile",
@@ -5462,7 +5462,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "photocraft-cms"
+name = "magicpic-cms"
 version = "0.23.0"
 dependencies = [
  "moxcms",
@@ -5470,7 +5470,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "photocraft-codecs"
+name = "magicpic-codecs"
 version = "0.23.0"
 dependencies = [
  "craft-heif",
@@ -5494,42 +5494,42 @@ dependencies = [
 ]
 
 [[package]]
-name = "photocraft-color"
+name = "magicpic-color"
 version = "0.23.0"
 dependencies = [
- "photocraft-cms",
+ "magicpic-cms",
  "serde",
 ]
 
 [[package]]
-name = "photocraft-compose"
+name = "magicpic-compose"
 version = "0.23.0"
 dependencies = [
  "criterion",
- "photocraft-cms",
- "photocraft-color",
- "photocraft-doc",
- "photocraft-geom",
- "photocraft-paint",
- "photocraft-raster",
- "photocraft-vector",
+ "magicpic-cms",
+ "magicpic-color",
+ "magicpic-doc",
+ "magicpic-geom",
+ "magicpic-paint",
+ "magicpic-raster",
+ "magicpic-vector",
  "proptest",
  "rayon",
 ]
 
 [[package]]
-name = "photocraft-doc"
+name = "magicpic-doc"
 version = "0.23.0"
 dependencies = [
- "photocraft-color",
- "photocraft-geom",
- "photocraft-raster",
+ "magicpic-color",
+ "magicpic-geom",
+ "magicpic-raster",
  "serde",
  "serde_json",
 ]
 
 [[package]]
-name = "photocraft-engine"
+name = "magicpic-engine"
 version = "0.23.0"
 dependencies = [
  "base64 0.22.1",
@@ -5538,26 +5538,26 @@ dependencies = [
  "craft-print",
  "exr",
  "flate2",
- "photocraft-affinity",
- "photocraft-algo",
- "photocraft-cms",
- "photocraft-codecs",
- "photocraft-color",
- "photocraft-compose",
- "photocraft-doc",
- "photocraft-format",
- "photocraft-geom",
- "photocraft-io",
- "photocraft-ipp",
- "photocraft-ops",
- "photocraft-paint",
- "photocraft-plugins",
- "photocraft-psd",
- "photocraft-raster",
- "photocraft-raw",
- "photocraft-testkit",
- "photocraft-text",
- "photocraft-vector",
+ "magicpic-affinity",
+ "magicpic-algo",
+ "magicpic-cms",
+ "magicpic-codecs",
+ "magicpic-color",
+ "magicpic-compose",
+ "magicpic-doc",
+ "magicpic-format",
+ "magicpic-geom",
+ "magicpic-io",
+ "magicpic-ipp",
+ "magicpic-ops",
+ "magicpic-paint",
+ "magicpic-plugins",
+ "magicpic-psd",
+ "magicpic-raster",
+ "magicpic-raw",
+ "magicpic-testkit",
+ "magicpic-text",
+ "magicpic-vector",
  "rayon",
  "roxmltree 0.21.1",
  "same-file",
@@ -5572,7 +5572,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "photocraft-format"
+name = "magicpic-format"
 version = "0.23.0"
 dependencies = [
  "blake3",
@@ -5581,11 +5581,11 @@ dependencies = [
  "exacl",
  "flate2",
  "libc",
- "photocraft-codecs",
- "photocraft-color",
- "photocraft-doc",
- "photocraft-geom",
- "photocraft-raster",
+ "magicpic-codecs",
+ "magicpic-color",
+ "magicpic-doc",
+ "magicpic-geom",
+ "magicpic-raster",
  "proptest",
  "rustix 1.1.5",
  "ruzstd",
@@ -5596,27 +5596,27 @@ dependencies = [
 ]
 
 [[package]]
-name = "photocraft-geom"
+name = "magicpic-geom"
 version = "0.23.0"
 dependencies = [
  "serde",
 ]
 
 [[package]]
-name = "photocraft-gpu"
+name = "magicpic-gpu"
 version = "0.23.0"
 dependencies = [
  "bytemuck",
  "half",
  "log",
- "photocraft-algo",
- "photocraft-cms",
- "photocraft-color",
- "photocraft-compose",
- "photocraft-doc",
- "photocraft-geom",
- "photocraft-raster",
- "photocraft-vector",
+ "magicpic-algo",
+ "magicpic-cms",
+ "magicpic-color",
+ "magicpic-compose",
+ "magicpic-doc",
+ "magicpic-geom",
+ "magicpic-raster",
+ "magicpic-vector",
  "pollster 1.0.1",
  "rayon",
  "thiserror 2.0.21",
@@ -5624,7 +5624,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "photocraft-io"
+name = "magicpic-io"
 version = "0.23.0"
 dependencies = [
  "blake3",
@@ -5636,22 +5636,22 @@ dependencies = [
  "kurbo 0.13.1",
  "lopdf",
  "miniz_oxide 0.9.1",
- "photocraft-affinity",
- "photocraft-algo",
- "photocraft-cms",
- "photocraft-codecs",
- "photocraft-color",
- "photocraft-compose",
- "photocraft-doc",
- "photocraft-format",
- "photocraft-geom",
- "photocraft-paint",
- "photocraft-psd",
- "photocraft-raster",
- "photocraft-raw",
- "photocraft-testkit",
- "photocraft-text",
- "photocraft-vector",
+ "magicpic-affinity",
+ "magicpic-algo",
+ "magicpic-cms",
+ "magicpic-codecs",
+ "magicpic-color",
+ "magicpic-compose",
+ "magicpic-doc",
+ "magicpic-format",
+ "magicpic-geom",
+ "magicpic-paint",
+ "magicpic-psd",
+ "magicpic-raster",
+ "magicpic-raw",
+ "magicpic-testkit",
+ "magicpic-text",
+ "magicpic-vector",
  "proptest",
  "resvg",
  "roxmltree 0.21.1",
@@ -5664,24 +5664,24 @@ dependencies = [
 ]
 
 [[package]]
-name = "photocraft-ipp"
+name = "magicpic-ipp"
 version = "0.23.0"
 
 [[package]]
-name = "photocraft-ops"
+name = "magicpic-ops"
 version = "0.23.0"
 dependencies = [
- "photocraft-doc",
+ "magicpic-doc",
 ]
 
 [[package]]
-name = "photocraft-paint"
+name = "magicpic-paint"
 version = "0.23.0"
 dependencies = [
- "photocraft-cms",
- "photocraft-color",
- "photocraft-geom",
- "photocraft-raster",
+ "magicpic-cms",
+ "magicpic-color",
+ "magicpic-geom",
+ "magicpic-raster",
  "rayon",
  "rustc-hash 2.1.3",
  "serde",
@@ -5689,12 +5689,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "photocraft-plugins"
+name = "magicpic-plugins"
 version = "0.23.0"
 dependencies = [
- "photocraft-color",
- "photocraft-geom",
- "photocraft-raster",
+ "magicpic-color",
+ "magicpic-geom",
+ "magicpic-raster",
  "rayon",
  "rustix 1.1.5",
  "serde",
@@ -5705,25 +5705,25 @@ dependencies = [
 ]
 
 [[package]]
-name = "photocraft-psd"
+name = "magicpic-psd"
 version = "0.23.0"
 dependencies = [
  "encoding_rs",
  "flate2",
- "photocraft-psd",
+ "magicpic-psd",
  "proptest",
  "serde",
  "thiserror 2.0.21",
 ]
 
 [[package]]
-name = "photocraft-raster"
+name = "magicpic-raster"
 version = "0.23.0"
 dependencies = [
  "crc32fast",
  "lz4_flex",
- "photocraft-color",
- "photocraft-geom",
+ "magicpic-color",
+ "magicpic-geom",
  "proptest",
  "rayon",
  "rustix 1.1.5",
@@ -5733,13 +5733,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "photocraft-raw"
+name = "magicpic-raw"
 version = "0.23.0"
 dependencies = [
  "flate2",
  "image",
  "jxl-oxide",
- "photocraft-raw",
+ "magicpic-raw",
  "png 0.18.1",
  "rayon",
  "zune-core 0.5.3",
@@ -5748,7 +5748,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "photocraft-tablet"
+name = "magicpic-tablet"
 version = "0.23.0"
 dependencies = [
  "block2 0.6.2",
@@ -5763,7 +5763,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "photocraft-testkit"
+name = "magicpic-testkit"
 version = "0.23.0"
 dependencies = [
  "memory-stats",
@@ -5771,22 +5771,22 @@ dependencies = [
 ]
 
 [[package]]
-name = "photocraft-text"
+name = "magicpic-text"
 version = "0.23.0"
 dependencies = [
  "flate2",
  "parley",
- "photocraft-color",
- "photocraft-doc",
- "photocraft-geom",
- "photocraft-psd",
- "photocraft-raster",
+ "magicpic-color",
+ "magicpic-doc",
+ "magicpic-geom",
+ "magicpic-psd",
+ "magicpic-raster",
  "rayon",
  "skrifa 0.47.0",
 ]
 
 [[package]]
-name = "photocraft-ui-egui"
+name = "magicpic-ui-egui"
 version = "0.23.0"
 dependencies = [
  "base64 0.23.1",
@@ -5804,25 +5804,25 @@ dependencies = [
  "icu_casemap",
  "icu_locale_core",
  "log",
- "photocraft-algo",
- "photocraft-cms",
- "photocraft-codecs",
- "photocraft-color",
- "photocraft-compose",
- "photocraft-doc",
- "photocraft-engine",
- "photocraft-format",
- "photocraft-geom",
- "photocraft-gpu",
- "photocraft-io",
- "photocraft-paint",
- "photocraft-plugins",
- "photocraft-psd",
- "photocraft-raster",
- "photocraft-raw",
- "photocraft-testkit",
- "photocraft-text",
- "photocraft-vector",
+ "magicpic-algo",
+ "magicpic-cms",
+ "magicpic-codecs",
+ "magicpic-color",
+ "magicpic-compose",
+ "magicpic-doc",
+ "magicpic-engine",
+ "magicpic-format",
+ "magicpic-geom",
+ "magicpic-gpu",
+ "magicpic-io",
+ "magicpic-paint",
+ "magicpic-plugins",
+ "magicpic-psd",
+ "magicpic-raster",
+ "magicpic-raw",
+ "magicpic-testkit",
+ "magicpic-text",
+ "magicpic-vector",
  "rayon",
  "serde",
  "serde_json",
@@ -5835,32 +5835,32 @@ dependencies = [
 ]
 
 [[package]]
-name = "photocraft-vector"
+name = "magicpic-vector"
 version = "0.23.0"
 dependencies = [
- "photocraft-color",
- "photocraft-doc",
- "photocraft-geom",
- "photocraft-raster",
+ "magicpic-color",
+ "magicpic-doc",
+ "magicpic-geom",
+ "magicpic-raster",
  "rayon",
 ]
 
 [[package]]
-name = "photocraft-web"
+name = "magicpic-web"
 version = "0.23.0"
 dependencies = [
  "eframe",
  "egui",
  "js-sys",
  "log",
- "photocraft-codecs",
- "photocraft-doc",
- "photocraft-engine",
- "photocraft-io",
- "photocraft-paint",
- "photocraft-psd",
- "photocraft-raster",
- "photocraft-ui-egui",
+ "magicpic-codecs",
+ "magicpic-doc",
+ "magicpic-engine",
+ "magicpic-io",
+ "magicpic-paint",
+ "magicpic-psd",
+ "magicpic-raster",
+ "magicpic-ui-egui",
  "rfd",
  "serde_json",
  "wasm-bindgen",
@@ -5869,7 +5869,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "photocraft-web-boot"
+name = "magicpic-web-boot"
 version = "0.23.0"
 dependencies = [
  "flate2",

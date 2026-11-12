@@ -2,7 +2,7 @@
 //! decorations, and the line's vertical-type and justification adjustments.
 
 use parley::{PositionedLayoutItem, Run};
-use photocraft_doc::text::{CharStyle, Kerning, TextAlign};
+use magicpic_doc::text::{CharStyle, Kerning, TextAlign};
 use skrifa::instance::NormalizedCoord;
 
 use super::area::{LineMetrics, line_metrics};

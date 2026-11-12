@@ -16,7 +16,7 @@
 //!   Above 5, when every colour channel's mean shift agrees (a brightness change), the middle moves
 //!   toward the new surroundings, the whole way at Color 10. A hue change leaves the middle alone.
 //!   The edge band still blends at every Color. The Patch Tool keeps a limited gain and bias of
-//!   about `0.04 · color` ([`photocraft_algo::content_aware::color_amount`]: content 42 and 102
+//!   about `0.04 · color` ([`magicpic_algo::content_aware::color_amount`]: content 42 and 102
 //!   levels brighter shifts 32 and 31 levels at 3, and 35 and 95 at 10).
 //!
 //! The selection moves with the content, as in Photoshop. A soft selection counts wherever it is
@@ -32,8 +32,8 @@
 //! transformed with it. A transformed patch may reach past the canvas edge (Photoshop lets the
 //! box go there): what lands outside is dropped.
 
-use photocraft_algo::content_aware::{FillOptions, color_amount, color_level, fill_with, level_transform};
-use photocraft_algo::transform::{Homography, Interp};
+use magicpic_algo::content_aware::{FillOptions, color_amount, color_level, fill_with, level_transform};
+use magicpic_algo::transform::{Homography, Interp};
 
 use super::patch::{coverage, offset, selection_area, target_layer};
 use super::{
@@ -727,7 +727,7 @@ fn shift(dx: f64, dy: f64) -> Homography {
 /// rounding the scaled offset doesn't shift it. Writes into `doc` (a copy) and returns the
 /// rectangle it changed.
 fn run_scaled(doc: &mut Document, sel: &Surface, plan: &Plan, p: &Value, scale: f64, ctx: &crate::jobs::JobCtx) -> Result<Rect> {
-    use photocraft_algo::resample::{Resample, resize_surface_in_canvas, scaled_rect};
+    use magicpic_algo::resample::{Resample, resize_surface_in_canvas, scaled_rect};
     let f = scale;
     if !(f > 0.0 && f < 1.0) {
         return Err(EngineError::Other("internal error: a coarse preview needs a scale below 1".into()));
@@ -753,13 +753,13 @@ fn run_scaled(doc: &mut Document, sel: &Surface, plan: &Plan, p: &Value, scale: 
     let small = resize_surface_in_canvas(&src, f, f, Resample::Bilinear, plan.canvas);
     // The selection is scaled in 32-bit float: in 8 bits a faint, sparse one (scattered 1/255
     // pixels) averages to 0 and the scaled solve would find nothing selected.
-    let sel_f32 = photocraft_color::PixelFormat { sample: photocraft_color::SampleType::F32, ..sel.format() };
+    let sel_f32 = magicpic_color::PixelFormat { sample: magicpic_color::SampleType::F32, ..sel.format() };
     let small_sel = resize_surface_in_canvas(&crop(sel, reach_rect).convert(sel_f32), f, f, Resample::Bilinear, plan.canvas);
     ctx.check()?;
     let canvas = scaled_rect(plan.canvas, f, f);
-    let size = photocraft_geom::Size { width: canvas.width(), height: canvas.height() };
+    let size = magicpic_geom::Size { width: canvas.width(), height: canvas.height() };
     let mut mini = Document::new("Content-Aware Move preview", size, doc.mode, doc.depth);
-    let layer = photocraft_doc::Layer::new("preview", LayerContent::Raster(small));
+    let layer = magicpic_doc::Layer::new("preview", LayerContent::Raster(small));
     let id = layer.id;
     mini.layers.push(layer);
 
@@ -830,7 +830,7 @@ mod tests {
             for y in b.y0..b.y1 {
                 for x in b.x0..b.x1 {
                     let v = ((x * 7 + y * 13) % 17) as f32 / 17.0;
-                    data.extend(photocraft_raster::from_rgba(&fmt, [v, 1.0 - v, 0.5, 1.0]));
+                    data.extend(magicpic_raster::from_rgba(&fmt, [v, 1.0 - v, 0.5, 1.0]));
                 }
             }
             surf.write_region(b, &data);
@@ -874,7 +874,7 @@ mod tests {
         // sample below half an 8-bit level, reproducing the loss without a 0.77 MP solve.
         let mut s = textured(600, 600);
         s.edit("faint selection", |doc, _| {
-            let mut sel = Surface::new(photocraft_color::PixelFormat::GRAY8);
+            let mut sel = Surface::new(magicpic_color::PixelFormat::GRAY8);
             let r = Rect::new(20, 20, 536, 536);
             let data: Vec<f32> = (r.y0..r.y1).flat_map(|y| (r.x0..r.x1).map(move |x| if x % 4 == 0 && y % 4 == 0 { 1.0 / 255.0 } else { 0.0 })).collect();
             sel.write_region(r, &data);
