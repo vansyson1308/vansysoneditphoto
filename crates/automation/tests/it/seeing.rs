@@ -484,12 +484,18 @@ async fn new_folders_are_never_made_outside_the_write_root() {
     let _ = std::fs::remove_dir_all(&outside);
     std::fs::create_dir_all(&outside).unwrap();
     let absolute = outside.join("abs/x.png");
-    let mut refused = vec![format!("../{escape}/x.png"), absolute.to_str().unwrap().to_owned(), "notes.txt/x.png".into(), "notes.txt/sub/x.png".into()];
+    // Links out of the root, where the platform makes them without extra rights.
     #[cfg(unix)]
-    {
+    let links = {
         std::os::unix::fs::symlink(&outside, ws.0.join("link")).unwrap();
-        refused.extend(["link/new/x.png".to_owned(), "link/x.png".to_owned()]);
-    }
+        vec!["link/new/x.png", "link/x.png"]
+    };
+    #[cfg(not(unix))]
+    let links: Vec<&str> = Vec::new();
+    let refused: Vec<String> = [format!("../{escape}/x.png"), absolute.to_str().unwrap().to_owned(), "notes.txt/x.png".into(), "notes.txt/sub/x.png".into()]
+        .into_iter()
+        .chain(links.into_iter().map(String::from))
+        .collect();
     let client = connect(ws.server()).await;
     json_of(&call(&client, "doc_open", json!({"path": "photo.png"})).await);
     for path in &refused {
