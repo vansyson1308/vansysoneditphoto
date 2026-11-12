@@ -74,7 +74,7 @@ pub fn specs() -> Vec<CommandSpec> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_doc::LayerId;
+    use magicpic_doc::LayerId;
 
     /// A red layer with a drop shadow and a blue colour overlay, and the background (no effects).
     fn session() -> (Session, u64, u64) {
@@ -116,8 +116,8 @@ mod tests {
         s.active().unwrap().history.past_len()
     }
 
-    fn flat(s: &Session) -> photocraft_compose::Buffer {
-        photocraft_compose::flatten(&s.active().unwrap().doc)
+    fn flat(s: &Session) -> magicpic_compose::Buffer {
+        magicpic_compose::flatten(&s.active().unwrap().doc)
     }
 
     #[test]

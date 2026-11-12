@@ -14,11 +14,11 @@
 //! A pending quad belongs to the document it was drawn on, like the Crop tool's frame.
 
 use egui::{Color32, Pos2, Stroke};
-use photocraft_algo::transform::{Homography, convex_quad};
-use photocraft_engine::prefs::Unit;
+use magicpic_algo::transform::{Homography, convex_quad};
+use magicpic_engine::prefs::Unit;
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::canvas::{ToolEvent, ViewXform};
 use crate::state::Tool;
 
@@ -44,22 +44,22 @@ pub struct PerspectiveCrop {
     /// The pointer between clicks (button up), the preview quad's free corner (#11804).
     pub hover: Option<[f64; 2]>,
     /// The document the pending quad belongs to.
-    doc: Option<photocraft_doc::DocId>,
+    doc: Option<magicpic_doc::DocId>,
 }
 
-fn active(app: &PhotocraftApp) -> bool {
+fn active(app: &MagicpicApp) -> bool {
     app.ui.tool == Tool::PerspectiveCrop && app.session.active().is_some()
 }
 
 /// A quad or corners clicked or a drag in progress.
-pub fn pending(app: &PhotocraftApp) -> bool {
+pub fn pending(app: &MagicpicApp) -> bool {
     app.ui.perspective_crop.is_some() || !app.pcrop.clicks.is_empty() || app.pcrop.drag.is_some()
 }
 
 /// A box, corner or quad drag in progress: held past the canvas edge, it scrolls the view (#4183).
 /// A press that hasn't moved further than a click doesn't: scrolling would turn a corner-placing
 /// click near the edge into a box.
-pub fn dragging(app: &PhotocraftApp) -> bool {
+pub fn dragging(app: &MagicpicApp) -> bool {
     app.ui.tool == Tool::PerspectiveCrop
         && match app.pcrop.drag {
             Some(Drag::New { start, cur, .. }) => !is_click(app, start, cur),
@@ -69,12 +69,12 @@ pub fn dragging(app: &PhotocraftApp) -> bool {
 }
 
 /// A new-box press released within [`CLICK_PX`] screen points of where it began places a corner.
-fn is_click(app: &PhotocraftApp, start: [f64; 2], cur: [f64; 2]) -> bool {
+fn is_click(app: &MagicpicApp, start: [f64; 2], cur: [f64; 2]) -> bool {
     let click = crate::distort_ui::tolerance(app) * CLICK_PX / 8.0;
     (cur[0] - start[0]).abs() <= click && (cur[1] - start[1]).abs() <= click
 }
 
-pub fn cancel(app: &mut PhotocraftApp) {
+pub fn cancel(app: &mut MagicpicApp) {
     app.ui.perspective_crop = None;
     app.pcrop.drag = None;
     app.pcrop.clicks.clear();
@@ -83,7 +83,7 @@ pub fn cancel(app: &mut PhotocraftApp) {
 
 /// Another document became active: its pending quad is dropped (also from `sync_views`, so it is
 /// never drawn on the other document).
-pub(crate) fn cancel_stale(app: &mut PhotocraftApp) {
+pub(crate) fn cancel_stale(app: &mut MagicpicApp) {
     let doc = app.session.active().map(|st| st.doc.id);
     if pending(app) && app.pcrop.doc.is_some() && app.pcrop.doc != doc {
         cancel(app);
@@ -135,7 +135,7 @@ fn axis_rect(q: &[[f64; 2]; 4]) -> bool {
 }
 
 /// Pointer events (document px) with the tool and the held modifiers. True when consumed.
-pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifiers) -> bool {
+pub fn pointer(app: &mut MagicpicApp, ev: ToolEvent, mods: egui::Modifiers) -> bool {
     if app.ui.tool != Tool::PerspectiveCrop {
         app.pcrop.drag = None;
         return false;
@@ -200,7 +200,7 @@ pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifiers) ->
     true
 }
 
-fn drag_to(app: &mut PhotocraftApp, p: [f64; 2], mods: egui::Modifiers) {
+fn drag_to(app: &mut MagicpicApp, p: [f64; 2], mods: egui::Modifiers) {
     match app.pcrop.drag {
         // The modifiers held now shape the box, as the Frame tool's (not measured mid-drag).
         Some(Drag::New { start, .. }) => app.pcrop.drag = Some(Drag::New { start, cur: p, square: mods.shift, centred: mods.alt }),
@@ -244,7 +244,7 @@ fn drag_to(app: &mut PhotocraftApp, p: [f64; 2], mods: egui::Modifiers) {
 
 /// `image.perspectiveCrop`'s size params from W, H and the resolution (the Crop tool's fields):
 /// lengths in physical units convert at the typed resolution, else the document's.
-pub(crate) fn size_params(app: &PhotocraftApp, p: &mut Value) {
+pub(crate) fn size_params(app: &MagicpicApp, p: &mut Value) {
     let o = &app.ui.tool_options;
     let res = crate::crop_size::resolution_ppi(o);
     let dpi = res.unwrap_or_else(|| app.session.active().map_or(72.0, |st| f64::from(st.doc.resolution_dpi)));
@@ -267,7 +267,7 @@ pub(crate) fn size_params(app: &PhotocraftApp, p: &mut Value) {
 }
 
 /// ↵: crops to the pending quad. An invalid quad stays for fixing, with the engine's reason.
-pub fn commit(app: &mut PhotocraftApp) {
+pub fn commit(app: &mut MagicpicApp) {
     cancel_stale(app);
     let Some(q) = app.ui.perspective_crop else { return };
     let mut p = json!({"corners": q});
@@ -278,7 +278,7 @@ pub fn commit(app: &mut PhotocraftApp) {
 }
 
 /// ↵ commits and Esc cancels while the tool has something pending. True when a key was taken.
-pub fn keys(app: &mut PhotocraftApp, ctx: &egui::Context) -> bool {
+pub fn keys(app: &mut MagicpicApp, ctx: &egui::Context) -> bool {
     if !active(app) || !pending(app) {
         return false;
     }
@@ -303,7 +303,7 @@ fn grid_steps(side: f32) -> usize {
 /// The quad that follows the pointer while corners are clicked (#11804): after two clicks the two
 /// points and the pointer as the third and fourth corner (a triangle), after three the three points
 /// and the pointer as the fourth. `None` with fewer clicks or no pointer position.
-pub(crate) fn click_preview(app: &PhotocraftApp) -> Option<[[f64; 2]; 4]> {
+pub(crate) fn click_preview(app: &MagicpicApp) -> Option<[[f64; 2]; 4]> {
     let h = app.pcrop.hover.filter(|h| h.iter().all(|v| v.is_finite()))?;
     match app.pcrop.clicks[..] {
         [a, b] => Some([a, b, h, h]),
@@ -379,7 +379,7 @@ fn clip_half_plane(poly: &[[f64; 2]], a: [f64; 2], b: [f64; 2], side: f64) -> Ve
 }
 
 /// The quad, its perspective grid and corner handles; corners clicked so far; the box being drawn.
-pub fn draw_overlay(app: &PhotocraftApp, painter: &egui::Painter, xf: &ViewXform) {
+pub fn draw_overlay(app: &MagicpicApp, painter: &egui::Painter, xf: &ViewXform) {
     if app.ui.tool != Tool::PerspectiveCrop {
         return;
     }
@@ -455,7 +455,7 @@ pub fn draw_overlay(app: &PhotocraftApp, painter: &egui::Painter, xf: &ViewXform
 
 /// Options bar: W, ⇄, H, the resolution (the Crop tool's fields), Front Image, Clear, Show Grid,
 /// and cancel / commit.
-pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn options_bar(app: &mut MagicpicApp, ui: &mut egui::Ui) {
     crate::crop_size::fields(&mut app.ui.tool_options, ui);
     if crate::widgets::secondary_button(ui, tl!("Front Image"), 0.0).clicked()
         && let Some((size, dpi)) = app.session.active().map(|st| (st.doc.size, f64::from(st.doc.resolution_dpi)))
@@ -509,18 +509,18 @@ mod perspective_crop_deselect_tests;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_doc::{Color, ColorMode, Document, SampleType, Size};
+    use magicpic_doc::{Color, ColorMode, Document, SampleType, Size};
 
     /// A straight drag (no width or no height) leaves no zero-area box that only Esc could clear,
     /// and a plain click still counts as a corner click.
     #[test]
     fn a_drag_without_area_leaves_no_quad() {
         let doc = Document::with_background("p", Size::new(200, 150), ColorMode::Rgb, SampleType::U8, Color::WHITE);
-        let mut s = photocraft_engine::Session::new();
+        let mut s = magicpic_engine::Session::new();
         s.add_document(doc, None);
-        let mut app = PhotocraftApp::new(s, crate::Services::default());
+        let mut app = MagicpicApp::new(s, crate::Services::default());
         app.ui.tool = Tool::PerspectiveCrop;
-        let ev = |app: &mut PhotocraftApp, e| assert!(pointer(app, e, egui::Modifiers::NONE));
+        let ev = |app: &mut MagicpicApp, e| assert!(pointer(app, e, egui::Modifiers::NONE));
         for (x1, y1) in [(10.0, 60.0), (90.0, 10.0)] {
             ev(&mut app, ToolEvent::Down { x: 10.0, y: 10.0, pressure: 1.0 });
             ev(&mut app, ToolEvent::Move { x: x1, y: y1, pressure: 1.0 });
@@ -540,9 +540,9 @@ mod tests {
     fn a_corner_held_past_the_canvas_edge_scrolls_the_view() {
         use egui::{Event, Modifiers, PointerButton, pos2};
         let doc = Document::with_background("p", Size::new(200, 100), ColorMode::Rgb, SampleType::U8, Color::WHITE);
-        let mut s = photocraft_engine::Session::new();
+        let mut s = magicpic_engine::Session::new();
         s.add_document(doc, None);
-        let mut a = PhotocraftApp::new(s, crate::Services::default());
+        let mut a = MagicpicApp::new(s, crate::Services::default());
         a.ui.tool = Tool::PerspectiveCrop;
         a.ui.extras.snap = false;
         a.ui.extras.rulers = false;
@@ -561,7 +561,7 @@ mod tests {
         }];
         a.ui.perspective_crop = Some([[40.0, 10.0], [100.0, 10.0], [100.0, 40.0], [40.0, 40.0]]);
         let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(600.0, 400.0)).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut MagicpicApp| {
                 let v = app.ui.views[0].clone();
                 crate::canvas::canvas_view(app, ui, 0, ui.max_rect(), v, true);
             },
@@ -598,9 +598,9 @@ mod tests {
     fn a_temporary_zoom_during_a_corner_drag_stops_the_scrolling() {
         use egui::{Event, Key, Modifiers, PointerButton, pos2};
         let doc = Document::with_background("p", Size::new(800, 100), ColorMode::Rgb, SampleType::U8, Color::WHITE);
-        let mut s = photocraft_engine::Session::new();
+        let mut s = magicpic_engine::Session::new();
         s.add_document(doc, None);
-        let mut a = PhotocraftApp::new(s, crate::Services::default());
+        let mut a = MagicpicApp::new(s, crate::Services::default());
         a.ui.tool = Tool::PerspectiveCrop;
         a.ui.extras.snap = false;
         a.ui.extras.rulers = false;
@@ -619,7 +619,7 @@ mod tests {
         }];
         a.ui.perspective_crop = Some([[40.0, 10.0], [100.0, 10.0], [100.0, 40.0], [40.0, 40.0]]);
         let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(600.0, 400.0)).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut MagicpicApp| {
                 let v = app.ui.views[0].clone();
                 crate::canvas::canvas_view(app, ui, 0, ui.max_rect(), v, true);
             },
@@ -664,9 +664,9 @@ mod tests {
     fn a_click_at_the_canvas_edge_places_a_corner_without_scrolling() {
         use egui::{Event, Modifiers, PointerButton, pos2};
         let doc = Document::with_background("p", Size::new(200, 100), ColorMode::Rgb, SampleType::U8, Color::WHITE);
-        let mut s = photocraft_engine::Session::new();
+        let mut s = magicpic_engine::Session::new();
         s.add_document(doc, None);
-        let mut a = PhotocraftApp::new(s, crate::Services::default());
+        let mut a = MagicpicApp::new(s, crate::Services::default());
         a.ui.tool = Tool::PerspectiveCrop;
         a.ui.extras.snap = false;
         a.ui.extras.rulers = false;
@@ -685,7 +685,7 @@ mod tests {
             zoom_transition: None,
         }];
         let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(700.0, 400.0)).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut MagicpicApp| {
                 let v = app.ui.views[0].clone();
                 let rect = egui::Rect::from_min_size(egui::pos2(100.0, 0.0), egui::vec2(600.0, 400.0));
                 crate::canvas::canvas_view(app, ui, 0, rect, v, true);
@@ -735,11 +735,11 @@ mod tests {
     #[test]
     fn drag_a_box_move_a_corner_and_commit() {
         let doc = Document::with_background("p", Size::new(200, 150), ColorMode::Rgb, SampleType::U8, Color::WHITE);
-        let mut s = photocraft_engine::Session::new();
+        let mut s = magicpic_engine::Session::new();
         s.add_document(doc, None);
-        let mut app = PhotocraftApp::new(s, crate::Services::default());
+        let mut app = MagicpicApp::new(s, crate::Services::default());
         app.ui.tool = Tool::PerspectiveCrop;
-        let ev = |app: &mut PhotocraftApp, e| assert!(pointer(app, e, egui::Modifiers::NONE));
+        let ev = |app: &mut MagicpicApp, e| assert!(pointer(app, e, egui::Modifiers::NONE));
         ev(&mut app, ToolEvent::Down { x: 20.0, y: 10.0, pressure: 1.0 });
         ev(&mut app, ToolEvent::Move { x: 120.0, y: 90.0, pressure: 1.0 });
         ev(&mut app, ToolEvent::Up { x: 120.0, y: 90.0 });
@@ -759,9 +759,9 @@ mod tests {
     #[test]
     fn commit_with_w_and_h_empty_takes_the_perspective_size() {
         let doc = Document::with_background("p", Size::new(800, 500), ColorMode::Rgb, SampleType::U8, Color::WHITE);
-        let mut s = photocraft_engine::Session::new();
+        let mut s = magicpic_engine::Session::new();
         s.add_document(doc, None);
-        let mut app = PhotocraftApp::new(s, crate::Services::default());
+        let mut app = MagicpicApp::new(s, crate::Services::default());
         app.ui.tool = Tool::PerspectiveCrop;
         app.ui.perspective_crop = Some([[100.0, 50.0], [700.0, 80.0], [760.0, 450.0], [40.0, 420.0]]);
         commit(&mut app);
@@ -776,15 +776,15 @@ mod tests {
     fn the_options_bar_swap_button_swaps_w_and_h() {
         use egui_kittest::kittest::Queryable;
         let doc = Document::with_background("p", Size::new(200, 150), ColorMode::Rgb, SampleType::U8, Color::WHITE);
-        let mut s = photocraft_engine::Session::new();
+        let mut s = magicpic_engine::Session::new();
         s.add_document(doc, None);
-        let mut app = PhotocraftApp::new(s, crate::Services::default());
+        let mut app = MagicpicApp::new(s, crate::Services::default());
         app.ui.tool = Tool::PerspectiveCrop;
         app.ui.tool_options.crop_width = "4 in".into();
         app.ui.tool_options.crop_height = "6 in".into();
         assert_ne!(app.ui.tool_options.crop_ratio, crate::crop_size::WHR);
         let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(1400.0, 60.0)).build_ui_state(
-            |ui, app: &mut PhotocraftApp| {
+            |ui, app: &mut MagicpicApp| {
                 if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                     return;
                 }
@@ -792,7 +792,7 @@ mod tests {
             },
             app,
         );
-        PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ProMedium);
+        MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::ProMedium);
         h.run_steps(4);
         h.get_by_label("Swaps height and width").click();
         h.run_steps(2);
@@ -804,14 +804,14 @@ mod tests {
     /// never drawn on the other one; on its own document it stays.
     #[test]
     fn switching_documents_drops_the_pending_quad() {
-        let mut s = photocraft_engine::Session::new();
+        let mut s = magicpic_engine::Session::new();
         for name in ["a", "b"] {
             s.add_document(Document::with_background(name, Size::new(200, 150), ColorMode::Rgb, SampleType::U8, Color::WHITE), None);
         }
         s.set_active(0);
-        let mut app = PhotocraftApp::new(s, crate::Services::default());
+        let mut app = MagicpicApp::new(s, crate::Services::default());
         app.ui.tool = Tool::PerspectiveCrop;
-        let ev = |app: &mut PhotocraftApp, e| assert!(pointer(app, e, egui::Modifiers::NONE));
+        let ev = |app: &mut MagicpicApp, e| assert!(pointer(app, e, egui::Modifiers::NONE));
         ev(&mut app, ToolEvent::Down { x: 20.0, y: 10.0, pressure: 1.0 });
         ev(&mut app, ToolEvent::Move { x: 120.0, y: 90.0, pressure: 1.0 });
         ev(&mut app, ToolEvent::Up { x: 120.0, y: 90.0 });

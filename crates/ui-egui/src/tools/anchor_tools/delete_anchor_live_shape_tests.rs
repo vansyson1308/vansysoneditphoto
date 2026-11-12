@@ -6,7 +6,7 @@ use egui_kittest::kittest::Queryable;
 use serde_json::{Value, json};
 
 use super::delete_anchor_targeted_path_tests::{click, select_layer, select_saved_path, setup_asking, shape_path, steps};
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::state::Tool;
 
 const QUESTION: &str = "This operation will turn a live shape into a regular path. Continue?";
@@ -14,21 +14,21 @@ const QUESTION: &str = "This operation will turn a live shape into a regular pat
 const CORNER: [f64; 2] = [650.0, 250.0];
 
 /// The tool with the live rectangle active.
-fn live(tool: Tool) -> (PhotocraftApp, u64) {
+fn live(tool: Tool) -> (MagicpicApp, u64) {
     let (mut app, shape) = setup_asking(tool);
     select_layer(&mut app, shape);
     (app, shape)
 }
 
-fn info(app: &mut PhotocraftApp, shape: u64) -> Value {
+fn info(app: &mut MagicpicApp, shape: u64) -> Value {
     app.run("shape.info", json!({"layer": shape})).unwrap()
 }
 
-fn question(app: &PhotocraftApp) -> Option<u64> {
+fn question(app: &MagicpicApp) -> Option<u64> {
     app.ui.dialogs.iter().find(|d| d.fields.get("__command").and_then(Value::as_str) == Some("path.deleteAnchor")).map(|d| d.id)
 }
 
-fn corners(app: &mut PhotocraftApp, shape: u64) -> usize {
+fn corners(app: &mut MagicpicApp, shape: u64) -> usize {
     shape_path(app, shape)["subpaths"][0]["knots"].as_array().unwrap().len()
 }
 
@@ -51,7 +51,7 @@ fn a_click_on_a_live_shape_anchor_asks_with_yes_no_and_an_unticked_box() {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, Default::default());
+    MagicpicApp::setup_context(&h.ctx, Default::default());
     h.run_steps(5);
     if !has_fonts(&h.ctx) {
         return;

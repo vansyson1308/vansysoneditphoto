@@ -1,4 +1,4 @@
-# PhotoCraft architecture
+# MagicPic architecture
 
 > **Last reviewed:** 2026-10-10 · **Last updated:** 2026-10-20 · **Change:** minor (accurate GPU matrix/TRC display conversion; large payloads in the document model are `Arc`-shared, #4535; original design plan retained) · **Target:** Adobe Photoshop 2026
 
@@ -7,8 +7,8 @@
 What exists on `main` today. The numbered sections below are the original design plan of
 2026-09-30; where the code differs, this summary wins.
 
-- **Workspace:** 25 library crates under `crates/`, 4 apps (`photocraft` desktop, `photocraft-cli`,
-  `photocraft-web`, `photocraft-web-boot`), `xtask`, an example plug-in and 5 fuzz crates; ~539,000 lines of Rust in
+- **Workspace:** 25 library crates under `crates/`, 4 apps (`magicpic` desktop, `magicpic-cli`,
+  `magicpic-web`, `magicpic-web-boot`), `xtask`, an example plug-in and 5 fuzz crates; ~539,000 lines of Rust in
   ~1,310 files; ~8,040 `#[test]` functions (ui-egui 2,809, engine 1,796, algo 572, io 539,
   codecs 426, psd 341), counted 2026-10-13. Crate map and layers: [`AGENTS.md`](../AGENTS.md) §2 and
   `xtask/src/layers.rs` (enforced by `cargo xtask layers`).
@@ -23,7 +23,7 @@ What exists on `main` today. The numbered sections below are the original design
   Affinity (`affinity`), document mapping (`io`), native `.pcraft` (`format`, atomic saves).
   Coverage: [`file-format-parity.md`](file-format-parity.md).
 - **Not built (yet) from the plan:** the `ml` crate (no ML runtime; see gap G15), plug-in ABI v2.
-- **Deviations from the plan below:** `photocraft-tablet` is the one crate allowed `unsafe`
+- **Deviations from the plan below:** `magicpic-tablet` is the one crate allowed `unsafe`
   (AppKit pen events); `affinity`, `heif` and `raw` crates were added; the phased roadmap in §15
   is superseded by [`roadmap.md`](roadmap.md).
 
@@ -53,7 +53,7 @@ This plan sets out:
 2. **Everything is a command.** Each user-visible action has a stable `CommandId` (such as `filter.blur.gaussianBlur`) with typed, serializable parameters. The menu, command palette, shortcuts, recorded actions/macros, CLI, MCP and plugins all dispatch the same commands.
 3. **Data describes the UI; toolkits draw it.** Tools produce *overlay primitives* (lines, handles, marching-ants paths) as data. Filter and adjustment dialogs are generated from *parameter schemas*. A new toolkit implements one renderer for each, not about 150 bespoke dialogs.
 4. **One algorithm, one parameter struct.** Every algorithm has a CPU reference implementation (Rust + rayon, deterministic). Some also get a GPU implementation (WGSL). Both read the same `#[repr(C)]` `bytemuck::Pod` parameter struct. We never keep hand-synced copies of an algorithm in several languages.
-5. **Immutable snapshots, copy-on-write tiles.** Pixel data is stored in `Arc`-shared 256² tiles. Taking a document snapshot is O(layers), which makes undo, background jobs, autosave and UI reads cheap and lock-free. Every other large payload in `photocraft-doc` is `Arc`-shared too (the XMP packet, EXIF, raw PSD resources and blocks, a layer's or Duotone's raw PSD data, an unsupported adjustment's bytes), so a snapshot never copies one; a new field that can hold a large payload follows the same rule (#4535).
+5. **Immutable snapshots, copy-on-write tiles.** Pixel data is stored in `Arc`-shared 256² tiles. Taking a document snapshot is O(layers), which makes undo, background jobs, autosave and UI reads cheap and lock-free. Every other large payload in `magicpic-doc` is `Arc`-shared too (the XMP packet, EXIF, raw PSD resources and blocks, a layer's or Duotone's raw PSD data, an unsupported adjustment's bytes), so a snapshot never copies one; a new field that can hold a large payload follows the same rule (#4535).
 6. **Determinism.** The same input gives the same output across CPU and GPU (within tolerance), across thread counts, and between preview and export. Noise is hashed from document coordinates.
 7. **Pure Rust by default.** C/C++ dependencies are allowed only behind Cargo features, in I/O-edge crates (for example an optional LibRaw).
 8. **Clean-room.** We study other editors' *behaviour* only, and we must **not copy proprietary source** (Rust, WGSL, C++ or JS), even where it ships as readable source. Specs come from public format docs (Adobe PSD spec, ISO/ICC), academic papers (PatchMatch, Poisson blending, ARAP) and observed behaviour. Never paste code from another product.
@@ -103,50 +103,50 @@ The test is simple: **adding 64-bit float, a new colour model, or a new file for
 ## 2. Workspace layout
 
 ```text
-photocraft/
+magicpic/
 ├─ Cargo.toml                  # [workspace], shared deps, lints, profiles
 ├─ crates/
 │  │  ── foundation (no_std-friendly where practical, wasm-safe) ──
-│  ├─ geom/                    photocraft-geom      points, rects, affine/perspective, tile coords, bezier (kurbo)
-│  ├─ cms/                     photocraft-cms       pure-Rust ICC colour management: profiles, transforms, intents, BPC, soft proof, 3D LUTs
-│  ├─ color/                   photocraft-color     pixel formats, color spaces, blend-mode math (scalar reference); conversions via cms
-│  ├─ raster/                  photocraft-raster    tiled COW surfaces, masks, mip pyramids, damage regions, pixel iterators
+│  ├─ geom/                    magicpic-geom      points, rects, affine/perspective, tile coords, bezier (kurbo)
+│  ├─ cms/                     magicpic-cms       pure-Rust ICC colour management: profiles, transforms, intents, BPC, soft proof, 3D LUTs
+│  ├─ color/                   magicpic-color     pixel formats, color spaces, blend-mode math (scalar reference); conversions via cms
+│  ├─ raster/                  magicpic-raster    tiled COW surfaces, masks, mip pyramids, damage regions, pixel iterators
 │  │  ── document ──
-│  ├─ doc/                     photocraft-doc       document model: layer tree, masks, effects, channels, paths, guides, metadata (pure data + serde)
-│  ├─ ops/                     photocraft-ops       reversible operations on a doc + transactions + history/undo
+│  ├─ doc/                     magicpic-doc       document model: layer tree, masks, effects, channels, paths, guides, metadata (pure data + serde)
+│  ├─ ops/                     magicpic-ops       reversible operations on a doc + transactions + history/undo
 │  │  ── algorithms (CPU reference impls, rayon, wasm-safe) ──
-│  ├─ algo/                    photocraft-algo      adjustments, filters, selection, inpaint/heal, warp/transform, resampling
-│  ├─ paint/                   photocraft-paint     brush engine: dabs, dynamics, stroke smoothing, brush presets (.abr import later)
-│  ├─ text/                    photocraft-text      font DB trait, shaping + layout (parley/skrifa/harfrust), text-layer rasterization
-│  ├─ vector/                  photocraft-vector    shapes, paths, strokes → coverage (vello_cpu / kurbo)
+│  ├─ algo/                    magicpic-algo      adjustments, filters, selection, inpaint/heal, warp/transform, resampling
+│  ├─ paint/                   magicpic-paint     brush engine: dabs, dynamics, stroke smoothing, brush presets (.abr import later)
+│  ├─ text/                    magicpic-text      font DB trait, shaping + layout (parley/skrifa/harfrust), text-layer rasterization
+│  ├─ vector/                  magicpic-vector    shapes, paths, strokes → coverage (vello_cpu / kurbo)
 │  │  ── rendering ──
-│  ├─ compose/                 photocraft-compose   layer tree → DrawOp plan; CPU compositor (reference + export + wasm fallback)
-│  ├─ gpu/                     photocraft-gpu       wgpu backend for the DrawOp plan + GPU kernels (WGSL), residency cache, memory budget
-│  ├─ viewport/                photocraft-viewport  camera (zoom/pan/rotate), visible tiles/mips, renders a doc into a wgpu texture; toolkit-agnostic
+│  ├─ compose/                 magicpic-compose   layer tree → DrawOp plan; CPU compositor (reference + export + wasm fallback)
+│  ├─ gpu/                     magicpic-gpu       wgpu backend for the DrawOp plan + GPU kernels (WGSL), residency cache, memory budget
+│  ├─ viewport/                magicpic-viewport  camera (zoom/pan/rotate), visible tiles/mips, renders a doc into a wgpu texture; toolkit-agnostic
 │  │  ── I/O ──
-│  ├─ psd/                     photocraft-psd       PSD/PSB read + write; its OWN format-level model; depends on nothing in this workspace
-│  ├─ adobe-assets/            photocraft-adobe-assets  .abr .asl .aco/.ase .grd .pat .csh .atn .cube/.3dl, ACR .xmp presets (standalone, like psd)
-│  ├─ codecs/                  photocraft-codecs    flat raster decode/encode at format-supported depths; AVIF encode only (feature `avif`), HEIF/HEIC decode only (feature `heif`); no JPEG XL
-│  ├─ affinity/                photocraft-affinity  bounded native Affinity reader: archive, object stream, layers, vectors, text, pixels (standalone; read only)
-│  ├─ raw/                     photocraft-raw       clean-room camera RAW decode (DNG, CR2, TIFF/EP) + develop pipeline (standalone, like psd)
-│  ├─ format/                  photocraft-format    native document format (.pcraft bundle): manifest + content-addressed tiles
-│  ├─ io/                      photocraft-io        import/export orchestration; doc ⇄ PSD mapping; PDF/SVG import (features)
+│  ├─ psd/                     magicpic-psd       PSD/PSB read + write; its OWN format-level model; depends on nothing in this workspace
+│  ├─ adobe-assets/            magicpic-adobe-assets  .abr .asl .aco/.ase .grd .pat .csh .atn .cube/.3dl, ACR .xmp presets (standalone, like psd)
+│  ├─ codecs/                  magicpic-codecs    flat raster decode/encode at format-supported depths; AVIF encode only (feature `avif`), HEIF/HEIC decode only (feature `heif`); no JPEG XL
+│  ├─ affinity/                magicpic-affinity  bounded native Affinity reader: archive, object stream, layers, vectors, text, pixels (standalone; read only)
+│  ├─ raw/                     magicpic-raw       clean-room camera RAW decode (DNG, CR2, TIFF/EP) + develop pipeline (standalone, like psd)
+│  ├─ format/                  magicpic-format    native document format (.pcraft bundle): manifest + content-addressed tiles
+│  ├─ io/                      magicpic-io        import/export orchestration; doc ⇄ PSD mapping; PDF/SVG import (features)
 │  │  ── intelligence ──
-│  ├─ ml/                      photocraft-ml        model registry + InferenceBackend trait (ort native / burn|candle web); SAM2, matting, depth, sky
-│  ├─ plugins/                 photocraft-plugins   sandboxed WebAssembly filter plug-ins (wasmi host, limits, ABI v1, registry)
+│  ├─ ml/                      magicpic-ml        model registry + InferenceBackend trait (ort native / burn|candle web); SAM2, matting, depth, sky
+│  ├─ plugins/                 magicpic-plugins   sandboxed WebAssembly filter plug-ins (wasmi host, limits, ABI v1, registry)
 │  │  ── the façade every frontend talks to ──
-│  ├─ tools/                   photocraft-tools     tool state machines (move, marquee, lasso, brush, clone, gradient, crop, transform, pen, text…)
-│  ├─ engine/                  photocraft-engine    Session: open docs, command registry + dispatch, jobs, events, view-models, preferences
+│  ├─ tools/                   magicpic-tools     tool state machines (move, marquee, lasso, brush, clone, gradient, crop, transform, pen, text…)
+│  ├─ engine/                  magicpic-engine    Session: open docs, command registry + dispatch, jobs, events, view-models, preferences
 │  │  ── platform + frontends ──
-│  ├─ platform/                photocraft-platform  traits: file dialogs, clipboard, fonts, tablet input, menus, storage; native + web impls
-│  ├─ ui-egui/                 photocraft-ui-egui   the (first) GUI shell: panels, dialogs, canvas widget, theme
-│  ├─ automation/              photocraft-automation  MCP server (rmcp) + JSON-RPC over the command registry
-│  └─ testkit/                 photocraft-testkit   golden images, perceptual diff, fixtures, PSD corpus helpers
+│  ├─ platform/                magicpic-platform  traits: file dialogs, clipboard, fonts, tablet input, menus, storage; native + web impls
+│  ├─ ui-egui/                 magicpic-ui-egui   the (first) GUI shell: panels, dialogs, canvas widget, theme
+│  ├─ automation/              magicpic-automation  MCP server (rmcp) + JSON-RPC over the command registry
+│  └─ testkit/                 magicpic-testkit   golden images, perceptual diff, fixtures, PSD corpus helpers
 ├─ apps/
-│  ├─ photocraft/              desktop binary (winit + wgpu + ui-egui + platform-native)
-│  ├─ photocraft-cli/          headless batch CLI (open → commands → export), also hosts `mcp` subcommand
-│  ├─ photocraft-web/          wasm32 binary (ui-egui + platform-web), demo
-│  └─ photocraft-web-boot/     wasm32 binary that starts the packaged web app from parts of its wasm
+│  ├─ magicpic/              desktop binary (winit + wgpu + ui-egui + platform-native)
+│  ├─ magicpic-cli/          headless batch CLI (open → commands → export), also hosts `mcp` subcommand
+│  ├─ magicpic-web/          wasm32 binary (ui-egui + platform-web), demo
+│  └─ magicpic-web-boot/     wasm32 binary that starts the packaged web app from parts of its wasm
 ├─ shaders/                    (or inside gpu/) WGSL, with generated struct headers
 ├─ assets/                     icons, bundled fonts, default brushes/swatches/presets
 ├─ fuzz/                       cargo-fuzz targets (psd, codecs, format)
@@ -158,7 +158,7 @@ photocraft/
 
 **Crate granularity:** start with the crates above. Split `algo` into `-adjust`, `-filters`, `-select`, `-inpaint` and `-warp` once any module passes about 10k lines, or once compile times hurt. Its internal module boundaries should already follow those lines.
 
-**Naming:** directories are short and packages are prefixed `photocraft-`. `photocraft-psd` gets a neutral, publishable name (such as `psd-rw`) if we release it to crates.io.
+**Naming:** directories are short and packages are prefixed `magicpic-`. `magicpic-psd` gets a neutral, publishable name (such as `psd-rw`) if we release it to crates.io.
 
 ---
 
@@ -179,8 +179,8 @@ photocraft/
 
 1. A crate may depend only on crates in **lower** layers. No cycles and no sideways dependencies, except where listed.
 2. **Nothing below L6 may depend on any UI toolkit, winit, or a `platform` implementation.** Platform services reach the engine through traits defined in `engine` (or in `platform`'s trait-only core), and are injected at startup.
-3. **`photocraft-psd` depends on no workspace crate.** The doc ⇄ PSD mapping lives in `io`. This keeps the PSD crate publishable and reusable by other projects. The same holds for every standalone crate; `STANDALONE_EXCEPTIONS` in `xtask/src/layers.rs` is empty since HEIF decoding moved to craft-libs' `craft-heif`.
-4. **wasm gate:** every crate in L0–L5 (except feature-gated native backends) must build for `wasm32-unknown-unknown`. CI runs `cargo build -p photocraft-engine --target wasm32-unknown-unknown --no-default-features --features web`.
+3. **`magicpic-psd` depends on no workspace crate.** The doc ⇄ PSD mapping lives in `io`. This keeps the PSD crate publishable and reusable by other projects. The same holds for every standalone crate; `STANDALONE_EXCEPTIONS` in `xtask/src/layers.rs` is empty since HEIF decoding moved to craft-libs' `craft-heif`.
+4. **wasm gate:** every crate in L0–L5 (except feature-gated native backends) must build for `wasm32-unknown-unknown`. CI runs `cargo build -p magicpic-engine --target wasm32-unknown-unknown --no-default-features --features web`.
 5. `gpu` is optional for `engine`. Engine features are `gpu` (default on) and `cpu-only`, and `cpu-only` builds are what the headless CLI and CI tests use.
 6. **C dependencies** (optional LibRaw) only behind features, only in `codecs`, `raw` or `io`, and never on by default for the web target.
 
@@ -193,7 +193,7 @@ A frontend needs exactly five things from the core. Keeping these small and data
 ### 4.1 `Session`: commands in, events out
 
 ```rust
-// photocraft-engine
+// magicpic-engine
 pub struct Session { /* docs, registry, job pool, prefs, services */ }
 
 impl Session {
@@ -220,13 +220,13 @@ Each command registers the following:
 **Consumers:**
 - The GUI builds the menu bar, the ⌘F palette and the shortcut editor from it.
 - `automation` exposes the registry as MCP tools.
-- `photocraft-cli` exposes `photocraft-cli run in.psd --cmd filter.blur.gaussianBlur --params '{"radius":4}' --out out.png`.
+- `magicpic-cli` exposes `magicpic-cli run in.psd --cmd filter.blur.gaussianBlur --params '{"radius":4}' --out out.png`.
 - Action recording is simply `Vec<CommandInvocation>`.
 
 ### 4.3 Tools: pointer events in, ops and overlays out
 
 ```rust
-// photocraft-tools
+// magicpic-tools
 pub struct PointerEvent { pub pos_doc: Point, pub pressure: f32, pub tilt: Vector, pub twist: f32,
                           pub time_us: u64, pub buttons: Buttons, pub mods: Modifiers, pub kind: PointerKind /* mouse|pen|eraser|touch */ }
 
@@ -249,7 +249,7 @@ Coalesced high-rate pen samples come from `platform` and are handed to tools as 
 ### 4.4 Viewport: document to pixels
 
 ```rust
-// photocraft-viewport
+// magicpic-viewport
 pub struct Viewport { pub camera: Camera /* zoom, pan, rotation, dpr */, /* tile/mip cache */ }
 impl Viewport {
     pub fn render_gpu(&mut self, snap: &DocSnapshot, gpu: &GpuContext, target: &wgpu::TextureView, damage: &Region);
@@ -266,11 +266,11 @@ impl Viewport {
 - Panels (Layers, History, Channels, Paths, Properties, Navigator, Histogram, Swatches) read plain structs produced from a snapshot, such as `LayersModel { rows: Vec<LayerRow{ id, name, kind, depth, visible, locked, thumb: ThumbHandle, blend, opacity, has_mask, effects: Vec<..> }> }`. Thumbnails are `ThumbHandle`s that the UI resolves to textures through an engine thumbnail cache.
 - Dialogs are generated from command `params` schemas. A toolkit may register *custom* dialog widgets for a few complex commands: Curves, Levels, Camera Raw, Liquify, Layer Style.
 
-**Litmus test for the seam:** `apps/photocraft-cli` and the automation server must be able to do *everything* the GUI does, except pointer painting, which they do by replaying `PointerEvent` streams through tools.
+**Litmus test for the seam:** `apps/magicpic-cli` and the automation server must be able to do *everything* the GUI does, except pointer painting, which they do by replaying `PointerEvent` streams through tools.
 
 ---
 
-## 5. Document model (`photocraft-doc`)
+## 5. Document model (`magicpic-doc`)
 
 ```rust
 pub struct Document {
@@ -307,7 +307,7 @@ pub enum LayerContent {
 
 ---
 
-## 6. Operations and history (`photocraft-ops`)
+## 6. Operations and history (`magicpic-ops`)
 
 - **Every mutation is an `Op`**, such as `SetLayerProps`, `PaintTiles{layer, tiles_before, tiles_after}`, `AddLayer`, `MoveLayer` or `ApplyFilter`.
 - **A command produces a `Transaction` of ops** with a label ("Gaussian Blur").
@@ -348,8 +348,8 @@ Both backends consume the same plan. This is the only place that encodes Photosh
 ### 7.3 Color
 
 - Blending happens in document space by default, which is Photoshop-compatible. A per-document "linear light blending" option is also available.
-- **Display transform** (`engine/src/display_color.rs`): the canvas is always colour-managed, document profile → monitor profile (relative colorimetric + BPC), cached per (document profile, mode, monitor). On the GPU canvas RGB matrix/TRC transforms retain separate full-float input curves, matrix/offsets and inverse output curves (sampled densely near black); this avoids the shadow darkening of a uniform RGB cube (#7958). Other transforms and Gamut Warning retain the 33³ display LUT, and the shader applies 32-bit preview before either conversion; the CPU canvas runs an 8-bit `photocraft-cms` transform on the composite. When the document profile matches the monitor (sRGB on sRGB) there is no LUT and no transform. Linear composites (EXR/HDR, tagged linear sRGB on import) are stored sRGB-encoded in the 8-bit canvas texture. CMYK documents are read through their embedded CMYK profile (`photocraft_color::convert::with_cmyk_space`, entered by the compositors and composite exports).
-- **Monitor profile:** Edit › Color Settings › Monitor Profile: `auto`, a built-in RGB profile or an `.icc` path. In `auto` each window uses the profile of the display it is on (#569): the desktop app reads every display's id, name, frame and ICC profile at launch and again when the app comes back to the front, when any window is on an unknown or resized display (at most every 30 s; a trigger inside that window is deferred) and when Edit › Color Settings opens (`ui-egui/src/monitor_status.rs`). macOS reads AppKit `NSScreen` through `osascript` (no FFI); X11 reads RandR outputs and the default colord profile matched by exact `XRANDR_name`; native Wayland and Xwayland windows from a Wayland session stay on sRGB because eframe/winit cannot safely set the app surface's Wayland image description. The macOS helper is stopped after 10 s. There is deliberately no periodic re-read (#569 decision: a read costs about 0.2 s of CPU), so a profile reassigned while PhotoCraft stays in front with no window moving is picked up at the next return to the front or Color Settings. X11 selects the root window's RandR output by winit's current-monitor name and other windows by their overlapping RandR frame; macOS follows `NSWindow.screen`. Elsewhere `auto` is sRGB. The GPU canvas keeps one texture per document and a display LUT per (document, display); CPU canvas textures are per (document, display). `ColorState::monitor_status_for` says what is applied per display: `auto`, `manual`, or `fallback` to sRGB with the reason (missing, unreadable, non-RGB or unusable as a destination), and whether the reading is an earlier one kept after a failed re-read; `edit.colorSettings` (`monitorStatus`, `displays`), Help › System Info and the Color Settings dialog show it, and a fallback in `auto` posts a notice. Letting macOS colour-match the canvas instead is #581 (an architecture decision).
+- **Display transform** (`engine/src/display_color.rs`): the canvas is always colour-managed, document profile → monitor profile (relative colorimetric + BPC), cached per (document profile, mode, monitor). On the GPU canvas RGB matrix/TRC transforms retain separate full-float input curves, matrix/offsets and inverse output curves (sampled densely near black); this avoids the shadow darkening of a uniform RGB cube (#7958). Other transforms and Gamut Warning retain the 33³ display LUT, and the shader applies 32-bit preview before either conversion; the CPU canvas runs an 8-bit `magicpic-cms` transform on the composite. When the document profile matches the monitor (sRGB on sRGB) there is no LUT and no transform. Linear composites (EXR/HDR, tagged linear sRGB on import) are stored sRGB-encoded in the 8-bit canvas texture. CMYK documents are read through their embedded CMYK profile (`magicpic_color::convert::with_cmyk_space`, entered by the compositors and composite exports).
+- **Monitor profile:** Edit › Color Settings › Monitor Profile: `auto`, a built-in RGB profile or an `.icc` path. In `auto` each window uses the profile of the display it is on (#569): the desktop app reads every display's id, name, frame and ICC profile at launch and again when the app comes back to the front, when any window is on an unknown or resized display (at most every 30 s; a trigger inside that window is deferred) and when Edit › Color Settings opens (`ui-egui/src/monitor_status.rs`). macOS reads AppKit `NSScreen` through `osascript` (no FFI); X11 reads RandR outputs and the default colord profile matched by exact `XRANDR_name`; native Wayland and Xwayland windows from a Wayland session stay on sRGB because eframe/winit cannot safely set the app surface's Wayland image description. The macOS helper is stopped after 10 s. There is deliberately no periodic re-read (#569 decision: a read costs about 0.2 s of CPU), so a profile reassigned while MagicPic stays in front with no window moving is picked up at the next return to the front or Color Settings. X11 selects the root window's RandR output by winit's current-monitor name and other windows by their overlapping RandR frame; macOS follows `NSWindow.screen`. Elsewhere `auto` is sRGB. The GPU canvas keeps one texture per document and a display LUT per (document, display); CPU canvas textures are per (document, display). `ColorState::monitor_status_for` says what is applied per display: `auto`, `manual`, or `fallback` to sRGB with the reason (missing, unreadable, non-RGB or unusable as a destination), and whether the reading is an earlier one kept after a failed re-read; `edit.colorSettings` (`monitorStatus`, `displays`), Help › System Info and the Color Settings dialog show it, and a fallback in `auto` posts a notice. Letting macOS colour-match the canvas instead is #581 (an architecture decision).
 - **Spot dot gain:** Edit › Color Settings › Spot (`spotDotGain`, % at a 50 % dot; Photoshop's default Dot Gain 20 %, menu 10–30 % or custom). The ink preview of Multichannel documents (`compose/src/multichannel.rs`, CPU only) and spot channel overlays in the Channels view print each channel value through `1 − (1 − v)^γ`, γ chosen so a 50 % dot shows at 50 % + gain (the curve family of the built-in Dot Gain 20 %-compatible gray). It is process-wide (`multichannel::set_spot_dot_gain`), set with the colour settings like the text gamma, and folded into the canvas display key so changing it redraws open Multichannel documents. Separation data is unchanged: only the preview gains.
 - **HDR/EDR output** (an `rgba16float` surface with an extended-range colorspace) is a later-phase feature. The interfaces already carry `f32` pixels.
 
@@ -359,7 +359,7 @@ Both backends consume the same plan. This is the only place that encodes Photosh
 
 ---
 
-## 8. `photocraft-psd`: standalone PSD/PSB crate
+## 8. `magicpic-psd`: standalone PSD/PSB crate
 
 **Scope:** faithful, format-level read and write of PSD (v1) and PSB (v2, 64-bit lengths). It has no dependency on our document model.
 
@@ -390,7 +390,7 @@ psd/src/
   5. Text layers: shaped with `text`; the original descriptors are kept for round-trip.
   6. Smart objects: embedded and linked, live both ways (`io::smart_map`). Import reads the
      placed-layer data (`SoLd`: file id, transform quad, warp), the smart filter stack
-     (`filterFX`: modelled filters become their PhotoCraft command and params; any other filter
+     (`filterFX`: modelled filters become their MagicPic command and params; any other filter
      stays verbatim and is listed as not editable) and the filter mask (global `FEid`). Export
      writes `PlLd` + `SoLd`, embeds the source in `lnk2` (a `.pcraft` source becomes a PSB of the
      nested document, written by our own PSD writer) and a filter cache with the unfiltered
@@ -407,7 +407,7 @@ psd/src/
 
 ---
 
-## 9. Native file format (`photocraft-format`)
+## 9. Native file format (`magicpic-format`)
 
 - **Format:** a `.pcraft` file is a zip (store mode) or directory bundle.
   - `manifest.json`: a versioned document tree with serde, including `format_version` and migrations.
@@ -478,7 +478,7 @@ psd/src/
     access fail closed at the automation boundary.
 - **Actions:** recorded `Vec<CommandInvocation>`, replayable in batch (File → Automate → Batch).
 - **Scripting (later):** embed a scripting language over the same registry. Options are Rhai, or Lua via mlua (C). JS via QuickJS is possible if we want Photoshop-script familiarity.
-- **Plugins:** sandboxed WebAssembly filter plug-ins (`photocraft-plugins`, L4) run by `wasmi`, a pure-Rust interpreter, with fuel, memory, stack and wall-time limits and no host imports. They are driven by the `plugin.*` commands and listed under Filter › Plug-ins; the ABI is in [`plugins.md`](plugins.md). Native Photoshop `.8BF`/CEP/UXP hosting is out of scope (it needs unsafe FFI and can't run on the web). Panel plug-ins are later.
+- **Plugins:** sandboxed WebAssembly filter plug-ins (`magicpic-plugins`, L4) run by `wasmi`, a pure-Rust interpreter, with fuel, memory, stack and wall-time limits and no host imports. They are driven by the `plugin.*` commands and listed under Filter › Plug-ins; the ABI is in [`plugins.md`](plugins.md). Native Photoshop `.8BF`/CEP/UXP hosting is out of scope (it needs unsafe FFI and can't run on the web). Panel plug-ins are later.
 
 ---
 
@@ -530,7 +530,7 @@ schemars = "1"
 blake3 = "1"
 zstd = "*"           # native; ruzstd for wasm decode
 # color / codecs
-# ICC: our own photocraft-cms (pure Rust)
+# ICC: our own magicpic-cms (pure Rust)
 image = { version = "*", default-features = false }
 jxl-oxide = "*"
 # gpu
@@ -572,14 +572,14 @@ Each phase ends with a demoable build and green CI on all targets. Phases 8–10
 | **4. Adjust and filter** | adjustment layers (first 10), first 20 filters with schema-generated dialogs + live preview; **PSD write**; actions recording | PSD open → edit → save opens correctly in Photoshop/Photopea |
 | **5. Text, vector, styles** | text layers, shapes/pen/paths, layer effects (drop shadow, stroke, glows, overlays, bevel) | PSD text/shape/effects round-trip at fidelity 4–5 |
 | **6. Smart features** | ML backend + SAM2 select subject/object, background removal, content-aware fill, healing, RAW develop | select subject + remove background on a portrait in <3 s |
-| **7. Automation and web** | MCP server + CLI parity, batch; `photocraft-web` demo | an agent edits a PSD through MCP; the web demo opens a PSD, paints and filters |
+| **7. Automation and web** | MCP server + CLI parity, batch; `magicpic-web` demo | an agent edits a PSD through MCP; the web demo opens a PSD, paints and filters |
 
 ---
 
 ## 16. Open decisions
 
 1. **License.** MIT/Apache-2.0 is maximally reusable. GPL-3.0 is the Krita/GIMP model and protects against proprietary forks. Note that some candidate deps are LGPL (rawler) or GPL-or-commercial (Slint), and MIT/Apache would constrain which of them we can use.
-2. **Project name.** `photocraft` (the repo name) is assumed.
+2. **Project name.** `magicpic` (the repo name) is assumed.
 3. **PSD crate.** Build our own, or adopt or fork `ag-psd`/`psd`. Decide after the week-1 spike.
 4. **Default working depth and blending.** 8-bit + gamma-space blending matches Photoshop. 16-bit/float + linear is the modern default. The proposal is to follow Photoshop by default and make the other a per-document option.
 

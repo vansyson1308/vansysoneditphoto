@@ -139,7 +139,7 @@ impl BridgeClient {
                 .map_err(|_| Failure::NotSent(format!("timed out connecting to {}", self.addr)))?
                 .map_err(|e| {
                     Failure::NotSent(format!(
-                        "cannot connect to {} ({e}); start the app with `photocraft --control <port>` and matching control credentials",
+                        "cannot connect to {} ({e}); start the app with `magicpic --control <port>` and matching control credentials",
                         self.addr
                     ))
                 })?;
@@ -195,7 +195,7 @@ impl BridgeClient {
             Ok(challenge) => challenge,
             Err(AutomationError::App(e)) => {
                 return Ok(Err(AutomationError::Bridge(format!(
-                    "{} refused challenge authentication ({e}): it is not PhotoCraft, or a PhotoCraft too old to support it (update the app); the control token was not sent",
+                    "{} refused challenge authentication ({e}): it is not MagicPic, or a MagicPic too old to support it (update the app); the control token was not sent",
                     self.addr
                 ))));
             }
@@ -206,7 +206,7 @@ impl BridgeClient {
             (Some(nonce), Some(proof)) if proof_matches(&self.token, ProofRole::Server, &client_nonce, nonce, proof) => nonce,
             _ => {
                 return Ok(Err(AutomationError::Bridge(format!(
-                    "{} did not prove it holds this control token: the token does not match the app's, or the listener is not that PhotoCraft app; the control token was not sent",
+                    "{} did not prove it holds this control token: the token does not match the app's, or the listener is not that MagicPic app; the control token was not sent",
                     self.addr
                 ))));
             }

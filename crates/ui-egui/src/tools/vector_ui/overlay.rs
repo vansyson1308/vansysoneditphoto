@@ -2,10 +2,10 @@ use super::curvature::curvature_refresh;
 use super::path_ops::{MovedPath, active_type_path, path_selection_preview, targeted_vector_mask, work_path_shown_in};
 use super::pen::{closing, over_first_anchor, shift_45};
 use egui::{Color32, Pos2, Rect, Stroke, pos2, vec2};
-use photocraft_doc::vector::Path;
-use photocraft_doc::{Document, LayerContent};
+use magicpic_doc::vector::Path;
+use magicpic_doc::{Document, LayerContent};
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::canvas::ViewXform;
 use crate::state::Tool;
 use crate::theme::Tokens;
@@ -115,14 +115,14 @@ pub(crate) fn shows_anchors(tool: Tool) -> bool {
 
 /// The saved path selected in the Paths panel: Photoshop's target path, drawn on the canvas with
 /// any tool (#6550). `None` when the panel selects the work path, a layer's path or nothing.
-pub(crate) fn selected_saved_path(app: &PhotocraftApp) -> Option<&Path> {
+pub(crate) fn selected_saved_path(app: &MagicpicApp) -> Option<&Path> {
     let sel = app.ui.selected_path.as_deref().filter(|s| !matches!(*s, "work" | "layer"))?;
     app.session.active()?.doc.paths.iter().find(|p| p.name == sel).map(|p| &p.path)
 }
 
 /// [`selected_saved_path`] with its index in the document's `paths`: the saved path Path
 /// Selection and Direct Selection edit (#8478).
-pub(crate) fn selected_saved_path_index(app: &PhotocraftApp) -> Option<(usize, Path)> {
+pub(crate) fn selected_saved_path_index(app: &MagicpicApp) -> Option<(usize, Path)> {
     let sel = app.ui.selected_path.as_deref().filter(|s| !matches!(*s, "work" | "layer"))?;
     app.session.active()?.doc.paths.iter().enumerate().find(|(_, p)| p.name == sel).map(|(i, p)| (i, p.path.clone()))
 }
@@ -131,11 +131,11 @@ pub(crate) fn selected_saved_path_index(app: &PhotocraftApp) -> Option<(usize, P
 /// progress.
 /// Whether the path being drawn previews its next segment up to the pointer. The Pen only does
 /// with its gear's Rubber Band on (#12900); the other pens' paths keep their preview.
-fn rubber_band_shown(app: &PhotocraftApp, tool: Tool, pen: &super::PenPath) -> bool {
+fn rubber_band_shown(app: &MagicpicApp, tool: Tool, pen: &super::PenPath) -> bool {
     tool != Tool::Pen || pen.curvature || app.ui.tool_options.pen_rubber_band
 }
 
-pub fn draw_overlay(app: &PhotocraftApp, painter: &egui::Painter, xf: &ViewXform, doc: &Document) {
+pub fn draw_overlay(app: &MagicpicApp, painter: &egui::Painter, xf: &ViewXform, doc: &Document) {
     let tool = app.ui.tool;
     let accent = Tokens::get(painter.ctx()).accent;
     let to_scr = |q: [f64; 2]| xf.to_screen(q[0] as f32, q[1] as f32);

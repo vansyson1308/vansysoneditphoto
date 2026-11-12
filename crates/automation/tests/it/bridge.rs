@@ -4,8 +4,8 @@
 
 use std::time::Duration;
 
-use photocraft_automation::security::{AuthStep, ServerHandshake};
-use photocraft_automation::{AutomationError, BridgeClient};
+use magicpic_automation::security::{AuthStep, ServerHandshake};
+use magicpic_automation::{AutomationError, BridgeClient};
 use serde_json::{Value, json};
 use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};

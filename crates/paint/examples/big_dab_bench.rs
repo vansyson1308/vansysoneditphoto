@@ -1,9 +1,9 @@
 //! Where a large brush's time goes: one dab of a 2000 px tip, by stage.
-//! `cargo run --release -p photocraft-paint --example big_dab_bench [size] [hardness] [angle]`
-use photocraft_color::PixelFormat;
-use photocraft_geom::Rect;
-use photocraft_paint::{BrushContext, BrushSettings, Dab, StrokePoint, StrokeRenderer};
-use photocraft_raster::Surface;
+//! `cargo run --release -p magicpic-paint --example big_dab_bench [size] [hardness] [angle]`
+use magicpic_color::PixelFormat;
+use magicpic_geom::Rect;
+use magicpic_paint::{BrushContext, BrushSettings, Dab, StrokePoint, StrokeRenderer};
+use magicpic_raster::Surface;
 use std::time::Instant;
 
 fn main() {
@@ -18,7 +18,7 @@ fn main() {
     let mut target = pre.clone();
     // Stage 1: the tip's coverage alone.
     let ctx = BrushContext::new(&brush);
-    let mut dab = Dab::round(photocraft_geom::Point::new(3000.0, 2000.0), size / 2.0, 1.0);
+    let mut dab = Dab::round(magicpic_geom::Point::new(3000.0, 2000.0), size / 2.0, 1.0);
     dab.angle = angle;
     let rect = ctx.dab_rect(&dab, false);
     let mut cov = Vec::new();

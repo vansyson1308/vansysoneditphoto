@@ -6,30 +6,30 @@ use egui::accesskit::{Role, Toggled};
 use egui::{Modifiers, vec2};
 use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
-use photocraft_doc::LayerId;
+use magicpic_doc::LayerId;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 
 const MENU: &str = "Font size presets";
 const SIZES: [&str; 17] =
     ["6 pt", "8 pt", "9 pt", "10 pt", "11 pt", "12 pt", "14 pt", "16 pt", "18 pt", "24 pt", "30 pt", "36 pt", "48 pt", "60 pt", "72 pt", "150 pt", "300 pt"];
 
-fn new_app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn new_app() -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 1600, "height": 900})).unwrap();
     app.sync_views();
     app.ui.tool = crate::state::Tool::Type;
     app
 }
 
-fn add_layer(app: &mut PhotocraftApp, size: f32) -> LayerId {
+fn add_layer(app: &mut MagicpicApp, size: f32) -> LayerId {
     let made = app.run("type.create", json!({"text": "AéBCD", "font": "Inter", "size": size, "color": "#000000"})).unwrap();
     LayerId(made["layer"].as_u64().unwrap())
 }
 
 /// An app whose one selected type layer is `size` points.
-fn app_with_layer(size: f32) -> (PhotocraftApp, LayerId) {
+fn app_with_layer(size: f32) -> (MagicpicApp, LayerId) {
     let mut app = new_app();
     let id = add_layer(&mut app, size);
     app.run("layer.select", json!({"layer": id.0, "mode": "replace"})).unwrap();
@@ -38,7 +38,7 @@ fn app_with_layer(size: f32) -> (PhotocraftApp, LayerId) {
 
 /// `draw` in a window tall enough for the list, once the app's fonts are set up. Up to 16 passes,
 /// because the font list arrives in batches (see `canvas_tests::controls`).
-fn harness(app: PhotocraftApp, draw: fn(&mut PhotocraftApp, &mut egui::Ui)) -> Harness<'static, PhotocraftApp> {
+fn harness(app: MagicpicApp, draw: fn(&mut MagicpicApp, &mut egui::Ui)) -> Harness<'static, MagicpicApp> {
     let mut h = Harness::builder().with_size(vec2(1400.0, 800.0)).with_max_steps(16).build_ui_state(
         move |ui, app| {
             if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
@@ -47,27 +47,27 @@ fn harness(app: PhotocraftApp, draw: fn(&mut PhotocraftApp, &mut egui::Ui)) -> H
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, Default::default());
+    MagicpicApp::setup_context(&h.ctx, Default::default());
     h.run_steps(4);
     h
 }
 
-fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+fn options_bar(app: &mut MagicpicApp, ui: &mut egui::Ui) {
     ui.horizontal(|ui| super::options_bar(app, ui));
 }
 
-fn character_panel(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+fn character_panel(app: &mut MagicpicApp, ui: &mut egui::Ui) {
     ui.set_width(340.0);
     super::super::character_panel(app, ui, false);
 }
 
-fn open(h: &mut Harness<'static, PhotocraftApp>) {
+fn open(h: &mut Harness<'static, MagicpicApp>) {
     // A button in the options bar, a combo box in the Character panel.
     h.get_by_label(MENU).click();
     h.run();
 }
 
-fn pick(h: &mut Harness<'static, PhotocraftApp>, label: &str) {
+fn pick(h: &mut Harness<'static, MagicpicApp>, label: &str) {
     open(h);
     // Presets near the end of the list can be below its scroll viewport.
     h.get_by_label(label).scroll_to_me();
@@ -78,7 +78,7 @@ fn pick(h: &mut Harness<'static, PhotocraftApp>, label: &str) {
 
 /// The open list's labels, top to bottom, with "|" where a separator splits them (a gap clearly
 /// larger than the row pitch). `any` is one item's label.
-fn menu_items(h: &Harness<'static, PhotocraftApp>, any: &str) -> Vec<String> {
+fn menu_items(h: &Harness<'static, MagicpicApp>, any: &str) -> Vec<String> {
     let role = h.get_by_label(any).accesskit_node().role();
     let left = h.get_by_label(any).rect().left();
     let mut items: Vec<(f32, String)> = h
@@ -99,12 +99,12 @@ fn menu_items(h: &Harness<'static, PhotocraftApp>, any: &str) -> Vec<String> {
 }
 
 /// Each run of the layer's text as (bytes, size in points).
-fn runs(app: &PhotocraftApp, id: LayerId) -> Vec<(usize, f32)> {
+fn runs(app: &MagicpicApp, id: LayerId) -> Vec<(usize, f32)> {
     let t = super::super::text_layer(&app.session.active().unwrap().doc, id).unwrap();
     t.char_runs().iter().map(|r| (r.len, r.style.size_pt)).collect()
 }
 
-fn history_len(app: &PhotocraftApp) -> usize {
+fn history_len(app: &MagicpicApp) -> usize {
     app.session.active().unwrap().history.entries().len()
 }
 
@@ -261,7 +261,7 @@ fn the_list_stays_open_when_the_controls_before_it_change() {
     fn shifted() -> egui::Id {
         egui::Id::unique("size-presets-shift")
     }
-    fn shifting_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+    fn shifting_bar(app: &mut MagicpicApp, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             if ui.data(|d| d.get_temp::<bool>(shifted())).unwrap_or(false) {
                 ui.label("Loading fonts…");

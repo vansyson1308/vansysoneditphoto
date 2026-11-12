@@ -1,4 +1,4 @@
-use photocraft_engine::Session;
+use magicpic_engine::Session;
 use serde_json::json;
 
 fn session() -> Session {
@@ -94,10 +94,10 @@ fn subtracting_from_an_existing_selection_preserves_other_pixels_and_history() {
 
 #[test]
 fn marquee_add_subtract_match_dense_combination_across_tiles() {
-    use photocraft_algo::selection as sel;
-    use photocraft_color::PixelFormat;
-    use photocraft_geom::Rect;
-    use photocraft_raster::Surface;
+    use magicpic_algo::selection as sel;
+    use magicpic_color::PixelFormat;
+    use magicpic_geom::Rect;
+    use magicpic_raster::Surface;
 
     // A partial edge tile, a shape crossing a tile boundary, and an untouched distant tile.
     let area = Rect::from_xywh(0, 0, 777, 263);

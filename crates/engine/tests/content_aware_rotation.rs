@@ -1,9 +1,9 @@
 //! Native Fill rotation enables quarter-turn candidates without changing ordinary Fill or Crop.
 
-use photocraft_algo::content_aware::{FillOptions, color_level, fill, rotation_level};
-use photocraft_doc::{LayerId, Rect};
-use photocraft_engine::Session;
-use photocraft_raster::Surface;
+use magicpic_algo::content_aware::{FillOptions, color_level, fill, rotation_level};
+use magicpic_doc::{LayerId, Rect};
+use magicpic_engine::Session;
+use magicpic_raster::Surface;
 use serde_json::{Value, json};
 
 const W: usize = 64;

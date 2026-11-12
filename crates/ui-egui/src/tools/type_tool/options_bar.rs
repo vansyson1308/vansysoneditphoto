@@ -3,10 +3,10 @@ use super::editing::{cancel, commit_with};
 use super::fonts::{font_picker, font_picker_tip, fonts_ready, selected_style, style_label, styles};
 use super::keys::is_vertical;
 use super::panel::{MetricChoice, SIZE_PRESETS, preset_items};
-use super::{Color32, LayerId, PhotocraftApp, Stroke, byte_of, insertion_style, json, selected_styles, text_layer};
+use super::{Color32, LayerId, MagicpicApp, Stroke, byte_of, insertion_style, json, selected_styles, text_layer};
 
 /// Photoshop's Type options bar.
-pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn options_bar(app: &mut MagicpicApp, ui: &mut egui::Ui) {
     let t = crate::theme::Tokens::get(ui.ctx());
     // Both Type controls describe the selected characters, or the caret's typing style.
     let shown = styles_at(app).map(|(c, _)| (shown_family(app, &c), selected_style(&c), c.size_pt * shown_scale(app), c.color));
@@ -76,7 +76,7 @@ pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     }
     let mut aa = target(app)
         .and_then(|(id, _)| app.session.active().and_then(|st| text_layer(&st.doc, LayerId(id))))
-        .map(|t| photocraft_engine::type_extra_cmds::aa_name(t.antialias).to_string())
+        .map(|t| magicpic_engine::type_extra_cmds::aa_name(t.antialias).to_string())
         .unwrap_or_else(|| o.type_aa.clone());
     let aa_opts = [
         ("none".to_string(), tl!("None")),
@@ -99,9 +99,9 @@ pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     let para = styles_at(app).map(|(_, p)| p);
     let shown_align = match &para {
         Some(p) => match p.align {
-            photocraft_doc::text::TextAlign::Left => "left",
-            photocraft_doc::text::TextAlign::Center => "center",
-            photocraft_doc::text::TextAlign::Right => "right",
+            magicpic_doc::text::TextAlign::Left => "left",
+            magicpic_doc::text::TextAlign::Center => "center",
+            magicpic_doc::text::TextAlign::Right => "right",
             _ => "",
         },
         None => o.type_align.as_str(),
@@ -111,7 +111,7 @@ pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     // The Horizontal Type Mask tool keeps the horizontal buttons (not measured).
     let vertical = app.ui.tool != crate::state::Tool::HorizontalTypeMask
         && match super::defaults::target_text(app) {
-            Some(t) => t.orientation == photocraft_doc::text::Orientation::Vertical,
+            Some(t) => t.orientation == magicpic_doc::text::Orientation::Vertical,
             None => app.ui.tool.is_vertical_type(),
         };
     let buttons = if vertical {
@@ -190,8 +190,8 @@ pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
 
 /// A blank family represents mixed fonts, rather than falsely reporting the first one after
 /// commit. At a caret, the current/pending insertion font is the relevant single style.
-pub(super) fn shown_family(app: &PhotocraftApp, c: &photocraft_doc::text::CharStyle) -> String {
-    let same = |s: &photocraft_doc::text::CharStyle| s.font_family == c.font_family;
+pub(super) fn shown_family(app: &MagicpicApp, c: &magicpic_doc::text::CharStyle) -> String {
+    let same = |s: &magicpic_doc::text::CharStyle| s.font_family == c.font_family;
     let Some(st) = target_doc(app) else { return c.font_family.clone() };
     let uniform = if let Some(ed) = &app.ui.text_edit {
         if ed.caret == ed.anchor {
@@ -207,7 +207,7 @@ pub(super) fn shown_family(app: &PhotocraftApp, c: &photocraft_doc::text::CharSt
 
 /// Character and paragraph style at the selection, caret, or first run of selected layers.
 /// The paragraph at a collapsed caret is the caret's, as the options bar and Paragraph panel show it.
-pub(crate) fn styles_at(app: &PhotocraftApp) -> Option<(photocraft_doc::text::CharStyle, photocraft_doc::text::ParagraphStyle)> {
+pub(crate) fn styles_at(app: &MagicpicApp) -> Option<(magicpic_doc::text::CharStyle, magicpic_doc::text::ParagraphStyle)> {
     let (layer, range) = target(app)?;
     let t = text_layer(&target_doc(app)?.doc, LayerId(layer))?;
     let at = range.map_or_else(|| app.ui.text_edit.as_ref().map_or(0, |ed| byte_of(&t.text, ed.caret.saturating_sub(1))), |r| byte_of(&t.text, r[0]));
@@ -235,7 +235,7 @@ pub(crate) fn styles_at(app: &PhotocraftApp) -> Option<(photocraft_doc::text::Ch
 
 /// Kerning shown for the target: at a collapsed caret, the pair before it (Photoshop's
 /// Character panel); else the style at the selection.
-pub(super) fn kerning_at(app: &PhotocraftApp) -> Option<(photocraft_doc::text::Kerning, f32)> {
+pub(super) fn kerning_at(app: &MagicpicApp) -> Option<(magicpic_doc::text::Kerning, f32)> {
     let ed = app.ui.text_edit.as_ref().filter(|e| e.caret == e.anchor && e.caret > 0)?;
     let st = app.session.active()?;
     let t = text_layer(&st.doc, LayerId(ed.layer))?;
@@ -251,8 +251,8 @@ pub(super) fn kerning_at(app: &PhotocraftApp) -> Option<(photocraft_doc::text::K
 }
 
 /// The Character panel's kerning text: "Metrics", "Optical" or the manual value.
-pub(crate) fn kerning_label((mode, kern): (photocraft_doc::text::Kerning, f32)) -> String {
-    use photocraft_doc::text::Kerning;
+pub(crate) fn kerning_label((mode, kern): (magicpic_doc::text::Kerning, f32)) -> String {
+    use magicpic_doc::text::Kerning;
     match mode {
         _ if kern != 0.0 && kern.is_finite() => format!("{}", kern.round() as i64),
         Kerning::Metrics => "Metrics".into(),
@@ -306,7 +306,7 @@ pub(super) fn kerning_field(ui: &mut egui::Ui, shown: &str, width: f32) -> Optio
 
 /// Applies a kerning value: at a collapsed caret to the pair before it, else to the selection
 /// (or the whole layer).
-pub(super) fn apply_kerning(app: &mut PhotocraftApp, ctx: &egui::Context, v: serde_json::Value) {
+pub(super) fn apply_kerning(app: &mut MagicpicApp, ctx: &egui::Context, v: serde_json::Value) {
     match app.ui.text_edit.clone().filter(|e| e.caret == e.anchor) {
         Some(ed) if ed.caret > 0 => {
             let _ = app.run("type.edit", json!({"layer": ed.layer, "range": [ed.caret - 1, ed.caret], "kerning": v}));
@@ -351,8 +351,8 @@ pub(super) fn num_field(ui: &mut egui::Ui, label: &str, tip: &str, v: f32, range
 
 /// Photoshop's paragraph alignment glyphs: four text lines whose widths/offsets show the mode
 /// (justify variants run full width, with the last line placed left/centre/right).
-pub(super) fn align_glyph(p: &egui::Painter, r: egui::Rect, a: photocraft_doc::text::TextAlign, c: Color32) {
-    use photocraft_doc::text::TextAlign as A;
+pub(super) fn align_glyph(p: &egui::Painter, r: egui::Rect, a: magicpic_doc::text::TextAlign, c: Color32) {
+    use magicpic_doc::text::TextAlign as A;
     let widths = [1.0, 0.62, 1.0, 0.62];
     for (i, w) in widths.iter().enumerate() {
         let y = r.top() + i as f32 * r.height() / 3.0;
@@ -373,8 +373,8 @@ pub(super) fn align_glyph(p: &egui::Painter, r: egui::Rect, a: photocraft_doc::t
 
 /// Paragraph direction choices for the Paragraph panel and the options bar (TYPE-218-2): the
 /// `direction` value `type.setStyle` takes, the tooltip, and the direction it sets.
-pub(super) fn direction_items() -> [(&'static str, &'static str, photocraft_doc::text::TextDirection); 3] {
-    use photocraft_doc::text::TextDirection as D;
+pub(super) fn direction_items() -> [(&'static str, &'static str, magicpic_doc::text::TextDirection); 3] {
+    use magicpic_doc::text::TextDirection as D;
     [
         ("auto", tl!("Automatic paragraph direction"), D::Auto),
         ("ltr", tl!("Left-to-right paragraph direction"), D::Ltr),
@@ -383,8 +383,8 @@ pub(super) fn direction_items() -> [(&'static str, &'static str, photocraft_doc:
 }
 
 /// A pilcrow over an arrow pointing the way the paragraph runs; Auto points both ways.
-pub(super) fn direction_glyph(p: &egui::Painter, r: egui::Rect, d: photocraft_doc::text::TextDirection, c: Color32) {
-    use photocraft_doc::text::TextDirection as D;
+pub(super) fn direction_glyph(p: &egui::Painter, r: egui::Rect, d: magicpic_doc::text::TextDirection, c: Color32) {
+    use magicpic_doc::text::TextDirection as D;
     let g = p.layout_no_wrap("¶".to_string(), egui::FontId::proportional(11.0), c);
     p.galley(egui::pos2(r.center().x - g.size().x / 2.0, r.top() - 2.0), g, c);
     let (y, s) = (r.bottom() - 1.5, Stroke::new(1.3, c));
@@ -403,7 +403,7 @@ pub(super) fn direction_glyph(p: &egui::Painter, r: egui::Rect, d: photocraft_do
 }
 
 /// The options bar's 24 px square button for one paragraph direction, styled like its icon buttons.
-fn direction_button(ui: &mut egui::Ui, d: photocraft_doc::text::TextDirection, selected: bool, tip: &str) -> egui::Response {
+fn direction_button(ui: &mut egui::Ui, d: magicpic_doc::text::TextDirection, selected: bool, tip: &str) -> egui::Response {
     let (r, resp) = ui.allocate_exact_size(egui::vec2(24.0, 24.0), egui::Sense::click());
     let tint = crate::icons::button_chrome(ui, r, selected, resp.hovered());
     direction_glyph(ui.painter(), egui::Rect::from_center_size(r.center(), egui::vec2(14.0, 16.0)), d, tint);

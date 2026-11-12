@@ -14,8 +14,8 @@ pub(crate) const SAVE_OPTIONS_OPEN: &str = "Answer the TIFF, Targa, DDS or JPEG 
 /// Compatibility: Preferences › File Handling decides).
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct FormatChoices {
-    pub tga_bits: Option<photocraft_io::TgaBits>,
-    pub dds: Option<photocraft_io::DdsOptions>,
+    pub tga_bits: Option<magicpic_io::TgaBits>,
+    pub dds: Option<magicpic_io::DdsOptions>,
     pub jpeg: Option<jpeg_options_ui::JpegChoice>,
     pub tiff: Option<tiff_options_ui::TiffChoice>,
     pub maximize_compatibility: Option<bool>,
@@ -85,11 +85,11 @@ impl FormatChoices {
 
 /// `"maximizeCompatibility"` in command or control call `cmd`'s params, read as the engine reads it.
 fn maximize_param(params: &Value, cmd: &str) -> Result<Option<bool>, String> {
-    photocraft_engine::file_cmds::maximize_compatibility_param(params, cmd).map_err(|e| e.to_string())
+    magicpic_engine::file_cmds::maximize_compatibility_param(params, cmd).map_err(|e| e.to_string())
 }
 
 /// Decode a file: (document, warnings about anything approximated or dropped).
-pub type ImportFn = Box<dyn Fn(&str, &[u8], &photocraft_io::ImportOptions) -> Result<(Document, Vec<String>), String>>;
+pub type ImportFn = Box<dyn Fn(&str, &[u8], &magicpic_io::ImportOptions) -> Result<(Document, Vec<String>), String>>;
 
 /// Encoder settings chosen in Export As (the file format comes from the name's extension).
 #[derive(Clone, Debug, PartialEq)]
@@ -100,7 +100,7 @@ pub struct ExportSettings {
     /// Export As keeps full chroma above quality 50 so saturated text and graphics stay sharp.
     pub jpeg_chroma_subsampling: bool,
     /// JPEG Options › Format Options: baseline, baseline optimized or progressive.
-    pub jpeg_format: photocraft_codecs::JpegFormat,
+    pub jpeg_format: magicpic_codecs::JpegFormat,
     /// WebP: lossless (VP8L) rather than lossy (VP8 at [`Self::webp_quality`]).
     pub webp_lossless: bool,
     /// Lossy WebP quality 1–100 (None = codec default).
@@ -108,9 +108,9 @@ pub struct ExportSettings {
     /// TIFF: keep the layers (Photoshop layer data); `false` is "Discard Layers and Save a Copy".
     pub tiff_layers: bool,
     /// TIFF Options › Image Compression.
-    pub tiff_compression: photocraft_codecs::TiffCompression,
+    pub tiff_compression: magicpic_codecs::TiffCompression,
     /// TIFF Options › Save Transparency (`None`: kept unless the document has alpha or spot
-    /// channels; see [`photocraft_io::ExportOptions::tiff_transparency`]).
+    /// channels; see [`magicpic_io::ExportOptions::tiff_transparency`]).
     pub tiff_transparency: Option<bool>,
     /// TIFF Options › Save Image Pyramid.
     pub tiff_pyramid: bool,
@@ -120,18 +120,18 @@ pub struct ExportSettings {
     pub xmp_all: bool,
     /// Targa: bits per pixel from Targa Options or Export As (`None`: 32 with an alpha channel or
     /// transparency, else 24).
-    pub tga_bits: Option<photocraft_io::TgaBits>,
+    pub tga_bits: Option<magicpic_io::TgaBits>,
     /// DDS: the compression and mip chain from DDS Options (uncompressed without mipmaps unless
     /// chosen).
-    pub dds: photocraft_io::DdsOptions,
+    pub dds: magicpic_io::DdsOptions,
     /// PSD/PSB: embed a thumbnail (Preferences › File Handling › Image Previews; see
-    /// [`PhotocraftApp::save_settings`]).
+    /// [`MagicpicApp::save_settings`]).
     pub image_previews: bool,
     /// PSD/PSB: write the real merged image (Preferences › File Handling › Maximize PSD and PSB
-    /// File Compatibility; see [`PhotocraftApp::save_settings`]).
+    /// File Compatibility; see [`MagicpicApp::save_settings`]).
     pub psd_maximize_compatibility: bool,
     /// `.pcraft`: also write the full-size composite (Preferences › File Handling › Save Full-Size
-    /// Composite in .pcraft Files; see [`PhotocraftApp::save_settings`]). Off by default.
+    /// Composite in .pcraft Files; see [`MagicpicApp::save_settings`]). Off by default.
     pub pcraft_full_composite: bool,
     /// Embed the document's ICC profile when the format supports it. On for Save As and, unless
     /// Export As turns it off, for export.
@@ -140,11 +140,11 @@ pub struct ExportSettings {
     /// turns this off for Metadata: None; Save As leaves it on.
     pub embed_metadata: bool,
     /// The path of the document's own file, which linked smart objects that PSD/PSB embed are
-    /// resolved against ([`photocraft_io::ExportOptions::document_path`]).
+    /// resolved against ([`magicpic_io::ExportOptions::document_path`]).
     pub document_path: Option<std::path::PathBuf>,
     /// Native save cache owned by the open document; exports without one remain one-shot.
-    pub pcraft_cache: Option<photocraft_io::PcraftExportCache>,
-    /// Read and embed the files linked smart objects name ([`photocraft_io::ExportOptions::read_linked_files`]).
+    pub pcraft_cache: Option<magicpic_io::PcraftExportCache>,
+    /// Read and embed the files linked smart objects name ([`magicpic_io::ExportOptions::read_linked_files`]).
     /// Off for automation saves, which are granted only their target.
     pub read_linked_files: bool,
 }
@@ -154,16 +154,16 @@ impl Default for ExportSettings {
         ExportSettings {
             jpeg_quality: None,
             jpeg_chroma_subsampling: true,
-            jpeg_format: photocraft_codecs::JpegFormat::Baseline,
+            jpeg_format: magicpic_codecs::JpegFormat::Baseline,
             webp_lossless: true,
             webp_quality: None,
             tiff_layers: true,
-            tiff_compression: photocraft_codecs::TiffCompression::None,
+            tiff_compression: magicpic_codecs::TiffCompression::None,
             tiff_transparency: None,
             tiff_pyramid: false,
             xmp_all: true,
             tga_bits: None,
-            dds: photocraft_io::DdsOptions::default(),
+            dds: magicpic_io::DdsOptions::default(),
             image_previews: true,
             psd_maximize_compatibility: true,
             pcraft_full_composite: false,
@@ -179,8 +179,8 @@ impl Default for ExportSettings {
 impl ExportSettings {
     /// The IO export options these encoder settings select. Save As and Export As share this so
     /// a profile or metadata choice cannot be applied in one and forgotten in the other.
-    pub fn io_options(&self) -> photocraft_io::ExportOptions {
-        let mut opts = photocraft_io::ExportOptions::default();
+    pub fn io_options(&self) -> magicpic_io::ExportOptions {
+        let mut opts = magicpic_io::ExportOptions::default();
         if let Some(q) = self.jpeg_quality {
             opts.encode.jpeg_quality = q;
         }
@@ -196,7 +196,7 @@ impl ExportSettings {
         opts.tiff_transparency = self.tiff_transparency;
         opts.encode.tiff_compression = self.tiff_compression;
         opts.encode.tiff_pyramid = self.tiff_pyramid;
-        opts.xmp = if self.xmp_all { photocraft_io::XmpEmbed::All } else { photocraft_io::XmpEmbed::None };
+        opts.xmp = if self.xmp_all { magicpic_io::XmpEmbed::All } else { magicpic_io::XmpEmbed::None };
         opts.tga_bits = self.tga_bits;
         opts.encode.dds = self.dds;
         opts.image_previews = self.image_previews;
@@ -221,45 +221,45 @@ impl ExportSettings {
 /// goes through Save As, so the original is never overwritten with less than the document has.
 pub(crate) fn saves_flat_in_place(doc: &Document, path: &str) -> bool {
     let Some(layer) = plain_raster(doc) else { return false };
-    let Some(format) = photocraft_engine::file_cmds::extension(path).and_then(|e| photocraft_codecs::from_extension(&e)) else {
+    let Some(format) = magicpic_engine::file_cmds::extension(path).and_then(|e| magicpic_codecs::from_extension(&e)) else {
         return false;
     };
     let caps = format.caps();
     // Transparency is kept where the format's plan writes alpha for this document: DPX has no
     // gray + alpha, and float PNM (PFM) no alpha at all.
     let keeps_alpha = caps.alpha
-        && !(format == photocraft_codecs::Format::Dpx && doc.mode == photocraft_doc::ColorMode::Grayscale)
-        && !(format == photocraft_codecs::Format::Pnm && doc.depth == photocraft_color::SampleType::F32);
-    !photocraft_engine::file_cmds::saves_in_place(path)
+        && !(format == magicpic_codecs::Format::Dpx && doc.mode == magicpic_doc::ColorMode::Grayscale)
+        && !(format == magicpic_codecs::Format::Pnm && doc.depth == magicpic_color::SampleType::F32);
+    !magicpic_engine::file_cmds::saves_in_place(path)
         && doc.file_encoding.source_images.is_none()
-        && (!caps.lossy || format == photocraft_codecs::Format::Jpeg)
-        && (doc.mode != photocraft_doc::ColorMode::Grayscale || caps.layouts.iter().any(|l| l.is_gray()))
+        && (!caps.lossy || format == magicpic_codecs::Format::Jpeg)
+        && (doc.mode != magicpic_doc::ColorMode::Grayscale || caps.layouts.iter().any(|l| l.is_gray()))
         && caps.write
         && caps.depths.contains(&match doc.depth {
-            photocraft_color::SampleType::U8 => photocraft_codecs::SampleType::U8,
-            photocraft_color::SampleType::U16 => photocraft_codecs::SampleType::U16,
-            photocraft_color::SampleType::F32 => photocraft_codecs::SampleType::F32,
+            magicpic_color::SampleType::U8 => magicpic_codecs::SampleType::U8,
+            magicpic_color::SampleType::U16 => magicpic_codecs::SampleType::U16,
+            magicpic_color::SampleType::F32 => magicpic_codecs::SampleType::F32,
         })
         && (doc.icc_profile.is_none() || caps.icc)
         && doc.channels.is_empty()
-        && matches!(doc.mode, photocraft_doc::ColorMode::Rgb | photocraft_doc::ColorMode::Grayscale)
+        && matches!(doc.mode, magicpic_doc::ColorMode::Rgb | magicpic_doc::ColorMode::Grayscale)
         // Last: it may read every tile.
         && (keeps_alpha || doc.is_background(layer.id) || opaque_layer(doc, layer))
 }
 
 /// Whether `layer` is fully opaque over the canvas, so a format without transparency (JPEG)
 /// keeps all of it. Read from its tiles, stopping at the first transparent pixel (#2223).
-pub(crate) fn opaque_layer(doc: &Document, layer: &photocraft_doc::Layer) -> bool {
-    layer.surface().is_some_and(|s| !s.format().alpha || photocraft_io::opaque_surface(s, doc.bounds()))
+pub(crate) fn opaque_layer(doc: &Document, layer: &magicpic_doc::Layer) -> bool {
+    layer.surface().is_some_and(|s| !s.format().alpha || magicpic_io::opaque_surface(s, doc.bounds()))
 }
 
 /// The document's lone layer when it is a plain raster a flat file keeps: visible, at full
 /// opacity, in Normal mode, with no masks, effects, clipping, advanced blending, blending
 /// restrictions or video frames (#2234).
-pub(crate) fn plain_raster(doc: &Document) -> Option<&photocraft_doc::Layer> {
+pub(crate) fn plain_raster(doc: &Document) -> Option<&magicpic_doc::Layer> {
     match doc.layers.as_slice() {
         [layer]
-            if matches!(layer.content, photocraft_doc::LayerContent::Raster(_))
+            if matches!(layer.content, magicpic_doc::LayerContent::Raster(_))
                 && layer.visible
                 && layer.opacity >= 1.0
                 && layer.fill_opacity >= 1.0
@@ -267,9 +267,9 @@ pub(crate) fn plain_raster(doc: &Document) -> Option<&photocraft_doc::Layer> {
                 && layer.vector_mask.is_none()
                 && layer.effects.items.is_empty()
                 && layer.effects.psd_raw.is_none()
-                && matches!(layer.blend, photocraft_color::BlendMode::Normal | photocraft_color::BlendMode::PassThrough)
-                && photocraft_compose::channel_weights(layer, doc.mode).is_none()
-                && !photocraft_compose::blend_if_active(layer, doc.mode)
+                && matches!(layer.blend, magicpic_color::BlendMode::Normal | magicpic_color::BlendMode::PassThrough)
+                && magicpic_compose::channel_weights(layer, doc.mode).is_none()
+                && !magicpic_compose::blend_if_active(layer, doc.mode)
                 && !layer.clipped
                 && layer.advanced.is_default()
                 && layer.video.is_none() =>
@@ -409,7 +409,7 @@ pub type OpenExternalSvgFn = Box<dyn FnMut(ExternalSvgEditor, ExternalVectorSour
 /// Shared queue of (file name, bytes) delivered asynchronously.
 pub type Inbox = std::sync::Arc<std::sync::Mutex<Vec<(String, Vec<u8>)>>>;
 /// Shared queue of browser canvas drops with the document captured at the drop event.
-pub type PlaceInbox = std::sync::Arc<std::sync::Mutex<Vec<(photocraft_doc::DocId, String, Vec<u8>)>>>;
+pub type PlaceInbox = std::sync::Arc<std::sync::Mutex<Vec<(magicpic_doc::DocId, String, Vec<u8>)>>>;
 
 /// Read the saved preferences text (`None` when there is none yet).
 pub type LoadTextFn = Box<dyn FnMut() -> Option<String>>;
@@ -533,8 +533,8 @@ pub struct Services {
     pub automation_command: Option<AutomationCommandFn>,
     /// Same policy as [`Self::automation_command`], as a function pointer the engine calls for
     /// each step of `actions.play`. Installed on the session only while a control request or
-    /// an automation-driven [`PhotocraftApp::run`] runs, so a local play of a recorded `file.*` step still works.
-    pub automation_authorize: Option<fn(&str, &serde_json::Value) -> photocraft_engine::Result<()>>,
+    /// an automation-driven [`MagicpicApp::run`] runs, so a local play of a recorded `file.*` step still works.
+    pub automation_authorize: Option<fn(&str, &serde_json::Value) -> magicpic_engine::Result<()>>,
     /// Encode an RGBA8 image as PNG (used for screenshots and `ui.render`).
     pub encode_png: Option<EncodePngFn>,
     /// Open a URL in the system browser (native). Falls back to `ctx.open_url` (web) when unset.
@@ -547,7 +547,7 @@ pub struct Services {
     /// [`Self::beep`].
     pub alert: Option<fn()>,
     /// Starts a background check for published releases (desktop, outside Flatpak).
-    pub check_updates: Option<photocraft_engine::updates_cmds::CheckFn>,
+    pub check_updates: Option<magicpic_engine::updates_cmds::CheckFn>,
     /// What the last self-update came to, read once at the first frame: `Ok` with the version it
     /// installed, `Err` with the reason it could not be installed (desktop).
     pub last_update: Option<LastUpdateFn>,
@@ -555,7 +555,7 @@ pub struct Services {
     /// documents.
     pub inbox: Option<Inbox>,
     /// Files delivered asynchronously for a drop onto the active document's canvas (web
-    /// drag-and-drop, routed by [`PhotocraftApp::dropped_on_canvas`]): placed as layers like a
+    /// drag-and-drop, routed by [`MagicpicApp::dropped_on_canvas`]): placed as layers like a
     /// desktop canvas drop (Place Embedded, each in Free Transform).
     pub place_inbox: Option<PlaceInbox>,
     /// OS clipboard images: copies go out, screenshots and images from other apps come in.
@@ -622,12 +622,12 @@ pub struct Services {
     /// Where the pen is on the screen, independent of where the window is (Windows: the pen's
     /// pointer messages). A pen moving the window by its title bar follows it (`titlebar`).
     pub pen_screen_px: Option<PenScreenFn>,
-    /// WinTab packet poll (Windows with Windows Ink disabled; see `photocraft_tablet::wintab`).
+    /// WinTab packet poll (Windows with Windows Ink disabled; see `magicpic_tablet::wintab`).
     pub tablet_poll: Option<TabletPollFn>,
     /// The persistent brush preset store, loading in the background (desktop; see
-    /// `photocraft_engine::preset_store`). Attached to the session once it arrives; without
+    /// `magicpic_engine::preset_store`). Attached to the session once it arrives; without
     /// one, brush presets are session-only unless the shell attached a store before startup.
-    pub preset_store: Option<std::sync::mpsc::Receiver<photocraft_engine::preset_store::Opened>>,
+    pub preset_store: Option<std::sync::mpsc::Receiver<magicpic_engine::preset_store::Opened>>,
     /// Reads the displays and their ICC profiles in the background (desktop macOS; see
     /// `monitor_status`). Without one, the canvas uses the profile chosen in Color Settings, or sRGB.
     pub read_displays: Option<monitor_status::ReadDisplaysFn>,

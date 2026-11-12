@@ -1,9 +1,9 @@
 //! A Photoshop Frame's stroke (`Group::frame_stroke`) survives a `.pcraft` round trip; older
 //! manifests, written before it existed, load without one (#4381).
 
-use photocraft_color::{Color, ColorMode, SampleType};
-use photocraft_doc::{Document, Fill, Layer, LayerContent, ShapeStroke, Size, StrokeAlign};
-use photocraft_format::*;
+use magicpic_color::{Color, ColorMode, SampleType};
+use magicpic_doc::{Document, Fill, Layer, LayerContent, ShapeStroke, Size, StrokeAlign};
+use magicpic_format::*;
 
 fn stroke_of(d: &Document) -> Option<ShapeStroke> {
     match &d.layers.first()?.content {
@@ -31,7 +31,7 @@ fn frame_stroke_roundtrips_and_defaults_when_absent() {
     let content = &mut v["layers"][0]["content"];
     assert!(content.get("frame_stroke").is_some());
     content.as_object_mut().unwrap().remove("frame_stroke");
-    let old: photocraft_format::manifest::DocM = serde_json::from_value(v).unwrap();
-    let photocraft_format::manifest::ContentM::Group { frame_stroke, .. } = &old.layers[0].content else { panic!("not a group") };
+    let old: magicpic_format::manifest::DocM = serde_json::from_value(v).unwrap();
+    let magicpic_format::manifest::ContentM::Group { frame_stroke, .. } = &old.layers[0].content else { panic!("not a group") };
     assert!(frame_stroke.is_none());
 }

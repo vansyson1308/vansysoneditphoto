@@ -41,7 +41,7 @@ fn the_alert_has_one_button_ok() {
     app.run("layer.lockLayers", json!({"all": true})).unwrap();
     let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(900.0, 600.0)).build_ui_state(|ui, app| crate::dialogs::show(app, ui.ctx()), app);
     // The press after the fonts are set up: the harness draws its first frame at build.
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     stroke(h.state_mut());
     h.run_steps(2);
     assert!(h.query_by_label(WANT).is_some(), "the message is shown");
@@ -82,7 +82,7 @@ fn unmeasured_cases_keep_todays_behaviour() {
     app.run("layer.setProps", json!({"layer": id, "visible": false})).unwrap();
     stroke(&mut app);
     assert!(alerts(&app).is_empty(), "hidden: {:?}", alerts(&app));
-    assert_eq!(app.ui.status, photocraft_engine::hidden_target::HIDDEN);
+    assert_eq!(app.ui.status, magicpic_engine::hidden_target::HIDDEN);
     let mut app = self::app(Tool::Remove);
     app.run("layer.new.group", json!({})).unwrap();
     app.run("layer.lockLayers", json!({"all": true})).unwrap();

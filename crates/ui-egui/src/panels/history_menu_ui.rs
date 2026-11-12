@@ -5,7 +5,7 @@
 
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 
 /// The menu's items: label and command (None = shown greyed; not built yet).
 pub const ITEMS: &[(&str, Option<&str>)] = &[
@@ -38,7 +38,7 @@ fn resolve(cmd: &str, snapshot: Option<u64>) -> (&str, Value) {
     }
 }
 
-fn enabled(app: &PhotocraftApp, cmd: &str) -> bool {
+fn enabled(app: &MagicpicApp, cmd: &str) -> bool {
     if cmd == "window.panel.close" {
         return !app.session.prefs().workspace_locked;
     }
@@ -52,7 +52,7 @@ fn enabled(app: &PhotocraftApp, cmd: &str) -> bool {
 }
 
 /// Draw the History items of the panel menu and run the one clicked.
-pub fn panel_menu(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub fn panel_menu(app: &mut MagicpicApp, ui: &mut egui::Ui) {
     let snapshot = app.session.active().and_then(|st| crate::panels::selected_snapshot(ui.ctx(), st));
     let mut clicked: Option<&str> = None;
     for &(label, cmd) in ITEMS {
@@ -85,8 +85,8 @@ mod tests {
     use egui_kittest::Harness;
     use egui_kittest::kittest::{NodeT, Queryable};
 
-    fn app() -> PhotocraftApp {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    fn app() -> MagicpicApp {
+        let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 64, "height": 48})).unwrap();
         app.run("layer.new.layer", json!({})).unwrap();
         app.run("edit.fill", json!({"color": "#ff0000"})).unwrap();
@@ -94,23 +94,23 @@ mod tests {
         app
     }
 
-    fn harness(app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
-        let mut h = Harness::builder().with_size(egui::vec2(260.0, 420.0)).build_ui_state(|ui, app: &mut PhotocraftApp| panel_menu(app, ui), app);
+    fn harness(app: MagicpicApp) -> Harness<'static, MagicpicApp> {
+        let mut h = Harness::builder().with_size(egui::vec2(260.0, 420.0)).build_ui_state(|ui, app: &mut MagicpicApp| panel_menu(app, ui), app);
         h.run_steps(2);
         h
     }
 
-    fn states(h: &Harness<'static, PhotocraftApp>) -> (usize, usize) {
+    fn states(h: &Harness<'static, MagicpicApp>) -> (usize, usize) {
         let st = h.state().session.active().unwrap();
         (st.history.entries().len(), st.history.redo_labels().count())
     }
 
-    fn click(h: &mut Harness<'static, PhotocraftApp>, label: &str) {
+    fn click(h: &mut Harness<'static, MagicpicApp>, label: &str) {
         h.get_by_label(label).click();
         h.run_steps(2);
     }
 
-    fn is_disabled(h: &Harness<'static, PhotocraftApp>, label: &str) -> bool {
+    fn is_disabled(h: &Harness<'static, MagicpicApp>, label: &str) -> bool {
         h.get_by_label(label).accesskit_node().is_disabled()
     }
 
@@ -209,7 +209,7 @@ mod tests {
     #[test]
     fn new_snapshot_adds_a_snapshot_and_leaves_the_states() {
         let mut h = harness(app());
-        let snaps = |h: &Harness<'static, PhotocraftApp>| h.state().session.active().unwrap().snapshots.len();
+        let snaps = |h: &Harness<'static, MagicpicApp>| h.state().session.active().unwrap().snapshots.len();
         let (before, steps) = (snaps(&h), states(&h));
         click(&mut h, "New Snapshot…");
         assert!(!h.state().ui.status_error, "{}", h.state().ui.status);
@@ -224,7 +224,7 @@ mod tests {
         let mut app = app();
         app.run("history.newSnapshot", json!({})).unwrap();
         let mut h = harness(app);
-        let snaps = |h: &Harness<'static, PhotocraftApp>| h.state().session.active().unwrap().snapshots.len();
+        let snaps = |h: &Harness<'static, MagicpicApp>| h.state().session.active().unwrap().snapshots.len();
         let before = snaps(&h);
         let id = h.state().session.active().unwrap().snapshots.last().unwrap().id;
         let ctx = h.ctx.clone();
@@ -242,7 +242,7 @@ mod tests {
 
     #[test]
     fn without_a_document_only_close_and_history_options_are_enabled() {
-        let h = harness(PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default()));
+        let h = harness(MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default()));
         for &(label, cmd) in ITEMS.iter().filter(|(l, _)| *l != "---") {
             // History Options are preferences, not part of a document.
             let on = matches!(cmd, Some("window.panel.close" | "history.options"));

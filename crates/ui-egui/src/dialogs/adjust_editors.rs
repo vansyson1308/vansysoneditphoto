@@ -1,7 +1,7 @@
 //! One editor per adjustment kind, shared by the adjustment-layer Properties panel and the modal
 //! Image › Adjustments dialogs (`adjust_dialog`).
 //!
-//! Every editor edits the kind's complete parameter set (`photocraft_engine::adjust_params`) as a
+//! Every editor edits the kind's complete parameter set (`magicpic_engine::adjust_params`) as a
 //! JSON object and reports an [`Edit`]: `changed` while values move (the host previews them live)
 //! and `commit` when a gesture ends (the Properties host then runs one `layer.setAdjustment`; a
 //! dialog commits on OK). Color Lookup keeps its editor in `adjust_ui`.
@@ -11,14 +11,14 @@ use crate::state::CurvesEditorState as CurveUi;
 use std::sync::Arc;
 
 use egui::{Color32, Pos2, Rect, RichText, Sense, Stroke, StrokeKind, pos2, vec2};
-use photocraft_doc::adjust::{HueRange, ToneSpace};
-use photocraft_doc::{Adjustment, LayerId};
-use photocraft_engine::adjust_params::{self, HUE_RANGES, PHOTO_FILTERS};
-use photocraft_engine::presets::Group;
-use photocraft_engine::presets::gradients::GradientPreset;
+use magicpic_doc::adjust::{HueRange, ToneSpace};
+use magicpic_doc::{Adjustment, LayerId};
+use magicpic_engine::adjust_params::{self, HUE_RANGES, PHOTO_FILTERS};
+use magicpic_engine::presets::Group;
+use magicpic_engine::presets::gradients::GradientPreset;
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::theme::Tokens;
 use crate::tone::{self, HistSource, Histograms};
 use crate::widgets::{self, hue_color};
@@ -131,7 +131,7 @@ pub struct EditorCx {
     /// (off: the plain track).
     pub dynamic_color_sliders: bool,
     /// Image › Levels/Curves with a single Channels-panel target: that channel only (#5335).
-    pub isolated_curve: Option<photocraft_engine::channel_cmds::IsolatedCurveChannel>,
+    pub isolated_curve: Option<magicpic_engine::channel_cmds::IsolatedCurveChannel>,
 }
 
 /// The Levels/Curves channel space the values address.

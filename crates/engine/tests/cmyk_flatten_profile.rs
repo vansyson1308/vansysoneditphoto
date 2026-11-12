@@ -8,9 +8,9 @@
 
 use std::sync::Arc;
 
-use photocraft_color::convert::{CmykSpace, with_cmyk_space};
-use photocraft_engine::Session;
-use photocraft_geom::Rect;
+use magicpic_color::convert::{CmykSpace, with_cmyk_space};
+use magicpic_engine::Session;
+use magicpic_geom::Rect;
 use serde_json::json;
 
 const W: i32 = 8;
@@ -34,7 +34,7 @@ const INKS: [[f32; 4]; 8] = [
 ];
 
 fn profile() -> Arc<Vec<u8>> {
-    photocraft_cms::synth::cmyk_profile(&photocraft_cms::synth::CmykParams {
+    magicpic_cms::synth::cmyk_profile(&magicpic_cms::synth::CmykParams {
         description: "Test Uncoated".into(),
         tvi: [0.26, 0.26, 0.26, 0.3],
         ..Default::default()
@@ -59,10 +59,10 @@ fn document(depth: u32, tag: bool) -> Session {
         let fmt = bg.format();
         with_cmyk_space(if tag { space.as_ref() } else { None }, || {
             for (x, rgb) in RGB.iter().enumerate() {
-                let mut px = photocraft_raster::from_rgba(&fmt, [rgb[0], rgb[1], rgb[2], 1.0]);
+                let mut px = magicpic_raster::from_rgba(&fmt, [rgb[0], rgb[1], rgb[2], 1.0]);
                 for _ in 0..3 {
-                    let back = photocraft_raster::to_rgba(&fmt, &px);
-                    px = photocraft_raster::from_rgba(&fmt, back);
+                    let back = magicpic_raster::to_rgba(&fmt, &px);
+                    px = magicpic_raster::from_rgba(&fmt, back);
                 }
                 bg.write_pixel(x as i32, 0, &px);
             }

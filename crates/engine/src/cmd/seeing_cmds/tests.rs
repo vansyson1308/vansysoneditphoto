@@ -1,4 +1,3 @@
-use base64::Engine as _;
 use serde_json::{Value, json};
 
 use super::*;
@@ -16,7 +15,7 @@ fn picture(depth: u32) -> Session {
             for x in 0..96 {
                 let base = if x < 48 { 0.15 } else { 0.85 };
                 let c = if (10..26).contains(&x) && (10..26).contains(&y) { [0.9, 0.1, 0.1, 1.0] } else { [base, base, base, 1.0] };
-                vals.extend(photocraft_raster::from_rgba(&fmt, c));
+                vals.extend(magicpic_raster::from_rgba(&fmt, c));
             }
         }
         let layer = doc.layers.first_mut().ok_or(EngineError::NoDocument)?;
@@ -28,7 +27,7 @@ fn picture(depth: u32) -> Session {
 }
 
 fn flat(s: &Session, index: usize) -> Vec<[f32; 4]> {
-    photocraft_compose::flatten(&s.documents()[index].doc).px.clone()
+    magicpic_compose::flatten(&s.documents()[index].doc).px.clone()
 }
 
 /// What must not move when a command only looks: revision, history length, pixels, notes.
@@ -37,10 +36,10 @@ fn fingerprint(s: &Session, index: usize) -> (u64, usize, Vec<[f32; 4]>, usize) 
     (st.revision, st.history.past_len(), flat(s, index), st.doc.notes.len())
 }
 
-fn decode(v: &Value) -> photocraft_codecs::Image {
+fn decode(v: &Value) -> magicpic_codecs::Image {
     let bytes = base64::engine::general_purpose::STANDARD.decode(v["base64"].as_str().unwrap()).unwrap();
     assert_eq!(v["bytes"], bytes.len());
-    photocraft_codecs::decode(&bytes).unwrap()
+    magicpic_codecs::decode(&bytes).unwrap()
 }
 
 #[test]
@@ -214,7 +213,7 @@ fn experiments_stay_editable() {
     assert_eq!(doc.layers.len(), 2);
     assert!(matches!(doc.layers[0].content, LayerContent::Raster(_)));
     assert!(matches!(doc.layers[1].content, LayerContent::Smart(_)));
-    assert_eq!(photocraft_compose::render_layer(&doc.layers[0], doc.bounds()).px, photocraft_compose::flatten(&s.documents()[0].doc).px);
+    assert_eq!(magicpic_compose::render_layer(&doc.layers[0], doc.bounds()).px, magicpic_compose::flatten(&s.documents()[0].doc).px);
 }
 
 #[test]
@@ -246,7 +245,7 @@ fn a_frame_crops_the_variant_without_deleting_pixels() {
     assert!(flat(&s, 1).iter().all(|p| p[0] > 0.8 && p[1] < 0.2));
     // The rest of the picture is still in the layer, outside the canvas.
     let doc = &s.documents()[1].doc;
-    let outside = photocraft_compose::render_layer(&doc.layers[0], Rect::new(60, 30, 61, 31)).px[0];
+    let outside = magicpic_compose::render_layer(&doc.layers[0], Rect::new(60, 30, 61, 31)).px[0];
     assert!(outside[3] > 0.99 && outside[0] > 0.8, "{outside:?}");
     // A frame outside the picture is refused before anything is made.
     let bad = json!({"frame": {"x": 90, "y": 0, "width": 16, "height": 16}, "steps": []});
@@ -287,7 +286,7 @@ fn recipes_cannot_leave_the_variant() {
     }
     let many: Vec<Value> = (0..33).map(|_| json!({"id": "layer.newAdjustmentLayer.invert"})).collect();
     assert!(s.execute("seeing.variant", json!({"recipe": {"steps": many}})).is_err());
-    assert!(s.execute("seeing.variant", json!({"recipe": {"photocraftSeeing": 2, "steps": []}})).is_err());
+    assert!(s.execute("seeing.variant", json!({"recipe": {"magicpicSeeing": 2, "steps": []}})).is_err());
     assert!(s.execute("seeing.variant", json!({"recipe": {"steps": [], "surprise": 1}})).is_err());
     assert!(s.execute("seeing.variant", json!({"recipe": {"steps": [{"id": "layer.newAdjustmentLayer.invert", "params": 3}]}})).is_err());
     assert_eq!(s.documents().len(), 1);
@@ -340,6 +339,23 @@ fn recipe_of_a_plain_document_is_null() {
     // Somebody else's note that looks like a recipe is not one.
     s.execute("notes.add", json!({"x": 1, "y": 1, "text": "recipe: {\"steps\":[]}", "author": "someone"})).unwrap();
     assert!(s.execute("seeing.recipe", json!({})).unwrap()["recipe"].is_null());
+}
+
+/// A variant saved before the product was renamed carries the earlier note author and recipe key.
+/// Its recipe is still found, replays, and a new variant of it does not inherit the old notes.
+#[test]
+fn a_recipe_saved_under_the_earlier_product_name_is_still_read() {
+    let mut s = picture(8);
+    let text = r#"recipe: {"photocraftSeeing":1,"label":"exposure -2 EV","kind":"underexpose","seed":3,"steps":[{"id":"layer.newAdjustmentLayer.exposure","params":{"exposure":-2}}]}"#;
+    s.execute("notes.add", json!({"x": 1, "y": 1, "text": text, "author": "PhotoCraft Seeing"})).unwrap();
+    let stored = s.execute("seeing.recipe", json!({})).unwrap();
+    assert_eq!(stored["recipe"]["label"], "exposure -2 EV", "{stored}");
+    assert_eq!(stored["recipe"]["magicpicSeeing"], 1, "written back under the current key");
+    let recipe: Value = serde_json::from_str(text.trim_start_matches("recipe: ")).unwrap();
+    s.execute("seeing.variant", json!({"recipe": recipe})).unwrap();
+    let doc = &s.active().unwrap().doc;
+    assert!(doc.notes.iter().all(|n| n.author == NOTE_AUTHOR), "the source's old note is not carried into the variant");
+    assert_eq!(doc.notes.len(), 1);
 }
 
 #[test]
@@ -441,10 +457,10 @@ fn looking_keeps_a_floating_selection_floating() {
 /// opened EXR or HDR file is: the canvas then shows it through the sRGB curve.
 fn linear_grey(s: &mut Session) {
     s.edit("Grey", |doc, _| {
-        doc.icc_profile = Some(photocraft_cms::Builtin::LinearSrgb.profile().to_bytes());
+        doc.icc_profile = Some(magicpic_cms::Builtin::LinearSrgb.profile().to_bytes());
         let fmt = doc.pixel_format();
         let b = doc.bounds();
-        let vals: Vec<f32> = (0..256).flat_map(|_| photocraft_raster::from_rgba(&fmt, [0.2140, 0.2140, 0.2140, 1.0])).collect();
+        let vals: Vec<f32> = (0..256).flat_map(|_| magicpic_raster::from_rgba(&fmt, [0.2140, 0.2140, 0.2140, 1.0])).collect();
         let layer = doc.layers.first_mut().ok_or(EngineError::NoDocument)?;
         crate::pixels_mut(layer)?.write_region(b, &vals);
         Ok(())

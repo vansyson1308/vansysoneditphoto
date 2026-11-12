@@ -3,7 +3,7 @@
 
 use serde_json::{Map, Value, json};
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 
 pub const COMMAND: &str = "edit.stroke";
 const MARK: &str = "__stroke";
@@ -29,7 +29,7 @@ fn valid(key: &str, v: &Value) -> bool {
 }
 
 /// Construct a dialog from defaults and only valid, persisted preferences.
-pub fn fields(app: &PhotocraftApp) -> Map<String, Value> {
+pub fn fields(app: &MagicpicApp) -> Map<String, Value> {
     let mut f = Map::new();
     f.insert(MARK.into(), json!(true));
     f.insert("__command".into(), json!(COMMAND));
@@ -51,7 +51,7 @@ pub fn fields(app: &PhotocraftApp) -> Map<String, Value> {
 }
 
 /// Open Stroke with the current editing target, retaining the command's channel-view behavior.
-pub fn open(app: &mut PhotocraftApp) -> u64 {
+pub fn open(app: &mut MagicpicApp) -> u64 {
     let mut f = fields(app);
     let target = app.with_mask_target(COMMAND, json!({}));
     f.insert("__target".into(), target.get("target").cloned().unwrap_or_else(|| crate::canvas::paint_target(app)));
@@ -73,7 +73,7 @@ pub fn params(f: &Map<String, Value>) -> Value {
 
 /// OK: runs `edit.stroke` with the dialog's settings and, when it succeeds, remembers them for
 /// the next time the dialog opens.
-pub fn confirm(app: &mut PhotocraftApp, f: &Map<String, Value>) -> Result<Value, String> {
+pub fn confirm(app: &mut MagicpicApp, f: &Map<String, Value>) -> Result<Value, String> {
     let st = app.session.active().ok_or(tl!("The document is closed"))?;
     if f.get("__document").and_then(Value::as_u64) != Some(st.doc.id.0) || f.get("__layer") != Some(&json!(st.active_layer)) {
         return Err(tl!("The document or active layer changed. Open Stroke again.").into());

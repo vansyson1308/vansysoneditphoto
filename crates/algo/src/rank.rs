@@ -1,8 +1,8 @@
 //! Bounded native order-statistic filtering. Existing Median remains independent.
 use crate::{Ctx, image::Image};
-use photocraft_color::{PixelFormat, SampleType};
-use photocraft_geom::Rect;
-use photocraft_raster::{Interrupt, Surface};
+use magicpic_color::{PixelFormat, SampleType};
+use magicpic_geom::Rect;
+use magicpic_raster::{Interrupt, Surface};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -380,7 +380,7 @@ pub(crate) fn run_image(src: &Image, out: Rect, ctx: &Ctx, p: &Params) -> Vec<f3
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_color::ColorMode;
+    use magicpic_color::ColorMode;
 
     /// Sparse owner size must not change small native edits, repeated-edge samples or selection publication.
     #[test]

@@ -1,6 +1,6 @@
-use photocraft_compose::Buffer;
-use photocraft_geom::Rect;
-use photocraft_raster::scratch;
+use magicpic_compose::Buffer;
+use magicpic_geom::Rect;
+use magicpic_raster::scratch;
 
 /// Restores idle release even when an assertion fails.
 struct IdleReleaseOff;

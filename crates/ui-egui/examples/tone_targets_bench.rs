@@ -3,10 +3,10 @@
 //! Includes proxy construction, the command, and flattening; excludes GPU upload/UI latency.
 use std::{error::Error, time::Instant};
 
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_doc::{AlphaChannel, Document, Layer, LayerContent, LayerMask};
-use photocraft_geom::{Rect, Size};
-use photocraft_raster::Surface;
+use magicpic_color::{ColorMode, PixelFormat, SampleType};
+use magicpic_doc::{AlphaChannel, Document, Layer, LayerContent, LayerMask};
+use magicpic_geom::{Rect, Size};
+use magicpic_raster::Surface;
 use serde_json::{Value, json};
 
 /// Measure warmed proxy construction, adjustment dispatch and flattening on synthetic 24 MP targets.
@@ -25,7 +25,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     doc.layers.push(layer);
     doc.channels.push(AlphaChannel::new("Saved alpha", gray.clone()));
     doc.quick_mask = Some(AlphaChannel::new("Quick Mask", gray));
-    let k = photocraft_ui_egui::proxy::factor(&doc);
+    let k = magicpic_ui_egui::proxy::factor(&doc);
     let mut rows = Vec::new();
     for selection in [false, true] {
         doc.selection = selection.then(|| {
@@ -49,8 +49,8 @@ fn main() -> Result<(), Box<dyn Error>> {
                     json!({"target":target,"points":[[0,0],[100,125+(i%13)*3],[255,255]]})
                 };
                 let start = Instant::now();
-                let preview = photocraft_ui_egui::filter_dialog::preview_document(&doc, Some(id), "image.adjustments.curves", &p, k).ok_or("preview failed")?;
-                std::hint::black_box(photocraft_compose::flatten(&preview));
+                let preview = magicpic_ui_egui::filter_dialog::preview_document(&doc, Some(id), "image.adjustments.curves", &p, k).ok_or("preview failed")?;
+                std::hint::black_box(magicpic_compose::flatten(&preview));
                 let ms = start.elapsed().as_secs_f64() * 1000.0;
                 if i == 0 {
                     cold = ms;

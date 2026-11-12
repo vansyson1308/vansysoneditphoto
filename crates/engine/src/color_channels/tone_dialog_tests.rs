@@ -1,7 +1,7 @@
 //! Dialog normalization must retain the command's native per-component interpretation.
 use super::*;
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_geom::Rect;
+use magicpic_color::{ColorMode, PixelFormat, SampleType};
+use magicpic_geom::Rect;
 
 /// Map inputs, explicit point precedence and native records survive normalization for every
 /// multi-component subset, including full explicit sets and CMYK Black.

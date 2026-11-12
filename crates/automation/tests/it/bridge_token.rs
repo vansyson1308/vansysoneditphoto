@@ -6,7 +6,7 @@
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use photocraft_automation::{BridgeClient, Headless};
+use magicpic_automation::{BridgeClient, Headless};
 use serde_json::{Value, json};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpListener;
@@ -120,13 +120,13 @@ async fn a_listener_that_is_not_the_app_never_receives_the_token() {
     }
 }
 
-/// The bridge authenticates to the headless `photocraft-cli serve` server by challenge.
+/// The bridge authenticates to the headless `magicpic-cli serve` server by challenge.
 #[tokio::test(flavor = "multi_thread")]
 async fn the_bridge_authenticates_to_the_headless_server_by_challenge() {
     let headless = Arc::new(Mutex::new(Headless::new()));
     let (ready_tx, ready_rx) = std::sync::mpsc::channel();
     std::thread::spawn(move || {
-        let _ = photocraft_automation::rpc::serve_tcp("127.0.0.1:0", headless, CONTROL_TOKEN.to_owned(), move |addr| {
+        let _ = magicpic_automation::rpc::serve_tcp("127.0.0.1:0", headless, CONTROL_TOKEN.to_owned(), move |addr| {
             let _ = ready_tx.send(addr);
         });
     });

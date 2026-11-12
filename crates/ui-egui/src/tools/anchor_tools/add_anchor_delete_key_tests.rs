@@ -2,17 +2,17 @@
 //! its two segments (a closed subpath opens there), never the active layer.
 
 use egui::Modifiers;
-use photocraft_doc::vector::Path;
+use magicpic_doc::vector::Path;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::canvas::{ToolEvent, tool_event};
 use crate::state::Tool;
 
 /// 800 x 600 on white, pixel layer Red active, saved path Path 1 (a closed corner square)
 /// targeted in the Paths panel, the Add Anchor Point tool on.
-pub(super) fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+pub(super) fn app() -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 800, "height": 600, "background": "white"})).unwrap();
     app.sync_views();
     app.run("layer.new.layer", json!({"name": "Red"})).unwrap();
@@ -23,25 +23,25 @@ pub(super) fn app() -> PhotocraftApp {
     app
 }
 
-pub(super) fn path1(app: &PhotocraftApp) -> Path {
+pub(super) fn path1(app: &MagicpicApp) -> Path {
     app.session.active().unwrap().doc.paths.iter().find(|p| p.name == "Path 1").unwrap().path.clone()
 }
 
-pub(super) fn layers(app: &PhotocraftApp) -> usize {
+pub(super) fn layers(app: &MagicpicApp) -> usize {
     app.session.active().unwrap().doc.layers.len()
 }
 
-pub(super) fn steps(app: &PhotocraftApp) -> usize {
+pub(super) fn steps(app: &MagicpicApp) -> usize {
     app.session.active().unwrap().history.past_len()
 }
 
-pub(super) fn ctrl_click(app: &mut PhotocraftApp, at: [f64; 2]) {
+pub(super) fn ctrl_click(app: &mut MagicpicApp, at: [f64; 2]) {
     tool_event(app, ToolEvent::Down { x: at[0], y: at[1], pressure: 1.0 }, Modifiers::COMMAND);
     tool_event(app, ToolEvent::Up { x: at[0], y: at[1] }, Modifiers::COMMAND);
 }
 
 /// A key through the app's shortcut handling, as the canvas gets it.
-pub(super) fn press(app: &mut PhotocraftApp, key: egui::Key) {
+pub(super) fn press(app: &mut MagicpicApp, key: egui::Key) {
     let ctx = egui::Context::default();
     let m = Modifiers::NONE;
     let raw = egui::RawInput {

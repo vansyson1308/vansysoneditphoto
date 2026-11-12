@@ -2,8 +2,8 @@
 //! message, painting nothing and adding no history. RGB, Grayscale, CMYK and Lab at every depth
 //! keep healing; Bitmap, Duotone and Multichannel (not measured) don't get the refusal.
 
-use photocraft_color::{Color, ColorMode, SampleType};
-use photocraft_doc::Size;
+use magicpic_color::{Color, ColorMode, SampleType};
+use magicpic_doc::Size;
 
 use super::*;
 

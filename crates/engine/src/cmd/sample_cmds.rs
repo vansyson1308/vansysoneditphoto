@@ -9,9 +9,9 @@
 //! rounded to the document's depth (8 and 16 bit; 32 bit keeps the float), then returned as the
 //! straight-alpha RGBA the compositor and the tool colours use.
 
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_doc::{Document, LayerContent, LayerId};
-use photocraft_geom::Rect;
+use magicpic_color::{ColorMode, PixelFormat, SampleType};
+use magicpic_doc::{Document, LayerContent, LayerId};
+use magicpic_geom::Rect;
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;
@@ -105,8 +105,8 @@ pub fn sample_rect_at(x: f64, y: f64, size: u32, zoom: Option<f64>, canvas: Rect
 /// Round `v` to what a channel of `depth` can store (32 bit keeps the float).
 fn quantize(v: f32, depth: SampleType) -> f32 {
     let mut b = [0u8; 4];
-    photocraft_color::write_sample(&mut b, depth, 0, v);
-    photocraft_color::read_sample(&b, depth, 0)
+    magicpic_color::write_sample(&mut b, depth, 0, v);
+    magicpic_color::read_sample(&b, depth, 0)
 }
 
 /// The alpha-weighted average of straight-alpha RGBA pixels `px`, taken in the channels of
@@ -116,7 +116,7 @@ fn quantize(v: f32, depth: SampleType) -> f32 {
 /// transparent (or empty) input averages to transparent black.
 ///
 /// CMYK conversions use the CMYK space active on this thread
-/// (`photocraft_color::convert::with_cmyk_space`).
+/// (`magicpic_color::convert::with_cmyk_space`).
 pub fn average(px: &[[f32; 4]], mode: ColorMode, depth: SampleType) -> [f32; 4] {
     let fmt = PixelFormat::new(mode, depth, false);
     let n = fmt.channels().min(8);
@@ -128,7 +128,7 @@ pub fn average(px: &[[f32; 4]], mode: ColorMode, depth: SampleType) -> [f32; 4] 
         if a <= 0.0 || p[..3].iter().any(|v| !v.is_finite()) {
             continue;
         }
-        let k = photocraft_raster::from_rgba_into(&fmt, *p, &mut native).min(n);
+        let k = magicpic_raster::from_rgba_into(&fmt, *p, &mut native).min(n);
         for (s, v) in sum.iter_mut().zip(&native[..k]) {
             *s += f64::from(*v) * f64::from(a);
         }
@@ -138,7 +138,7 @@ pub fn average(px: &[[f32; 4]], mode: ColorMode, depth: SampleType) -> [f32; 4] 
         return [0.0; 4];
     }
     let mean: Vec<f32> = sum[..n].iter().map(|s| quantize((s / alpha) as f32, depth)).collect();
-    let [r, g, b, _] = photocraft_raster::to_rgba(&fmt, &mean);
+    let [r, g, b, _] = magicpic_raster::to_rgba(&fmt, &mean);
     [r, g, b, quantize((alpha / px.len() as f64) as f32, depth)]
 }
 
@@ -156,7 +156,7 @@ fn sampled_document(doc: &Document, active: Option<LayerId>, which: SampleLayers
             layer.clipped = false;
             layer.opacity = 1.0;
             layer.fill_opacity = 1.0;
-            layer.blend = photocraft_color::BlendMode::Normal;
+            layer.blend = magicpic_color::BlendMode::Normal;
             let mut solo = doc.clone();
             solo.layers = vec![layer];
             return Some(Cow::Owned(solo));
@@ -200,7 +200,7 @@ pub fn sample_color(doc: &Document, active: Option<LayerId>, x: f64, y: f64, siz
 pub fn sample_color_at(doc: &Document, active: Option<LayerId>, x: f64, y: f64, size: u32, zoom: Option<f64>, which: SampleLayers) -> [f32; 4] {
     let Some(rect) = sample_rect_at(x, y, size, zoom, doc.bounds()) else { return [0.0; 4] };
     let Some(src) = sampled_document(doc, active, which) else { return [0.0; 4] };
-    let buf = photocraft_compose::render(&src, rect);
+    let buf = magicpic_compose::render(&src, rect);
     if size == 1 {
         return buf.px.first().copied().unwrap_or_default();
     }
@@ -208,7 +208,7 @@ pub fn sample_color_at(doc: &Document, active: Option<LayerId>, x: f64, y: f64, 
 }
 
 /// The colour model the averages are taken in: the document's, except CMYK. CMYK documents are
-/// composited in RGB (see `photocraft_compose`), and the profile's RGB → CMYK → RGB round trip
+/// composited in RGB (see `magicpic_compose`), and the profile's RGB → CMYK → RGB round trip
 /// is not exact (deep shadows move by several levels), so averaging in CMYK would make a 3×3
 /// sample of a flat area differ from its Point Sample. Their composite RGB is averaged instead.
 fn averaging_model(doc: &Document) -> ColorMode {
@@ -289,7 +289,7 @@ pub fn specs() -> Vec<CommandSpec> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_doc::{Adjustment, Layer, Size};
+    use magicpic_doc::{Adjustment, Layer, Size};
 
     /// A `w`×`h` document of `mode`/`depth` whose background is `px(x, y)` (RGBA, converted to
     /// the document's channels).
@@ -300,7 +300,7 @@ mod tests {
         let fmt = s.format();
         for y in 0..h as i32 {
             for x in 0..w as i32 {
-                s.write_pixel(x, y, &photocraft_raster::from_rgba(&fmt, px(x, y)));
+                s.write_pixel(x, y, &magicpic_raster::from_rgba(&fmt, px(x, y)));
             }
         }
         d.layers.push(bg);
@@ -367,9 +367,9 @@ mod tests {
         let (red, blue) = ([1.0, 0.0, 0.0, 1.0], [0.0, 0.0, 1.0, 1.0]);
         for mode in [ColorMode::Cmyk, ColorMode::Lab] {
             let fmt = PixelFormat::new(mode, SampleType::F32, false);
-            let (r, b) = (photocraft_raster::from_rgba(&fmt, red), photocraft_raster::from_rgba(&fmt, blue));
+            let (r, b) = (magicpic_raster::from_rgba(&fmt, red), magicpic_raster::from_rgba(&fmt, blue));
             let mean: Vec<f32> = r.iter().zip(&b).map(|(x, y)| (x + y) / 2.0).collect();
-            let want = photocraft_raster::to_rgba(&fmt, &mean);
+            let want = magicpic_raster::to_rgba(&fmt, &mean);
             let got = average(&[red, blue], mode, SampleType::F32);
             assert!(close(got, want, 1e-5), "{mode:?}: {got:?} vs {want:?}");
             assert!(!close(got, [0.5, 0.0, 0.5, 1.0], 0.02), "{mode:?} averaged in RGB: {got:?}");
@@ -475,7 +475,7 @@ mod tests {
         let l = d.layer_mut(red).unwrap();
         l.visible = false;
         l.opacity = 0.5;
-        l.blend = photocraft_color::BlendMode::Multiply;
+        l.blend = magicpic_color::BlendMode::Multiply;
         assert!(close8(s(&d, Some(red), SampleLayers::Current), cur));
     }
 

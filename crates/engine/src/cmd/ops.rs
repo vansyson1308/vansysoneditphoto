@@ -164,10 +164,10 @@ pub(crate) fn translate_layer(doc: &Document, l: &mut Layer, dx: i32, dy: i32) {
 /// it come back on the opposite edge (View › Pattern Preview). Type, shapes and smart objects
 /// still move in a straight line: their geometry is not a tile of samples, and a linked mask on
 /// those layers follows that raw delta.
-pub(crate) fn translate_layer_wrapped(doc: &Document, l: &mut Layer, dx: i32, dy: i32, wrap: Option<photocraft_geom::Rect>) {
+pub(crate) fn translate_layer_wrapped(doc: &Document, l: &mut Layer, dx: i32, dy: i32, wrap: Option<magicpic_geom::Rect>) {
     use crate::layer_multi_cmds::shift_surface as translate_surface;
     use crate::layer_multi_cmds::wrap_surface;
-    let move_px = |s: &photocraft_raster::Surface, wrap: Option<photocraft_geom::Rect>| match wrap {
+    let move_px = |s: &magicpic_raster::Surface, wrap: Option<magicpic_geom::Rect>| match wrap {
         Some(tile) => wrap_surface(s, dx, dy, tile),
         None => translate_surface(s, dx, dy),
     };
@@ -184,11 +184,11 @@ pub(crate) fn translate_layer_wrapped(doc: &Document, l: &mut Layer, dx: i32, dy
     match &mut l.content {
         LayerContent::Raster(s) => *s = move_px(s, wrap),
         LayerContent::Text(t) => {
-            t.transform = photocraft_geom::Affine::translate(dx as f64, dy as f64).mul(&t.transform);
+            t.transform = magicpic_geom::Affine::translate(dx as f64, dy as f64).mul(&t.transform);
             // A whole-pixel move shifts the rendered text and its PSD position as they are.
             // Re-rendering would replace Photoshop's rendering of imported type, and drop the
             // text when its font is missing (artboard export, moving type with the Move tool).
-            let raw = t.psd_raw.as_deref().map(|r| photocraft_text::psd::translate_tysh(r, f64::from(dx), f64::from(dy)));
+            let raw = t.psd_raw.as_deref().map(|r| magicpic_text::psd::translate_tysh(r, f64::from(dx), f64::from(dy)));
             match (&mut t.cache, raw) {
                 (Some(c), Some(Some(r))) => {
                     *c = translate_surface(c, dx, dy);
@@ -240,17 +240,17 @@ pub(super) fn merge_group(s: &mut Session, id: LayerId) -> Result<Value> {
             return Err(EngineError::Other("the group is hidden".into()));
         }
         let fmt = doc.pixel_format();
-        let fmt = photocraft_color::PixelFormat::new(fmt.mode, fmt.sample, true);
+        let fmt = magicpic_color::PixelFormat::new(fmt.mode, fmt.sample, true);
         let mut solo = group.clone();
         solo.opacity = 1.0;
-        solo.blend = photocraft_doc::BlendMode::Normal;
+        solo.blend = magicpic_doc::BlendMode::Normal;
         solo.clipped = false;
         let mut tmp = doc.clone();
         tmp.layers = vec![solo];
         let mut merged = Layer::new(group.name.clone(), LayerContent::Raster(pixels::composite_layers_uncropped(&tmp, fmt)));
         merged.id = group.id;
         merged.opacity = group.opacity;
-        merged.blend = if group.blend == photocraft_doc::BlendMode::PassThrough { photocraft_doc::BlendMode::Normal } else { group.blend };
+        merged.blend = if group.blend == magicpic_doc::BlendMode::PassThrough { magicpic_doc::BlendMode::Normal } else { group.blend };
         merged.clipped = group.clipped;
         merged.locks = group.locks;
         *doc.layer_mut(id).ok_or(EngineError::NoLayer(id))? = merged;
@@ -277,7 +277,7 @@ mod tests {
         s.execute("layer.layerMask.revealSelection", json!({})).unwrap();
         let b = s.execute("layer.new.layer", json!({})).unwrap()["layer"].as_u64().unwrap();
         let group = s.execute("layer.groupLayers", json!({"layer": b})).unwrap()["layer"].as_u64().unwrap();
-        let mask_of = |s: &Session, id: u64| s.active().unwrap().doc.layer(photocraft_doc::LayerId(id)).unwrap().mask.clone();
+        let mask_of = |s: &Session, id: u64| s.active().unwrap().doc.layer(magicpic_doc::LayerId(id)).unwrap().mask.clone();
         let original = mask_of(&s, a).expect("a has a mask");
         // Move onto the group.
         s.execute("layer.layerMask.moveTo", json!({"layer": a, "to": group})).unwrap();
@@ -316,14 +316,14 @@ mod tests {
         s.execute("layer.layerMask.edit", json!({"layer": a, "density": 40})).unwrap();
         s.execute("layer.layerMask.enabled", json!({"layer": a, "enabled": false})).unwrap();
         let doc = s.active().unwrap().doc.clone();
-        let mask = doc.layer(photocraft_doc::LayerId(a)).unwrap().mask.clone().expect("a has a mask");
+        let mask = doc.layer(magicpic_doc::LayerId(a)).unwrap().mask.clone().expect("a has a mask");
         assert!(!mask.enabled && (mask.density - 0.4).abs() < 1e-6, "set up: disabled, 40% density");
         let history = s.active().unwrap().history.entries();
         for (copy, replace) in [(false, false), (true, false), (false, true), (true, true)] {
             let r = s.execute("layer.layerMask.moveTo", json!({"layer": a, "to": a, "copy": copy, "replace": replace}));
             assert!(r.is_err(), "copy: {copy}, replace: {replace}: refused");
             let st = s.active().unwrap();
-            assert_eq!(st.doc.layer(photocraft_doc::LayerId(a)).unwrap().mask.as_ref(), Some(&mask), "copy: {copy}, replace: {replace}: the mask is untouched");
+            assert_eq!(st.doc.layer(magicpic_doc::LayerId(a)).unwrap().mask.as_ref(), Some(&mask), "copy: {copy}, replace: {replace}: the mask is untouched");
             assert!(st.doc == doc, "copy: {copy}, replace: {replace}: the document is unchanged");
             assert_eq!(st.history.entries(), history, "copy: {copy}, replace: {replace}: no history step");
         }
@@ -344,7 +344,7 @@ mod tests {
         s.execute("layer.layerMask.hideSelection", json!({"layer": b})).unwrap();
         s.execute("layer.layerMask.enabled", json!({"layer": b, "enabled": false})).unwrap();
         let c = s.execute("layer.new.layer", json!({})).unwrap()["layer"].as_u64().unwrap();
-        let mask_of = |s: &Session, id: u64| s.active().unwrap().doc.layer(photocraft_doc::LayerId(id)).unwrap().mask.clone();
+        let mask_of = |s: &Session, id: u64| s.active().unwrap().doc.layer(magicpic_doc::LayerId(id)).unwrap().mask.clone();
         let (mask_a, mask_b) = (mask_of(&s, a).expect("a has a mask"), mask_of(&s, b).expect("b has a mask"));
         assert_ne!(mask_a, mask_b, "set up: two different masks");
         let doc = s.active().unwrap().doc.clone();

@@ -1,9 +1,9 @@
 //! #12074: a Type Mask that runs past the canvas edge keeps the off-canvas part of its selection,
 //! as the reference application does; masks fully on the canvas select exactly as before.
 
-use photocraft_doc::{LayerContent, LayerId};
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use magicpic_doc::{LayerContent, LayerId};
+use magicpic_geom::Rect;
+use magicpic_raster::Surface;
 use serde_json::{Value, json};
 
 use crate::Session;
@@ -197,7 +197,7 @@ fn replace_and_intersect_drop_an_off_canvas_previous_selection() {
 /// nothing, not an abort.
 #[test]
 fn an_unusual_earlier_selection_keeps_its_format_or_fails_cleanly() {
-    use photocraft_color::{PixelFormat, SampleType};
+    use magicpic_color::{PixelFormat, SampleType};
     let format = PixelFormat::GRAY8.with_sample(SampleType::F32);
     let earlier = Rect::new(-50, 50, 50, 120);
     let mut old = Surface::new(format);

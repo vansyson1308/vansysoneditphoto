@@ -12,12 +12,12 @@ const PATTERN_UPLOAD_BAND_BYTES: u64 = 4 << 20;
 
 fn pattern_upload_bands(
     pat: &Pattern,
-    mode: photocraft_color::ColorMode,
+    mode: magicpic_color::ColorMode,
     max_band_bytes: u64,
     mut upload: impl FnMut(u32, u32, &[u8]),
 ) -> Result<(), Unsupported> {
     let mut bytes = Vec::new();
-    photocraft_compose::pattern::pattern_rgba_bands(pat, mode, max_band_bytes, |top, pixels| {
+    magicpic_compose::pattern::pattern_rgba_bands(pat, mode, max_band_bytes, |top, pixels| {
         let len = pixels.len().checked_mul(16)?;
         bytes.clear();
         bytes.try_reserve_exact(len).ok()?;
@@ -352,7 +352,7 @@ impl Compositor {
         }
         let format = surface.format();
         let kind = TexKind::for_surface(key.1, format);
-        let cmyk = if format.mode == photocraft_color::ColorMode::Cmyk { self.cmyk } else { 0 };
+        let cmyk = if format.mode == magicpic_color::ColorMode::Cmyk { self.cmyk } else { 0 };
         let default_pixel = surface.default_pixel();
         let default_bits: Vec<u32> = default_pixel.iter().map(|v| v.to_bits()).collect();
         let stale = self
@@ -552,7 +552,7 @@ impl Compositor {
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod pattern_upload_tests {
     use super::*;
-    use photocraft_color::{ColorMode, PixelFormat, SampleType};
+    use magicpic_color::{ColorMode, PixelFormat, SampleType};
 
     fn fixture(sample: SampleType) -> Pattern {
         let mut surface = Surface::new(PixelFormat::new(ColorMode::Rgb, sample, true));

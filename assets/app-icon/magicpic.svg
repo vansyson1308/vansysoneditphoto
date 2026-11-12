@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <title>MagicPic</title>
+  <defs>
+    <linearGradient id="field" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6a3df0"/>
+      <stop offset="1" stop-color="#e2469a"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#field)"/>
+  <rect x="92" y="162" width="290" height="240" rx="40" fill="none" stroke="#ffffff" stroke-width="30"/>
+  <path d="M120 372 L204 276 L258 334 L292 300 L354 372 Z" fill="#ffffff"/>
+  <circle cx="172" cy="232" r="24" fill="#ffffff"/>
+  <path d="M392 58 C399 118 420 139 480 146 C420 153 399 174 392 234 C385 174 364 153 304 146 C364 139 385 118 392 58 Z" fill="#ffe36b" stroke="#7a3fe4" stroke-width="16" stroke-linejoin="round" paint-order="stroke"/>
+  <path d="M438 268 C441 292 449 300 473 303 C449 306 441 314 438 338 C435 314 427 306 403 303 C427 300 435 292 438 268 Z" fill="#ffe36b"/>
+</svg>

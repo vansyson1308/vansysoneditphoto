@@ -9,9 +9,9 @@
 //! Units: Levels and Curves in 0–255 levels; percentages for the rest (as in Photoshop's dialogs);
 //! colours as `"#rrggbb"` or `[r, g, b]` in 0–1.
 
-use photocraft_color::ColorMode;
-use photocraft_doc::Adjustment;
-use photocraft_doc::adjust::{CURVE_MAP_LEN, CurvePoint, HueRange, LevelsChannel, ToneSpace, curve_map, curve_map_outputs};
+use magicpic_color::ColorMode;
+use magicpic_doc::Adjustment;
+use magicpic_doc::adjust::{CURVE_MAP_LEN, CurvePoint, HueRange, LevelsChannel, ToneSpace, curve_map, curve_map_outputs};
 use serde_json::{Map, Value, json};
 
 use crate::{EngineError, Result};
@@ -225,7 +225,7 @@ pub fn from_params(kind: &str, p: &Value, base: Option<&Adjustment>, mode: Color
                         (stops0, source0)
                     } else {
                         let src = gradient_source(&cmd, v)?;
-                        (photocraft_io::gradient_bake::bake_source(&src), Some(src))
+                        (magicpic_io::gradient_bake::bake_source(&src), Some(src))
                     }
                 }
                 (None, None | Some(Value::Null)) => (stops0, source0),
@@ -579,7 +579,7 @@ fn lut_at(lut: &[f32], x: f32) -> f32 {
 
 /// A point curve drawn into a pencil-mode map (Photoshop switching to "Draw to modify the curve").
 pub fn points_to_map(points: &[CurvePoint]) -> Vec<CurvePoint> {
-    let lut = photocraft_compose::adjust::curve_lut(points);
+    let lut = magicpic_compose::adjust::curve_lut(points);
     let last = (CURVE_MAP_LEN - 1) as f32;
     curve_map(&(0..CURVE_MAP_LEN).map(|k| lut_at(&lut, k as f32 / last)).collect::<Vec<_>>())
 }
@@ -593,7 +593,7 @@ pub fn map_to_points(map: &[CurvePoint]) -> Vec<CurvePoint> {
     let at = |k: usize| CurvePoint { input: k as f32 / last as f32, output: target.get(k).copied().unwrap_or(0.0) };
     let mut pts = vec![at(0), at(last)];
     while pts.len() < MAX_FITTED_POINTS {
-        let lut = photocraft_compose::adjust::curve_lut(&pts);
+        let lut = magicpic_compose::adjust::curve_lut(&pts);
         let worst = (0..CURVE_MAP_LEN)
             .map(|k| (k, (lut_at(&lut, k as f32 / last as f32) - target.get(k).copied().unwrap_or(0.0)).abs()))
             .max_by(|a, b| a.1.total_cmp(&b.1));
@@ -753,10 +753,10 @@ fn rgb_luma(rgb: [f32; 3]) -> f32 {
 /// A non-monotone or flat curve may not have an exact inverse; the first nearest LUT entry gives
 /// a deterministic best fit.
 fn inverse_master_target(master: &[CurvePoint], target: f32) -> f32 {
-    if photocraft_doc::adjust::is_identity_curve(master) {
+    if magicpic_doc::adjust::is_identity_curve(master) {
         return target;
     }
-    let lut = photocraft_compose::adjust::curve_lut(master);
+    let lut = magicpic_compose::adjust::curve_lut(master);
     let Some(denominator) = lut.len().checked_sub(1).filter(|last| *last > 0) else { return target };
     let mut best_input = target;
     let mut best_error = f32::INFINITY;
@@ -813,7 +813,7 @@ fn set_levels_gamma(c: &mut LevelsChannel, sample: f32, target: f32) {
     }
     let reached = |gamma: f32| {
         let trial = LevelsChannel { gamma, ..c.clone() };
-        (photocraft_compose::adjust::levels(&trial, sample) - c.out_black) / span
+        (magicpic_compose::adjust::levels(&trial, sample) - c.out_black) / span
     };
     let (mut lo, mut hi) = (0.01f32.ln(), 9.99f32.ln());
     for _ in 0..40 {
@@ -956,7 +956,7 @@ pub fn destructive_eyedropper(s: &crate::Session, kind: &str, p: &Value) -> Resu
     let surface = if crate::channel_cmds::target_of(&p) == crate::channel_cmds::Target::FilterMask {
         let layer = target.layer.and_then(|id| d.doc.layer(id)).ok_or_else(|| bad(EYEDROPPER, "no target layer"))?;
         crate::smart_cmds::filter_mask_paintable(layer).map_err(EngineError::Other)?;
-        reveal_all = photocraft_doc::LayerMask::reveal_all();
+        reveal_all = magicpic_doc::LayerMask::reveal_all();
         crate::mask_view_cmds::viewed_mask(layer, true).map_or(&reveal_all.surface, |m| &m.surface)
     } else {
         crate::channel_cmds::read_target_surface(&d.doc, target.layer, &p)?
@@ -975,13 +975,13 @@ pub fn destructive_eyedropper(s: &crate::Session, kind: &str, p: &Value) -> Resu
 /// layer adjusts (the composite with the layer hidden, like its Properties histogram), so clicking
 /// the same pixel again maps it the same way. The picker edits the layer's adjustment with the
 /// other keys of `p` merged over it. `None` without the key.
-pub fn layer_eyedropper(s: &crate::Session, layer: photocraft_doc::LayerId, p: &Value) -> Result<Option<Adjustment>> {
+pub fn layer_eyedropper(s: &crate::Session, layer: magicpic_doc::LayerId, p: &Value) -> Result<Option<Adjustment>> {
     let Some(e) = p.get("eyedropper") else { return Ok(None) };
     let d = s.active().ok_or(EngineError::NoDocument)?;
     let l = d.doc.layer(layer).ok_or(EngineError::NoLayer(layer))?;
     let (kind, adj) = match &l.content {
-        photocraft_doc::LayerContent::Adjustment(adj @ Adjustment::Curves { .. }) => ("curves", adj),
-        photocraft_doc::LayerContent::Adjustment(adj @ Adjustment::Levels { .. }) => ("levels", adj),
+        magicpic_doc::LayerContent::Adjustment(adj @ Adjustment::Curves { .. }) => ("curves", adj),
+        magicpic_doc::LayerContent::Adjustment(adj @ Adjustment::Levels { .. }) => ("levels", adj),
         _ => return Err(bad(EYEDROPPER, "`eyedropper` applies to Levels and Curves adjustment layers only")),
     };
     let mut rest = p.clone();
@@ -997,10 +997,10 @@ const EYEDROPPER: &str = "eyedropper";
 
 /// The picker and sample of an `eyedropper` param; `at` samples `doc` with layer `hide` hidden.
 fn eyedropper_sample(
-    doc: &photocraft_doc::Document,
-    hide: Option<photocraft_doc::LayerId>,
+    doc: &magicpic_doc::Document,
+    hide: Option<magicpic_doc::LayerId>,
     e: &Value,
-    gray: Option<&photocraft_raster::Surface>,
+    gray: Option<&magicpic_raster::Surface>,
 ) -> Result<(CurvesEyedropper, [f32; 3])> {
     const CMD: &str = EYEDROPPER;
     let picker = match e.get("point").and_then(Value::as_str) {
@@ -1043,8 +1043,8 @@ fn eyedropper_sample(
             // Integer channels round the averaged value to their own depth; floats keep HDR.
             let depth = surface.format().sample;
             let mut encoded = [0u8; 4];
-            photocraft_color::write_sample(&mut encoded, depth, 0, mean);
-            let mean = photocraft_color::read_sample(&encoded, depth, 0);
+            magicpic_color::write_sample(&mut encoded, depth, 0, mean);
+            let mean = magicpic_color::read_sample(&encoded, depth, 0);
             return Ok((picker, [mean; 3]));
         }
         let all = crate::sample_cmds::SampleLayers::All;
@@ -1165,7 +1165,7 @@ fn curves(r: &Reader<'_>, base: Option<&Adjustment>, mode: ColorMode) -> Result<
         }
     }
     let [c0, c1, c2, black] = chans;
-    let identity = if pencil { is_identity_map(&black) } else { photocraft_doc::adjust::is_identity_curve(&black) };
+    let identity = if pencil { is_identity_map(&black) } else { magicpic_doc::adjust::is_identity_curve(&black) };
     let black = if space == ToneSpace::Cmyk && !identity { black } else { Vec::new() };
     Ok(Adjustment::Curves { master, per_channel: [c0, c1, c2], space, black, pencil })
 }
@@ -1196,7 +1196,7 @@ fn gradient_stops(cmd: &str, v: &Value) -> Result<Vec<(f32, [f32; 3])>> {
 
 /// A Gradient Map's Photoshop gradient as params: `{"stops": [[location, "#rrggbb"], …],
 /// "midpoints": [0.05..0.95 per segment], "smoothness": 0..1, "method": name}`.
-pub fn source_params(src: &photocraft_doc::adjust::GradientSource) -> Value {
+pub fn source_params(src: &magicpic_doc::adjust::GradientSource) -> Value {
     json!({
         "stops": src.stops.iter().map(|(t, c)| json!([t, hex(*c)])).collect::<Vec<_>>(),
         "midpoints": src.midpoints,
@@ -1207,7 +1207,7 @@ pub fn source_params(src: &photocraft_doc::adjust::GradientSource) -> Value {
 
 /// [`source_params`] read back, checked: 2..=64 stops (sorted), one midpoint (0.05..0.95) per
 /// segment (default halfway), Smoothness 0..1 (default 0), a known method (default classic).
-fn gradient_source(cmd: &str, v: &Value) -> Result<photocraft_doc::adjust::GradientSource> {
+fn gradient_source(cmd: &str, v: &Value) -> Result<magicpic_doc::adjust::GradientSource> {
     let o = v.as_object().ok_or_else(|| bad(cmd, "`source` must be {stops, midpoints?, smoothness?, method?}"))?;
     let stops = gradient_stops(cmd, o.get("stops").ok_or_else(|| bad(cmd, "`source.stops` is missing"))?)?;
     let segments = stops.len() - 1;
@@ -1226,11 +1226,11 @@ fn gradient_source(cmd: &str, v: &Value) -> Result<photocraft_doc::adjust::Gradi
     };
     let method = match o.get("method").and_then(Value::as_str) {
         None => "classic".to_string(),
-        Some(m) => photocraft_io::gradient_bake::Method::from_name(m)
+        Some(m) => magicpic_io::gradient_bake::Method::from_name(m)
             .map(|m| m.name().to_string())
             .ok_or_else(|| bad(cmd, "`source.method` must be classic, perceptual, linear or smooth"))?,
     };
-    Ok(photocraft_doc::adjust::GradientSource { stops, midpoints, smoothness, method })
+    Ok(magicpic_doc::adjust::GradientSource { stops, midpoints, smoothness, method })
 }
 
 /// Params with the private keys (`layer`, `coalesce`, `__kind`) removed.

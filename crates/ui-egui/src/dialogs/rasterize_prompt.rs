@@ -15,7 +15,7 @@
 
 use serde_json::{Map, Value, json};
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::state::{DialogKind, Tool};
 
 const MARK: &str = "__rasterize";
@@ -70,7 +70,7 @@ impl Kind {
 }
 
 /// Does `tool` paint the layer's pixels (so a vector or Smart Object layer must be rasterized)?
-pub fn paints_pixels(app: &PhotocraftApp, tool: Tool) -> bool {
+pub fn paints_pixels(app: &MagicpicApp, tool: Tool) -> bool {
     tool.is_brushlike()
         || matches!(tool, Tool::PaintBucket | Tool::MagicEraser | Tool::RedEye)
         || (tool == Tool::Gradient && app.ui.tool_options.gradient_classic)
@@ -79,7 +79,7 @@ pub fn paints_pixels(app: &PhotocraftApp, tool: Tool) -> bool {
 /// The active layer's kind when painting its pixels needs rasterizing first: the tool targets
 /// the layer's pixels (not its mask, an alpha channel or the Quick Mask) and the layer is a
 /// type, shape, Smart Object or fill layer that isn't locked.
-pub fn needed(app: &PhotocraftApp) -> Option<(Kind, photocraft_doc::LayerId)> {
+pub fn needed(app: &MagicpicApp) -> Option<(Kind, magicpic_doc::LayerId)> {
     if crate::canvas::paint_target(app) != json!("pixels") {
         return None;
     }
@@ -90,7 +90,7 @@ pub fn needed(app: &PhotocraftApp) -> Option<(Kind, photocraft_doc::LayerId)> {
     if locks.all || locks.pixels {
         return None;
     }
-    use photocraft_doc::LayerContent as C;
+    use magicpic_doc::LayerContent as C;
     let kind = match &l.content {
         C::Text(_) => Kind::Type,
         C::Shape(_) => Kind::Shape,
@@ -104,7 +104,7 @@ pub fn needed(app: &PhotocraftApp) -> Option<(Kind, photocraft_doc::LayerId)> {
 /// A tool's pointer press: when it would paint a layer that must be rasterized first, park it
 /// behind the prompt, or drop it (the Remove tool on a type layer), and return true (the tool
 /// must not see the press).
-pub fn intercept(app: &mut PhotocraftApp, tool: Tool, x: f64, y: f64, pressure: f32) -> bool {
+pub fn intercept(app: &mut MagicpicApp, tool: Tool, x: f64, y: f64, pressure: f32) -> bool {
     if !paints_pixels(app, tool) {
         return false;
     }
@@ -120,11 +120,11 @@ pub fn intercept(app: &mut PhotocraftApp, tool: Tool, x: f64, y: f64, pressure: 
 }
 
 /// Open the prompt for `layer`; OK rasterizes it. `tool` and `at` (x, y, pressure) only record the press that opened it.
-pub fn open(app: &mut PhotocraftApp, kind: Kind, layer: photocraft_doc::LayerId, tool: Tool, at: [f64; 3]) -> u64 {
+pub fn open(app: &mut MagicpicApp, kind: Kind, layer: magicpic_doc::LayerId, tool: Tool, at: [f64; 3]) -> u64 {
     let mut f = Map::new();
     f.insert(MARK.into(), json!(kind.key()));
     f.insert("__command".into(), json!(kind.command()));
-    f.insert("__label".into(), json!("PhotoCraft"));
+    f.insert("__label".into(), json!("MagicPic"));
     f.insert("message".into(), json!(kind.message()));
     f.insert("layer".into(), json!(layer.0));
     f.insert("tool".into(), json!(format!("{tool:?}")));
@@ -135,13 +135,13 @@ pub fn open(app: &mut PhotocraftApp, kind: Kind, layer: photocraft_doc::LayerId,
 /// The active type layer when `id` is a filter that only needs it rasterized: the engine greys it
 /// for not being a pixel layer, and the layer is not locked. The flag says whether the filter also
 /// runs on a Smart Object, as a smart filter (Vanishing Point doesn't).
-pub fn filter_needs(app: &PhotocraftApp, id: &str) -> Option<(photocraft_doc::LayerId, bool)> {
+pub fn filter_needs(app: &MagicpicApp, id: &str) -> Option<(magicpic_doc::LayerId, bool)> {
     if !id.starts_with("filter.") {
         return None;
     }
     let st = app.session.active()?;
     let layer = st.active_layer?;
-    if !matches!(st.doc.layer(layer)?.content, photocraft_doc::LayerContent::Text(_)) {
+    if !matches!(st.doc.layer(layer)?.content, magicpic_doc::LayerContent::Text(_)) {
         return None;
     }
     let locks = st.doc.effective_locks(layer);
@@ -149,7 +149,7 @@ pub fn filter_needs(app: &PhotocraftApp, id: &str) -> Option<(photocraft_doc::La
         return None;
     }
     // Last Filter checks the layer before the journal: with no filter to repeat it stays grey.
-    if id == "filter.lastFilter" && photocraft_engine::filters::last_filter(&app.session).is_none() {
+    if id == "filter.lastFilter" && magicpic_engine::filters::last_filter(&app.session).is_none() {
         return None;
     }
     // The engine's reason for a type layer: "filters need a pixel layer (active layer is a Type
@@ -161,14 +161,14 @@ pub fn filter_needs(app: &PhotocraftApp, id: &str) -> Option<(photocraft_doc::La
 }
 
 /// A filter chosen on a type layer: open the prompt instead and return its answer to the caller.
-pub fn intercept_filter(app: &mut PhotocraftApp, id: &str, params: &Value) -> Option<Result<Value, String>> {
+pub fn intercept_filter(app: &mut MagicpicApp, id: &str, params: &Value) -> Option<Result<Value, String>> {
     let (layer, smart) = filter_needs(app, id)?;
     if let Some(d) = app.ui.dialogs.iter().find(|d| owns(&d.fields)) {
         return Some(Ok(json!({"dialog": d.id})));
     }
     let mut f = Map::new();
     f.insert(MARK.into(), json!(Kind::Type.key()));
-    f.insert("__label".into(), json!("PhotoCraft"));
+    f.insert("__label".into(), json!("MagicPic"));
     f.insert("message".into(), json!(Kind::Type.message()));
     f.insert("layer".into(), json!(layer.0));
     f.insert("filter".into(), json!(id));
@@ -206,7 +206,7 @@ pub fn body(ui: &mut egui::Ui, f: &Map<String, Value>) {
 }
 
 /// OK: rasterize the layer. The click that opened the prompt does not paint.
-pub fn confirm(app: &mut PhotocraftApp, f: &Map<String, Value>) -> Result<Value, String> {
+pub fn confirm(app: &mut MagicpicApp, f: &Map<String, Value>) -> Result<Value, String> {
     let kind = f.get(MARK).and_then(Value::as_str).and_then(Kind::from_key).ok_or("not a rasterize prompt")?;
     let layer = f.get("layer").and_then(Value::as_u64).ok_or("the prompt has no layer")?;
     if let Some(filter) = f.get("filter").and_then(Value::as_str) {
@@ -229,7 +229,7 @@ pub fn confirm(app: &mut PhotocraftApp, f: &Map<String, Value>) -> Result<Value,
 /// The filter prompt's answer: convert or rasterize the layer, then queue the filter for
 /// [`run_pending`]. Liquify, Camera Raw and the other filters with their own window need the
 /// egui context to open, which a dialog's answer doesn't have.
-fn confirm_filter(app: &mut PhotocraftApp, f: &Map<String, Value>, filter: &str, layer: u64) -> Result<Value, String> {
+fn confirm_filter(app: &mut MagicpicApp, f: &Map<String, Value>, filter: &str, layer: u64) -> Result<Value, String> {
     let smart = f.get("choice").and_then(Value::as_str) == Some("smartObject");
     if smart && !offers_smart_object(f) {
         return Err(format!("{filter} can't run as a smart filter"));
@@ -242,7 +242,7 @@ fn confirm_filter(app: &mut PhotocraftApp, f: &Map<String, Value>, filter: &str,
 }
 
 /// Runs the filter a prompt was answered for, as the menu would, now that the layer can take it.
-pub fn run_pending(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn run_pending(app: &mut MagicpicApp, ctx: &egui::Context) {
     let Some((filter, params)) = app.pending_after_prompt.take() else { return };
     if let Err(e) = crate::menus::invoke(app, ctx, &filter, params) {
         app.ui.status = e;

@@ -2,23 +2,23 @@
 //! Photoshop's scripting activeLayer can stay nonempty when its target-layer list is empty.
 
 use egui::Modifiers;
-use photocraft_doc::LayerId;
-use photocraft_geom::Rect;
+use magicpic_doc::LayerId;
+use magicpic_geom::Rect;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::canvas::{ToolEvent, tool_event};
 use crate::state::{DialogKind, Tool};
 
 struct Fixture {
-    app: PhotocraftApp,
+    app: MagicpicApp,
     background: LayerId,
     layers: [LayerId; 3],
 }
 
 impl Fixture {
     fn new() -> Self {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 80, "height": 60})).unwrap();
         app.sync_views();
         let background = app.session.active().unwrap().doc.background().unwrap().id;

@@ -10,7 +10,7 @@
 use egui::{Event, Key};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::state::Tool;
 
 /// A second digit within this long of the first makes a two-digit value.
@@ -76,7 +76,7 @@ enum Press {
 
 /// Consumes this frame's unmodified (or ⇧) digit presses and applies them, and ⌥+digit presses
 /// for the tools with a Smoothing field, in the order they were typed.
-pub fn handle(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn handle(app: &mut MagicpicApp, ctx: &egui::Context) {
     let smoothing = has_smoothing(app.ui.tool);
     let presses: Vec<Press> = ctx.input_mut(|i| {
         let mut out = Vec::new();
@@ -128,7 +128,7 @@ pub fn handle(app: &mut PhotocraftApp, ctx: &egui::Context) {
 }
 
 /// One digit press at `now` (ms).
-pub fn press(app: &mut PhotocraftApp, d: u8, shift: bool, now: f64) {
+pub fn press(app: &mut MagicpicApp, d: u8, shift: bool, now: f64) {
     let percent = match app.opacity_keys.take() {
         Some((first, s, at)) if s == shift && now - at < TWO_DIGITS_MS && now >= at => f32::from(first * 10 + d),
         _ => {
@@ -139,7 +139,7 @@ pub fn press(app: &mut PhotocraftApp, d: u8, shift: bool, now: f64) {
     apply(app, percent, shift);
 }
 
-fn apply(app: &mut PhotocraftApp, percent: f32, shift: bool) {
+fn apply(app: &mut MagicpicApp, percent: f32, shift: bool) {
     let v = percent / 100.0;
     // With airbrush build-up on, the keys swap roles, as in Photoshop: plain digits set Flow, ⇧ digits Opacity.
     // A Pencil- or Block-mode Eraser has no build-up (its options bar disables Flow and the airbrush).
@@ -183,15 +183,15 @@ fn apply(app: &mut PhotocraftApp, percent: f32, shift: bool) {
 mod tests {
     use super::*;
 
-    fn app(tool: Tool) -> PhotocraftApp {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    fn app(tool: Tool) -> MagicpicApp {
+        let mut app = MagicpicApp::new(magicpic_engine::Session::new(), Default::default());
         app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
         app.run("layer.new.layer", json!({})).unwrap();
         app.ui.tool = tool;
         app
     }
 
-    fn layer(app: &PhotocraftApp) -> (f32, f32) {
+    fn layer(app: &MagicpicApp) -> (f32, f32) {
         let st = app.session.active().unwrap();
         let l = st.doc.layer(st.active_layer.unwrap()).unwrap();
         (l.opacity, l.fill_opacity)
@@ -296,7 +296,7 @@ mod tests {
         a.run("layer.select", json!({"layer": bg.0})).unwrap();
         press(&mut a, 5, false, 30000.0);
         assert_eq!(a.session.active().unwrap().doc.layers[0].opacity, 1.0);
-        let mut none = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+        let mut none = MagicpicApp::new(magicpic_engine::Session::new(), Default::default());
         press(&mut none, 5, false, 0.0);
     }
 
@@ -337,13 +337,13 @@ mod tests {
     fn keys_work_in_the_app() {
         use egui_kittest::Harness;
         let mut h = Harness::builder().with_size(egui::vec2(1200.0, 800.0)).with_max_steps(64).build_eframe(|cc| {
-            PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+            MagicpicApp::setup_context(&cc.egui_ctx, Default::default());
             let mut a = app(Tool::Brush);
             a.run("tools.setBrush", json!({"brush": {"hardness": 0.5, "opacity": 1.0, "flow": 1.0}})).unwrap();
             a
         });
         h.run_steps(4);
-        let key = |h: &mut Harness<'_, PhotocraftApp>, k: Key, m: egui::Modifiers| {
+        let key = |h: &mut Harness<'_, MagicpicApp>, k: Key, m: egui::Modifiers| {
             h.event(Event::Key { key: k, physical_key: Some(k), pressed: true, repeat: false, modifiers: m });
             h.event(Event::Key { key: k, physical_key: Some(k), pressed: false, repeat: false, modifiers: m });
             h.run_steps(2);

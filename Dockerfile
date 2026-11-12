@@ -25,8 +25,8 @@ RUN set -eu; \
     asset="trunk-${arch}-unknown-linux-musl.tar.gz"; \
     url="https://github.com/trunk-rs/trunk/releases/download/v${TRUNK_VERSION}"; \
     cd /tmp; \
-    curl --proto '=https' -fsSL --retry 3 -A Photocraft-dev "$url/$asset" -o "$asset"; \
-    curl --proto '=https' -fsSL --retry 3 -A Photocraft-dev "$url/$asset.sha256" -o "$asset.sha256"; \
+    curl --proto '=https' -fsSL --retry 3 -A Magicpic-dev "$url/$asset" -o "$asset"; \
+    curl --proto '=https' -fsSL --retry 3 -A Magicpic-dev "$url/$asset.sha256" -o "$asset.sha256"; \
     printf '%s  %s\n' "$(cat "$asset.sha256")" "$asset" | sha256sum -c -; \
     tar -xzf "$asset" -C /usr/local/bin trunk; \
     rm "$asset" "$asset.sha256"; \
@@ -39,22 +39,22 @@ COPY craft-i18n.rev ./
 RUN set -eu; \
     rev="$(tr -d '[:space:]' < craft-i18n.rev)"; \
     mkdir -p /opt/craft-i18n; \
-    curl --proto '=https' -fsSL --retry 3 -A Photocraft-dev "https://codeload.github.com/storytold/craft-i18n/tar.gz/$rev" \
+    curl --proto '=https' -fsSL --retry 3 -A Magicpic-dev "https://codeload.github.com/storytold/craft-i18n/tar.gz/$rev" \
         | tar -xz --strip-components=1 -C /opt/craft-i18n; \
     test -d /opt/craft-i18n/locales
 ENV CRAFT_I18N_DIR=/opt/craft-i18n CRAFT_I18N_REQUIRED=1
 COPY . .
-WORKDIR /src/apps/photocraft-web
+WORKDIR /src/apps/magicpic-web
 # Docker serving has no static-host per-file size cap. Thin LTO uses less build
 # memory than the release zip's fat LTO; retain the profile's other optimizations.
 ARG CARGO_PROFILE_WASM_RELEASE_LTO=thin
 ARG CARGO_BUILD_JOBS=1
 # Optional build provenance shown in About and `--version` (crates/engine/src/build_info.rs).
 # .git is not in the build context, so pass it in, e.g.
-#   --build-arg PHOTOCRAFT_BUILD_SHA=$(git rev-parse HEAD) --build-arg PHOTOCRAFT_BUILD_DATE=$(date -u +%F)
+#   --build-arg MAGICPIC_BUILD_SHA=$(git rev-parse HEAD) --build-arg MAGICPIC_BUILD_DATE=$(date -u +%F)
 # Left empty, the build reports itself as a dev build.
-ARG PHOTOCRAFT_BUILD_SHA=
-ARG PHOTOCRAFT_BUILD_DATE=
+ARG MAGICPIC_BUILD_SHA=
+ARG MAGICPIC_BUILD_DATE=
 # index.html selects the wasm-release profile, HEIF support and wasm-opt -Oz.
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/src/target \

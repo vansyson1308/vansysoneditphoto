@@ -1,4 +1,4 @@
-// Shadows and Highlights for Camera Raw's GPU preview: `photocraft_algo::camera_raw::local_tone`
+// Shadows and Highlights for Camera Raw's GPU preview: `magicpic_algo::camera_raw::local_tone`
 // (the fast local Laplacian filter of Paris, Hasinoff and Kautz, SIGGRAPH 2011, in Aubry et al.'s
 // form, ACM TOG 2014) as fragment passes, and the order statistics it and Whites and Blacks read.
 // `camera_raw_tone.rs` holds the bindings and the order of the passes.

@@ -1,13 +1,13 @@
 use super::*;
 use egui::{Event, Pos2, RawInput, Vec2, ViewportId};
-use photocraft_engine::Session;
+use magicpic_engine::Session;
 
 /// #5826: the drag overlay under a dialog doesn't depend on the custom title bar. On macOS
 /// (OS traffic lights over the app's own title strip) a dialog left the window undraggable.
 #[test]
 fn a_dialog_keeps_the_title_strip_draggable_with_either_title_bar() {
     for custom in [false, true] {
-        let mut app = PhotocraftApp::new(Session::new(), crate::Services::default());
+        let mut app = MagicpicApp::new(Session::new(), crate::Services::default());
         app.custom_titlebar = custom;
         app.run("file.new", serde_json::json!({"width": 8, "height": 8})).unwrap();
         assert!(!app.titlebar_modal_drag(true), "no dialog, no overlay");
@@ -22,7 +22,7 @@ fn a_dialog_keeps_the_title_strip_draggable_with_either_title_bar() {
 /// A headless window `width` pt wide showing the title bar and the resize zones.
 struct Win {
     ctx: egui::Context,
-    app: PhotocraftApp,
+    app: MagicpicApp,
     width: f32,
     height: f32,
     /// Where the window's content is on the screen, and its outer rect's offset from that.
@@ -45,8 +45,8 @@ struct Win {
 impl Win {
     fn new(width: f32) -> Self {
         let ctx = egui::Context::default();
-        PhotocraftApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
-        let mut app = PhotocraftApp::new(Session::new(), crate::Services::default());
+        MagicpicApp::setup_context(&ctx, crate::theme::ThemeKind::ALL[0]);
+        let mut app = MagicpicApp::new(Session::new(), crate::Services::default());
         app.custom_titlebar = true;
         let at = pos2(200.0, 100.0);
         Self {
@@ -88,7 +88,7 @@ impl Win {
             v.inner_rect = Some(inner);
             v.outer_rect = Some(Rect::from_min_max(inner.min + self.frame_offset, inner.max - self.frame_offset));
         }
-        // What `PhotocraftApp::raw_input_hook` does.
+        // What `MagicpicApp::raw_input_hook` does.
         release_after_os_resize(&self.ctx, &mut input);
         let app = &mut self.app;
         let mut out = self.ctx.run_ui(input, |ui| {

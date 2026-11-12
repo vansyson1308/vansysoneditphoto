@@ -1,18 +1,18 @@
 //! #12536: a Paint Bucket click in a Bitmap document opens the reference application's alert with
 //! OK and fills nothing; an RGB document still fills.
 
-use photocraft_engine::paint_cmds::BITMAP_REFUSAL as TEXT;
+use magicpic_engine::paint_cmds::BITMAP_REFUSAL as TEXT;
 use serde_json::json;
 
 use super::brush_refusal_alert_tests::{alerts, app, refused, steps, stroke};
 use super::*;
 use crate::control::{ControlRequest, Outcome, handle};
 
-fn bitmap() -> PhotocraftApp {
+fn bitmap() -> MagicpicApp {
     let mut app = app(Tool::PaintBucket);
     app.run("image.mode.grayscale", json!({})).unwrap();
     app.run("image.mode.bitmap", json!({})).unwrap();
-    assert_eq!(app.session.active().unwrap().doc.mode, photocraft_doc::ColorMode::Bitmap);
+    assert_eq!(app.session.active().unwrap().doc.mode, magicpic_doc::ColorMode::Bitmap);
     app
 }
 

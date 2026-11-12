@@ -3,7 +3,7 @@
 //! Three things, all of which leave the document they look at unchanged:
 //!
 //! * **Views** (`seeing.view`): a reduced render of the document, or of a region of it, shown
-//!   plainly or through one of the [`photocraft_algo::seeing::View`]s (tones, colour masses,
+//!   plainly or through one of the [`magicpic_algo::seeing::View`]s (tones, colour masses,
 //!   shapes, lines, colour without tone). A view is returned as a PNG; it is never written into
 //!   the document, so it cannot end up in an export by accident. `seeing.study.*` opens a view
 //!   as a separate document for looking at in the app.
@@ -20,11 +20,11 @@
 //! is recorded, as they give it, with `seeing.note`.
 
 use base64::Engine as _;
-use photocraft_algo::seeing::{self, Chance, Frame, FrameParams, View, ViewParams};
-use photocraft_color::{ColorMode, SampleType};
-use photocraft_doc::{Document, Layer, LayerContent, Note};
-use photocraft_geom::{Rect, Size};
-use photocraft_raster::Surface;
+use magicpic_algo::seeing::{self, Chance, Frame, FrameParams, View, ViewParams};
+use magicpic_color::{ColorMode, SampleType};
+use magicpic_doc::{Document, Layer, LayerContent, Note};
+use magicpic_geom::{Rect, Size};
+use magicpic_raster::Surface;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
@@ -35,7 +35,15 @@ use crate::{EngineError, Result, Session};
 /// Recipe format version written by this build.
 pub const RECIPE_VERSION: u32 = 1;
 /// Author of the notes that hold a variant's recipe and the viewer's reactions.
-pub const NOTE_AUTHOR: &str = "PhotoCraft Seeing";
+pub const NOTE_AUTHOR: &str = "MagicPic Seeing";
+/// The author these notes carried before the product was renamed. A variant saved then keeps its
+/// recipe and reactions.
+const EARLIER_NOTE_AUTHOR: &str = "PhotoCraft Seeing";
+
+/// Whether `note` is one this feature wrote.
+fn ours(note: &Note) -> bool {
+    note.author == NOTE_AUTHOR || note.author == EARLIER_NOTE_AUTHOR
+}
 const RECIPE_PREFIX: &str = "recipe: ";
 const REACTION_PREFIX: &str = "reaction: ";
 /// Most steps in one recipe.
@@ -76,8 +84,8 @@ pub struct Source {
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct Recipe {
     /// Format version ([`RECIPE_VERSION`]).
-    #[serde(default = "version")]
-    pub photocraft_seeing: u32,
+    #[serde(default = "version", alias = "photocraftSeeing")]
+    pub magicpic_seeing: u32,
     /// Short name of the variant ("exposure +2 EV").
     #[serde(default)]
     pub label: String,
@@ -172,7 +180,7 @@ fn experiment(kind: &str, seed: u64, rng: &mut Chance, width: u32, height: u32) 
         }
         _ => return None,
     };
-    Some(Recipe { photocraft_seeing: RECIPE_VERSION, label, kind: Some(kind.into()), rule: Some(rule.into()), seed: Some(seed), frame, steps, source: None })
+    Some(Recipe { magicpic_seeing: RECIPE_VERSION, label, kind: Some(kind.into()), rule: Some(rule.into()), seed: Some(seed), frame, steps, source: None })
 }
 
 /// The recipe for `kind` and `seed`: a pure function of both and the picture's size.
@@ -281,7 +289,7 @@ fn render_view(
         return Err(bad(cmd, "the document has no pixels"));
     }
     let buf = match region {
-        None => photocraft_compose::thumbnail_buffer(doc, max_side),
+        None => magicpic_compose::thumbnail_buffer(doc, max_side),
         Some(f) => {
             if u64::from(f.width) * u64::from(f.height) > MAX_SOURCE_PIXELS {
                 return Err(bad(cmd, format!("`region` covers more than {MAX_SOURCE_PIXELS} pixels; pass a smaller region")));
@@ -290,13 +298,13 @@ fn render_view(
             let scale = (max_side as f32 / f.width.max(f.height) as f32).min(1.0);
             let w = ((f.width as f32 * scale).round() as u32).max(1);
             let h = ((f.height as f32 * scale).round() as u32).max(1);
-            photocraft_compose::render_reduced_rect(doc, rect, w, h)
+            magicpic_compose::render_reduced_rect(doc, rect, w, h)
         }
     };
     let (w, h) = (buf.rect.width(), buf.rect.height());
     let mut px = buf.into_px();
     if linear {
-        let encode = |v: f32| if v.is_finite() { photocraft_color::convert::linear_to_srgb(v.clamp(0.0, 65504.0)) } else { 0.0 };
+        let encode = |v: f32| if v.is_finite() { magicpic_color::convert::linear_to_srgb(v.clamp(0.0, 65504.0)) } else { 0.0 };
         for q in px.iter_mut() {
             *q = [encode(q[0]), encode(q[1]), encode(q[2]), q[3]];
         }
@@ -347,10 +355,10 @@ fn view(s: &mut Session, p: &Value) -> Result<Value> {
     let (w, h, px) = render_view(CMD, doc, is_linear(s, doc), region, max_side, view, params)?;
     let to_u8 = |v: f32| (v.clamp(0.0, 1.0) * 255.0 + 0.5) as u8;
     let (layout, mime, format, options) = if jpeg {
-        let options = photocraft_codecs::EncodeOptions { jpeg_quality: quality, ..Default::default() };
-        (photocraft_codecs::ChannelLayout::Rgb, "image/jpeg", photocraft_codecs::Format::Jpeg, options)
+        let options = magicpic_codecs::EncodeOptions { jpeg_quality: quality, ..Default::default() };
+        (magicpic_codecs::ChannelLayout::Rgb, "image/jpeg", magicpic_codecs::Format::Jpeg, options)
     } else {
-        (photocraft_codecs::ChannelLayout::Rgba, "image/png", photocraft_codecs::Format::Png, Default::default())
+        (magicpic_codecs::ChannelLayout::Rgba, "image/png", magicpic_codecs::Format::Png, Default::default())
     };
     let mut bytes = Vec::with_capacity(px.len().saturating_mul(4));
     for q in &px {
@@ -362,8 +370,8 @@ fn view(s: &mut Session, p: &Value) -> Result<Value> {
             bytes.extend(q.map(to_u8));
         }
     }
-    let image = photocraft_codecs::Image::from_u8(w, h, layout, bytes).map_err(|e| EngineError::Other(e.to_string()))?;
-    let encoded = photocraft_codecs::encode(&image, format, &options).map_err(|e| EngineError::Other(e.to_string()))?;
+    let image = magicpic_codecs::Image::from_u8(w, h, layout, bytes).map_err(|e| EngineError::Other(e.to_string()))?;
+    let encoded = magicpic_codecs::encode(&image, format, &options).map_err(|e| EngineError::Other(e.to_string()))?;
     Ok(json!({
         "mime": mime,
         "base64": base64::engine::general_purpose::STANDARD.encode(&encoded),
@@ -402,7 +410,7 @@ fn study(s: &mut Session, p: &Value, fixed: Option<View>) -> Result<Value> {
     }
     let fmt = doc.pixel_format();
     let mut surf = Surface::new(fmt);
-    let vals: Vec<f32> = px.iter().flat_map(|q| photocraft_raster::from_rgba(&fmt, *q)).collect();
+    let vals: Vec<f32> = px.iter().flat_map(|q| magicpic_raster::from_rgba(&fmt, *q)).collect();
     surf.write_region(doc.bounds(), &vals);
     surf.prune();
     doc.layers = vec![Layer::new(format!("Study: {}", view.id()), LayerContent::Raster(surf))];
@@ -476,8 +484,8 @@ fn experiments(s: &mut Session, p: &Value) -> Result<Value> {
 }
 
 fn check_recipe(cmd: &str, r: &Recipe) -> Result<()> {
-    if r.photocraft_seeing != RECIPE_VERSION {
-        return Err(bad(cmd, format!("recipe version {} is not supported (this build reads version {RECIPE_VERSION})", r.photocraft_seeing)));
+    if r.magicpic_seeing != RECIPE_VERSION {
+        return Err(bad(cmd, format!("recipe version {} is not supported (this build reads version {RECIPE_VERSION})", r.magicpic_seeing)));
     }
     if r.steps.len() > MAX_STEPS {
         return Err(bad(cmd, format!("a recipe has at most {MAX_STEPS} steps")));
@@ -552,7 +560,7 @@ fn make_variant(s: &mut Session, cmd: &str, mut recipe: Recipe, name: Option<&st
         let note = recipe_note(&recipe)?;
         failed = s
             .edit("Seeing Recipe", |doc, _| {
-                doc.notes.retain(|n| n.author != NOTE_AUTHOR);
+                doc.notes.retain(|n| !ours(n));
                 doc.notes.push(note);
                 Ok(())
             })
@@ -622,9 +630,9 @@ fn chance_variant(s: &mut Session, p: &Value) -> Result<Value> {
 
 /// The recipe and the reactions stored in a document's notes.
 fn stored(doc: &Document) -> (Option<Recipe>, Vec<&str>) {
-    let ours = || doc.notes.iter().filter(|n| n.author == NOTE_AUTHOR);
-    let recipe = ours().filter_map(|n| n.text.strip_prefix(RECIPE_PREFIX)).filter_map(|t| serde_json::from_str::<Recipe>(t).ok()).next_back();
-    (recipe, ours().filter_map(|n| n.text.strip_prefix(REACTION_PREFIX)).collect())
+    let mine = || doc.notes.iter().filter(|n| ours(n));
+    let recipe = mine().filter_map(|n| n.text.strip_prefix(RECIPE_PREFIX)).filter_map(|t| serde_json::from_str::<Recipe>(t).ok()).next_back();
+    (recipe, mine().filter_map(|n| n.text.strip_prefix(REACTION_PREFIX)).collect())
 }
 
 /// `seeing.recipe`: the recipe the active document was made with, and the reactions noted. A query.

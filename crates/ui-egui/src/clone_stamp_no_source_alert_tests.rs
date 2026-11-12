@@ -5,7 +5,7 @@
 use egui::Modifiers;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::canvas::{ToolEvent, tool_event};
 use crate::control::{ControlRequest, Outcome, handle};
 use crate::state::{DialogKind, Tool};
@@ -18,7 +18,7 @@ const MESSAGE: &str = if cfg!(target_os = "macos") {
 };
 
 /// The active layer's pixels.
-fn pixels(app: &PhotocraftApp) -> Vec<f32> {
+fn pixels(app: &MagicpicApp) -> Vec<f32> {
     let st = app.session.active().unwrap();
     st.doc.layer(st.active_layer.unwrap()).unwrap().surface().unwrap().read_region(st.doc.bounds())
 }

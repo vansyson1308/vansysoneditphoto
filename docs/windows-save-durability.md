@@ -49,8 +49,8 @@ document, preservation of old objects, barriers on reused objects, and successfu
 Run the format tests and repository checks:
 
 ```sh
-cargo test -p photocraft-format
-cargo clippy -p photocraft-format --all-targets -- -D warnings
+cargo test -p magicpic-format
+cargo clippy -p magicpic-format --all-targets -- -D warnings
 cargo xtask layers
 cargo xtask wasm
 cargo xtask test-corpus -p io

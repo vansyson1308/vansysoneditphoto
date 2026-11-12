@@ -154,7 +154,7 @@ fn rounded_swatches_clip_their_checker_to_the_corners() {
         super::color_swatch(ui, egui::Color32::RED);
         super::color_swatch_button(ui, egui::Color32::from_rgba_unmultiplied(0, 0, 255, 128), "Blue");
     });
-    crate::PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
+    crate::MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
     h.run_steps(2);
     let tile = h.ctx.data(|d| d.get_temp::<egui::TextureHandle>(super::checker_tile_id())).expect("the tile is loaded once");
     let manager = h.ctx.tex_manager();
@@ -181,7 +181,7 @@ fn elided_label_never_exceeds_its_room() {
         let short = super::elided_label(ui, "Fill", 200.0);
         assert!(short.rect.width() < 60.0, "a short label is not padded: {}", short.rect.width());
     });
-    crate::PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
+    crate::MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
     h.run_steps(2);
 }
 
@@ -383,7 +383,7 @@ fn panel_footer_buttons_are_not_clipped_by_the_body() {
         },
         None,
     );
-    crate::PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
+    crate::MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
     h.run();
     let (button, clip, body) = h.state().expect("the footer drew its button");
     assert!(button.bottom() > body.bottom(), "the bar really overruns the body, or this test proves nothing: {button:?} vs {body:?}");
@@ -403,7 +403,7 @@ fn text_field_is_a_boxed_input_whose_selection_colour_stays_local() {
         },
         (String::new(), egui::Color32::WHITE, egui::Color32::BLACK),
     );
-    crate::PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
+    crate::MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
     h.run();
     assert_eq!(h.state().1, h.state().2, "the field's selection colour does not leak into its parent");
     h.get_by_role(Role::TextInput).click();
@@ -419,7 +419,7 @@ fn text_field_is_a_boxed_input_whose_selection_colour_stays_local() {
 /// monospaced (hex) and proportional faces alike: neither low nor overshooting the middle.
 #[test]
 fn text_field_text_ink_is_centred_in_its_box() {
-    let _gpu = photocraft_testkit::gpu_lock();
+    let _gpu = magicpic_testkit::gpu_lock();
     let scale = 4.0;
     for kind in [crate::theme::ThemeKind::Pro, crate::theme::ThemeKind::Studio] {
         // Digits and capitals: no descenders, so their ink should straddle the box's middle.
@@ -432,7 +432,7 @@ fn text_field_text_ink_is_centred_in_its_box() {
                 },
                 (text.to_owned(), egui::Rect::NOTHING),
             );
-            crate::PhotocraftApp::setup_context(&h.ctx, kind);
+            crate::MagicpicApp::setup_context(&h.ctx, kind);
             h.run_steps(3);
             let image = h.render().expect("render text field");
             let field = h.state().1;
@@ -456,7 +456,7 @@ fn text_field_text_ink_is_centred_in_its_box() {
 fn text_field_caps_a_huge_paste() {
     use egui::accesskit::Role;
     let mut h = Harness::new_ui_state(|ui, s: &mut String| drop(super::text_field(ui, egui::Id::unique("tf"), s, "Value", 140.0, false)), String::new());
-    crate::PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
+    crate::MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
     h.run();
     h.get_by_role(Role::TextInput).click();
     h.run_steps(1);
@@ -476,7 +476,7 @@ fn text_field_bounds_an_oversized_existing_value() {
     use egui::accesskit::Role;
     let long = "9".repeat(super::TEXT_FIELD_LIMIT * 4);
     let mut h = Harness::new_ui_state(|ui, s: &mut String| drop(super::text_field(ui, egui::Id::unique("tf"), s, "Value", 140.0, false)), long.clone());
-    crate::PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
+    crate::MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
     h.run();
     assert_eq!(*h.state(), long, "drawing alone leaves the caller's value alone");
     assert_eq!(h.get_by_role(Role::TextInput).value().map(|v| v.chars().count()), Some(super::TEXT_FIELD_LIMIT));
@@ -501,7 +501,7 @@ fn text_field_harness(text: &str, enabled: bool) -> Harness<'static, FieldState>
         },
         (text.to_owned(), egui::Rect::NOTHING, false),
     );
-    crate::PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
+    crate::MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
     h.run();
     assert_eq!(h.state().1.size(), egui::vec2(140.0, super::TEXT_FIELD_H), "the state holds the field's box");
     h
@@ -591,7 +591,7 @@ fn text_field_trailing_arrow_keeps_its_click() {
         },
         ("hello".to_owned(), false, egui::Rect::NOTHING, false),
     );
-    crate::PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
+    crate::MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
     h.run();
     let pos = h.state().2.center();
     click_at(&mut h, pos, egui::PointerButton::Primary);
@@ -614,7 +614,7 @@ fn text_field_editor_click_places_the_caret_at_the_pointer() {
 #[test]
 fn raw_input_hook_caps_synthetic_text() {
     use eframe::App as _;
-    let mut app = crate::PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut app = crate::MagicpicApp::new(magicpic_engine::Session::new(), Default::default());
     app.synthetic.push(egui::Event::Text("x".repeat(super::INPUT_EVENT_LIMIT + 10)));
     let ctx = egui::Context::default();
     let mut raw = egui::RawInput::default();
@@ -680,7 +680,7 @@ fn labelled_rows_and_dropdowns_have_semantic_accessible_names() {
         },
         State::default(),
     );
-    crate::PhotocraftApp::setup_context(&h.ctx, Default::default());
+    crate::MagicpicApp::setup_context(&h.ctx, Default::default());
     h.run();
 
     // The row's caption is the accessible name of the value field and of the slider.
@@ -742,7 +742,7 @@ fn value_field_number_slot_is_centred_in_its_box() {
 /// `%`'s, so the number lines up with the box and its unit (#5150).
 #[test]
 fn value_field_digits_ink_is_centred_and_level_with_the_unit() {
-    let _gpu = photocraft_testkit::gpu_lock();
+    let _gpu = magicpic_testkit::gpu_lock();
     let scale = 4.0;
     for kind in [crate::theme::ThemeKind::Pro, crate::theme::ThemeKind::Studio] {
         let mut h = Harness::builder().with_size(egui::vec2(100.0, 40.0)).with_pixels_per_point(scale).wgpu().build_ui_state(
@@ -753,7 +753,7 @@ fn value_field_digits_ink_is_centred_and_level_with_the_unit() {
             },
             (100.0, egui::Rect::NOTHING),
         );
-        crate::PhotocraftApp::setup_context(&h.ctx, kind);
+        crate::MagicpicApp::setup_context(&h.ctx, kind);
         h.run_steps(3);
         let image = h.render().expect("render value field");
         let (field, suffix_left) = (h.state().1, h.state().1.right() - 14.0);
@@ -790,7 +790,7 @@ fn themed_value_field_number_sits_inside_its_box_in_every_size() {
                 },
                 (v, egui::Rect::NOTHING),
             );
-            crate::PhotocraftApp::setup_context(&harness.ctx, kind);
+            crate::MagicpicApp::setup_context(&harness.ctx, kind);
             harness.run();
             let number = harness.get_by_role(egui::accesskit::Role::SpinButton).rect();
             let field = harness.state().1;
@@ -1035,7 +1035,7 @@ fn button_row(os: egui::os::OperatingSystem) -> (Vec<String>, f32, f32) {
         },
         false,
     );
-    crate::PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    crate::MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.ctx.set_os(os);
     *h.state_mut() = true;
     h.run();
@@ -1711,7 +1711,7 @@ fn dropdown_opens_with_focus_and_arrow_keys_change_the_value() {
 /// option hovered from the start (#2607).
 #[test]
 fn dropdown_list_keeps_its_width_while_scrolling() {
-    use photocraft_color::BlendMode;
+    use magicpic_color::BlendMode;
     let mut h = Harness::builder().with_size(egui::vec2(400.0, 700.0)).build_ui_state(
         |ui, mode: &mut BlendMode| {
             let opts: Vec<(BlendMode, &str)> = BlendMode::LAYER_MODES.iter().map(|m| (*m, m.label())).collect();
@@ -1742,8 +1742,8 @@ fn dropdown_list_keeps_its_width_while_scrolling() {
 
 /// A window `height` tall with the Layers panel's blend mode dropdown (all 27 modes, wheel
 /// steps them) `down` from its top, opened.
-fn open_blend_modes(height: f32, down: f32) -> Harness<'static, photocraft_color::BlendMode> {
-    use photocraft_color::BlendMode;
+fn open_blend_modes(height: f32, down: f32) -> Harness<'static, magicpic_color::BlendMode> {
+    use magicpic_color::BlendMode;
     let mut h = Harness::builder().with_size(egui::vec2(400.0, height)).build_ui_state(
         move |ui, mode: &mut BlendMode| {
             ui.add_space(down);
@@ -1768,7 +1768,7 @@ fn open_list<T>(h: &Harness<'_, T>) -> egui::Rect {
 
 /// Each mode's row in the open list: its label's last node, as the box shows the chosen one's.
 fn mode_rows<T>(h: &Harness<'_, T>) -> Vec<egui::Rect> {
-    use photocraft_color::BlendMode;
+    use magicpic_color::BlendMode;
     BlendMode::LAYER_MODES.iter().map(|m| h.get_all_by_label(m.label()).last().map(|n| n.rect()).unwrap_or(egui::Rect::NOTHING)).collect()
 }
 
@@ -1796,7 +1796,7 @@ fn dropdown_list_is_as_tall_as_its_options_up_to_the_window() {
 /// although the button widens for the longer names.
 #[test]
 fn dropdown_list_opens_beside_its_button_and_stays_put_while_the_wheel_steps_its_value() {
-    use photocraft_color::BlendMode;
+    use magicpic_color::BlendMode;
     // (window height, button's distance from the top, list below it, all modes in sight)
     let cases = [
         (1000.0, 0.0, true, true),    // room below
@@ -1865,7 +1865,7 @@ fn a_short_dropdown_list_opens_below_or_above_its_button_whole() {
 /// of the click that opened it, held a few frames, chooses nothing (#5495 review).
 #[test]
 fn in_a_very_short_window_the_list_still_leaves_its_button_free_and_the_opening_click_chooses_nothing() {
-    use photocraft_color::BlendMode;
+    use magicpic_color::BlendMode;
     let mut h = Harness::builder().with_size(egui::vec2(400.0, 110.0)).build_ui_state(
         |ui, mode: &mut BlendMode| {
             ui.add_space(40.0);
@@ -1973,7 +1973,7 @@ fn brush_picker_footer_slider_stays_inside_the_dragged_height() {
     let size = vec2(crate::brush_picker::DEFAULT_SIZE[0], crate::brush_picker::DEFAULT_SIZE[1]);
     let mut h = Harness::builder().with_size(vec2(600.0, 700.0)).build_ui_state(
         |ui, height: &mut f32| {
-            let mut brush = photocraft_engine::BrushSettings::default();
+            let mut brush = magicpic_engine::BrushSettings::default();
             let mut list = crate::brush_picker::list_state();
             *height = ui.scope(|ui| crate::brush_picker::body(ui, &mut brush, &[], None, &mut list, size)).response.rect.height();
         },

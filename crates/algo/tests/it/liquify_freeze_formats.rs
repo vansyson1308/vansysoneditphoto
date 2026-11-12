@@ -1,8 +1,8 @@
 //! Final-render coverage for #7989, extending the boundary fix in #8012.
-use photocraft_algo::liquify::{LiquifyField, LiquifyStroke, LiquifyTool, apply_liquify};
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use magicpic_algo::liquify::{LiquifyField, LiquifyStroke, LiquifyTool, apply_liquify};
+use magicpic_color::{ColorMode, PixelFormat, SampleType};
+use magicpic_geom::Rect;
+use magicpic_raster::Surface;
 
 fn bounds() -> Rect {
     // Cross the tile boundary at x=256, with a nonzero origin on both axes.

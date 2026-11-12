@@ -10,7 +10,7 @@
 //! 6. Optional artifact export of cursor images as PNG files for visual regression inspection.
 //!
 //! ```sh
-//! cargo run --release -p photocraft-ui-egui --example cursor_bench -- [--moves 1000] [--reps 5] [--save-artifacts <dir>] [--json [path]]
+//! cargo run --release -p magicpic-ui-egui --example cursor_bench -- [--moves 1000] [--reps 5] [--save-artifacts <dir>] [--json [path]]
 //! ```
 
 #[path = "cursor_bench/args.rs"]
@@ -26,11 +26,11 @@ use std::time::Instant;
 
 use base64::Engine as _;
 use egui::{Context, pos2};
-use photocraft_codecs::{ChannelLayout, EncodeOptions, Format, Image, SampleType, encode};
-use photocraft_testkit::gpu_lock;
-use photocraft_ui_egui::canvas::tool_cursor::{PenVariant, native_scale, pen, pen_rasterization_count, rasterize_pen, reset_pen_rasterization_count};
-use photocraft_ui_egui::icons;
-use photocraft_ui_egui::state::Tool;
+use magicpic_codecs::{ChannelLayout, EncodeOptions, Format, Image, SampleType, encode};
+use magicpic_testkit::gpu_lock;
+use magicpic_ui_egui::canvas::tool_cursor::{PenVariant, native_scale, pen, pen_rasterization_count, rasterize_pen, reset_pen_rasterization_count};
+use magicpic_ui_egui::icons;
+use magicpic_ui_egui::state::Tool;
 
 #[derive(Clone, Debug, serde::Serialize)]
 struct BenchmarkRun {
@@ -486,7 +486,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     } else {
         println!("=================================================================================================================================");
-        println!("PhotoCraft Issue #9122 Native Pen Cursor Benchmark Results");
+        println!("MagicPic Issue #9122 Native Pen Cursor Benchmark Results");
         println!("Harness: {} pointer moves across {} repetitions per scale/variant", moves, reps);
         println!("=================================================================================================================================");
         println!(

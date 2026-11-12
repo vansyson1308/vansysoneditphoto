@@ -1,6 +1,6 @@
 //! Render: Clouds, Difference Clouds, Fibers, Lighting Effects (Lens Flare: `lens_flare.rs`).
 
-use photocraft_geom::Rect;
+use magicpic_geom::Rect;
 
 use crate::fxutil::{MAXC, luma, rgba, set_rgba, smoothstep, xy};
 use crate::image::Image;
@@ -169,7 +169,7 @@ pub(crate) fn lighting(src: &Image, out: Rect, ctx: &Ctx, spec: &LightingSpec) -
                     TextureChannel::Green => 1,
                     _ => 2,
                 };
-                if ctx.mode == photocraft_color::ColorMode::Rgb { tmp[k] } else { rgba(ctx, &tmp[..n])[k] }
+                if ctx.mode == magicpic_color::ColorMode::Rgb { tmp[k] } else { rgba(ctx, &tmp[..n])[k] }
             }
         };
         if spec.white_is_high { v } else { 1.0 - v }
@@ -240,9 +240,9 @@ pub(crate) fn lighting(src: &Image, out: Rect, ctx: &Ctx, spec: &LightingSpec) -
 #[cfg(test)]
 mod tests {
     use crate::{FilterParams, apply, output_area};
-    use photocraft_color::{ColorMode, PixelFormat, SampleType};
-    use photocraft_geom::Rect;
-    use photocraft_raster::Surface;
+    use magicpic_color::{ColorMode, PixelFormat, SampleType};
+    use magicpic_geom::Rect;
+    use magicpic_raster::Surface;
 
     const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
     const WHITE: [f32; 4] = [1.0; 4];

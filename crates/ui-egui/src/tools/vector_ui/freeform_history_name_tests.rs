@@ -2,8 +2,8 @@
 use super::*;
 
 /// Creates a 200 by 200 document with Freeform Pen selected in the requested drawing mode.
-fn app(mode: &str) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app(mode: &str) -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 200})).unwrap();
     app.sync_views();
     app.ui.tool = Tool::FreeformPen;
@@ -21,12 +21,12 @@ fn trace(closed: bool, offset: f64) -> Vec<[f64; 3]> {
 }
 
 /// Counts committed undo steps, excluding the initial document state.
-fn steps(app: &PhotocraftApp) -> usize {
+fn steps(app: &MagicpicApp) -> usize {
     app.session.active().unwrap().history.past_len()
 }
 
 /// Checks that a successful stroke adds exactly one step with the expected undo label.
-fn assert_step(app: &PhotocraftApp, before: usize, name: &str) {
+fn assert_step(app: &MagicpicApp, before: usize, name: &str) {
     let h = &app.session.active().unwrap().history;
     assert_eq!(h.past_len(), before + 1, "one step per stroke");
     assert_eq!(h.undo_label(), Some(name));
@@ -207,7 +207,7 @@ fn control_pointer_strokes_commit_only_on_release_with_the_freeform_label() {
     let ctx = egui::Context::default();
     for mode in ["path", "shape"] {
         let mut app = app(mode);
-        let call = |app: &mut PhotocraftApp, params| {
+        let call = |app: &mut MagicpicApp, params| {
             let (req, _rx) = ControlRequest::new("ui.pointer", params);
             let Outcome::Done(reply) = handle(app, &ctx, &req) else { panic!("expected pointer reply") };
             assert_eq!(reply["ok"], true, "{reply}");

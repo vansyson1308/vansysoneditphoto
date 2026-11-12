@@ -6,20 +6,20 @@
 //! huge_doc_bench time it).
 //!
 //! ```sh
-//! cargo run --release -p photocraft-ui-egui --example large_file_bench -- [--reps 3] [--only psd|psb] [--cache DIR] [--clean] [--json out.json]
+//! cargo run --release -p magicpic-ui-egui --example large_file_bench -- [--reps 3] [--only psd|psb] [--cache DIR] [--clean] [--json out.json]
 //! ```
 //!
-//! The fixtures (`photocraft_psd::fixtures`, about 6.4 GB together) are generated once into
-//! `--cache` (default: `$PHOTOCRAFT_FIXTURE_DIR`, else `fixtures/` in the target directory next
+//! The fixtures (`magicpic_psd::fixtures`, about 6.4 GB together) are generated once into
+//! `--cache` (default: `$MAGICPIC_FIXTURE_DIR`, else `fixtures/` in the target directory next
 //! to this binary) and kept for the next run; `--clean` removes them afterwards. Each row also
 //! records the peak resident memory of its opens. Needs about 30 GB of memory for the PSB.
 
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-use photocraft_engine::Session;
-use photocraft_psd::fixtures::{PSB_4GB, PSD_2GB, Streamed};
-use photocraft_testkit::perf::{RssSampler, row};
+use magicpic_engine::Session;
+use magicpic_psd::fixtures::{PSB_4GB, PSD_2GB, Streamed};
+use magicpic_testkit::perf::{RssSampler, row};
 use serde_json::json;
 
 fn arg(args: &[String], name: &str) -> Option<String> {
@@ -28,7 +28,7 @@ fn arg(args: &[String], name: &str) -> Option<String> {
 
 /// `<target>/fixtures`: the binary lives in `<target>/release/examples/`.
 fn default_cache() -> PathBuf {
-    if let Some(d) = std::env::var_os("PHOTOCRAFT_FIXTURE_DIR") {
+    if let Some(d) = std::env::var_os("MAGICPIC_FIXTURE_DIR") {
         return PathBuf::from(d);
     }
     std::env::current_exe().ok().and_then(|e| e.ancestors().nth(3).map(|t| t.join("fixtures"))).unwrap_or_else(std::env::temp_dir)
@@ -38,7 +38,7 @@ fn default_cache() -> PathBuf {
 /// caller drops it outside the timing) and whether a sampled pixel came back right.
 fn open(case: &Streamed, path: &std::path::Path) -> Result<(Session, bool), String> {
     let bytes = std::fs::read(path).map_err(|e| format!("read {}: {e}", path.display()))?;
-    let doc = photocraft_io::import(&case.file_name(), &bytes).map_err(|e| e.to_string())?.document;
+    let doc = magicpic_io::import(&case.file_name(), &bytes).map_err(|e| e.to_string())?.document;
     drop(bytes);
     let mut s = Session::new();
     s.open_document(doc, Some(path.display().to_string()));
@@ -114,8 +114,8 @@ fn main() {
     if let Some(out) = arg(&args, "--json") {
         let context =
             json!({"reps": reps, "cache": dir.display().to_string(), "errors": errors, "threads": std::thread::available_parallelism().map(|n| n.get()).ok()});
-        let report = photocraft_testkit::perf::report("large_file_bench", context, rows, Some(&sampler));
-        if let Err(e) = photocraft_testkit::perf::write_report(&out, &report) {
+        let report = magicpic_testkit::perf::report("large_file_bench", context, rows, Some(&sampler));
+        if let Err(e) = magicpic_testkit::perf::write_report(&out, &report) {
             eprintln!("{e}");
         }
     }

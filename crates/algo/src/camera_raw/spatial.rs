@@ -1,6 +1,6 @@
 //! Dehaze, Clarity and Texture resolved for one frame: the sizes, radii and constants their
 //! filters use, so another implementation of them (the GPU preview,
-//! `photocraft_gpu::CameraRawDevelop`) runs the same filters. [`develop`](super::develop) builds
+//! `magicpic_gpu::CameraRawDevelop`) runs the same filters. [`develop`](super::develop) builds
 //! its own from the same constructors.
 //!
 //! - **Dehaze** follows the dark channel prior (K. He, J. Sun, X. Tang, *Single Image Haze Removal

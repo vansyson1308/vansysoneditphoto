@@ -17,6 +17,28 @@ fn hindi_has_the_reveal_and_camera_raw_rows() {
     assert!(has(hi, "RAW Defaults…"), "RAW Defaults… is a catalog row, not a fallback");
 }
 
+/// The upstream catalogs were written for the program MagicPic was forked from. The build embeds
+/// them with the product name replaced on both sides of a row (`build.rs` `rebrand`), so a text
+/// that names the product still finds its translation, and the translation names MagicPic.
+#[test]
+fn rows_that_name_the_product_are_found_and_name_magicpic() {
+    if !needs_catalogs() {
+        return;
+    }
+    let vi = lang("vi");
+    for source in ["About MagicPic", "All shortcuts reset to MagicPic defaults.", "Nothing to paste: MagicPic can't read the system clipboard here"] {
+        assert!(has(vi, source), "{source:?} is a catalog row, not a fallback");
+        let shown = tr(vi, source);
+        assert_ne!(shown, source, "{source:?} is translated");
+        assert!(shown.contains("MagicPic"), "{shown:?} names MagicPic");
+    }
+    for code in LANGUAGES.iter().map(|l| l.code) {
+        for text in Lang::from_code(code).into_iter().flat_map(Lang::catalog_texts) {
+            assert!(!text.contains("PhotoCraft"), "{code}: an embedded row still names the upstream product");
+        }
+    }
+}
+
 #[test]
 fn hindi_tags_resolve() {
     if !needs_catalogs() {
@@ -168,9 +190,9 @@ fn candidates_walk_from_specific_to_general() {
     assert_eq!(candidates("pt_PT"), ["pt-pt", "pt-br", "pt"]);
 }
 
-/// PhotoCraft's Serbian catalog was `sr` and is craft-i18n's `sr-latn`: plain, regional and
+/// MagicPic's Serbian catalog was `sr` and is craft-i18n's `sr-latn`: plain, regional and
 /// Cyrillic Serbian tags still reach it, ahead of the bare `sr`, and the Latin tags keep their own
-/// order. Holds without embedded catalogs (the candidates are PhotoCraft's own).
+/// order. Holds without embedded catalogs (the candidates are MagicPic's own).
 #[test]
 fn serbian_tags_reach_the_latin_catalog() {
     assert_eq!(candidates("sr"), ["sr-latn", "sr"]);
@@ -307,7 +329,7 @@ fn ukrainian_and_arabic_resolve() {
     assert_eq!(ar.dir(), Dir::Rtl);
 }
 
-/// Every Serbian tag PhotoCraft matched to its `sr` catalog reaches `sr-latn`, as a system tag and
+/// Every Serbian tag MagicPic matched to its `sr` catalog reaches `sr-latn`, as a system tag and
 /// as a preference (a saved `sr` included).
 #[test]
 fn serbian_resolves_locales_and_preferences() {
@@ -354,7 +376,7 @@ fn azerbaijani_keeps_context_placeholders_and_command_names() {
     assert_eq!(tr_ctx(az, "cameraRaw", "Light"), "İşıq");
     assert_eq!(tr_ctx(az, "fontWeight", "Light"), "İncə");
     assert_ne!(tr_id(az, "edit.clear", "Clear"), "Clear");
-    assert!(fmt(tr(az, "About {app}"), &[("app", "PhotoCraft")]).contains("PhotoCraft"));
+    assert!(fmt(tr(az, "About {app}"), &[("app", "MagicPic")]).contains("MagicPic"));
 }
 
 /// Bosnian locales, with or without region, script or encoding, select the Latin catalog.
@@ -385,7 +407,7 @@ fn french_resolves() {
     }
 }
 
-/// Counts pick the form PhotoCraft's own plural rules picked before its catalogs moved to
+/// Counts pick the form MagicPic's own plural rules picked before its catalogs moved to
 /// craft-i18n, now from CLDR (the crate): per language, the old rule's form index per count.
 /// Exceptions, from the spec's parity list or CLDR: Hungarian, Turkish and Georgian have two forms
 /// (their catalogs repeat the one form), Hebrew's `two` form repeats `other`
@@ -426,7 +448,7 @@ fn counts_pick_the_same_plural_form_as_before() {
     }
 }
 
-/// Hebrew counts read as PhotoCraft's one|other rule did: craft-i18n's Hebrew rows list
+/// Hebrew counts read as MagicPic's one|other rule did: craft-i18n's Hebrew rows list
 /// one|two|other with `two` repeating `other`, so 2 reads like 3.
 #[test]
 fn hebrew_counts_read_one_or_other() {
@@ -478,7 +500,7 @@ fn id_rows_keep_the_shape_of_their_label() {
 
 /// The language list is well-formed, and with the catalogs embedded each registered language has
 /// one. Problems in the embedded catalogs' rows are not failed: craft-i18n
-/// checks its rows, a row PhotoCraft can't use shows in English, and `cargo xtask i18n-report`
+/// checks its rows, a row MagicPic can't use shows in English, and `cargo xtask i18n-report`
 /// lists what each language lacks.
 #[test]
 fn bundled_catalogs_are_consistent() {
@@ -505,7 +527,7 @@ fn bundled_catalogs_are_consistent() {
         for line in app.lines().filter(|l| l.starts_with("@id\t")) {
             let id = line.split('\t').nth(1).unwrap_or_default();
             if id != "language.name" && !(crate::menus::is_live(id) || crate::menu_catalog::CATALOG.iter().any(|m| m.3 == id)) {
-                println!("{code}: @id row for a command PhotoCraft doesn't have: {id:?}");
+                println!("{code}: @id row for a command MagicPic doesn't have: {id:?}");
             }
         }
     }

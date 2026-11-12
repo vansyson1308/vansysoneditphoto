@@ -6,8 +6,8 @@ pub(super) enum BuildState {
     #[default]
     NotStarted,
     Building,
-    Ready(Box<photocraft_gpu::Compositor>),
-    Failed(photocraft_gpu::Unsupported),
+    Ready(Box<magicpic_gpu::Compositor>),
+    Failed(magicpic_gpu::Unsupported),
     Adopted,
 }
 
@@ -26,16 +26,16 @@ pub(super) fn start(device: &eframe::wgpu::Device, format: eframe::wgpu::Texture
     let spawned = std::thread::Builder::new().name("gpu-compositor-build".into()).spawn(move || {
         let threads = std::thread::available_parallelism().map_or(1, |n| (n.get() / 2).max(1));
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            photocraft_gpu::Compositor::try_new_with_format_threads_classified(&device, format, threads)
+            magicpic_gpu::Compositor::try_new_with_format_threads_classified(&device, format, threads)
         }));
         let (result, outcome) = match result {
             Ok(Ok(comp)) => (BuildState::Ready(Box::new(comp)), Ok(())),
             Ok(Err(error)) => {
-                let deterministic = error.kind == photocraft_gpu::BuildFailureKind::DeterministicShaderCompilation;
-                (BuildState::Failed(photocraft_gpu::Unsupported(error.message.clone())), Err((error.message, deterministic)))
+                let deterministic = error.kind == magicpic_gpu::BuildFailureKind::DeterministicShaderCompilation;
+                (BuildState::Failed(magicpic_gpu::Unsupported(error.message.clone())), Err((error.message, deterministic)))
             }
             Err(_) => (
-                BuildState::Failed(photocraft_gpu::Unsupported("building the GPU compositor panicked".into())),
+                BuildState::Failed(magicpic_gpu::Unsupported("building the GPU compositor panicked".into())),
                 Err(("building the GPU compositor panicked".into(), false)),
             ),
         };
@@ -51,7 +51,7 @@ pub(super) fn start(device: &eframe::wgpu::Device, format: eframe::wgpu::Texture
 #[cfg(not(target_arch = "wasm32"))]
 fn record_spawn_failure(state: &mut BuildState, completion: &Completion, error: &std::io::Error) {
     let message = format!("failed to spawn GPU compositor build thread: {error}");
-    *state = BuildState::Failed(photocraft_gpu::Unsupported(message.clone()));
+    *state = BuildState::Failed(magicpic_gpu::Unsupported(message.clone()));
     *completion.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = Some(Err((message, false)));
 }
 
@@ -71,6 +71,6 @@ mod tests {
     #[test]
     fn compositor_is_send() {
         fn assert_send<T: Send>() {}
-        assert_send::<photocraft_gpu::Compositor>();
+        assert_send::<magicpic_gpu::Compositor>();
     }
 }

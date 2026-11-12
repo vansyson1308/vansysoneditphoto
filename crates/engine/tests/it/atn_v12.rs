@@ -1,5 +1,5 @@
-use photocraft_engine::{Session, paint::tile::b64_encode};
-use photocraft_psd::atn;
+use magicpic_engine::{Session, paint::tile::b64_encode};
+use magicpic_psd::atn;
 use serde_json::json;
 
 /// Legacy descriptor syntax must reach the same commands and parameters as version 16.

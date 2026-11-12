@@ -1,31 +1,31 @@
 use super::*;
 
-fn app() -> (PhotocraftApp, egui::Context) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> (MagicpicApp, egui::Context) {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 100})).unwrap();
     (app, egui::Context::default())
 }
 
 /// Draw `f` for a few frames (fonts load on the first).
-pub(crate) fn render(app: &mut PhotocraftApp, ctx: &egui::Context, f: fn(&mut PhotocraftApp, &egui::Context)) {
-    PhotocraftApp::setup_context(ctx, Default::default());
+pub(crate) fn render(app: &mut MagicpicApp, ctx: &egui::Context, f: fn(&mut MagicpicApp, &egui::Context)) {
+    MagicpicApp::setup_context(ctx, Default::default());
     for _ in 0..3 {
         let mut o = ctx.run_ui(Default::default(), |ui| f(app, ui.ctx()));
         o.textures_delta.clear();
     }
 }
 
-fn down(app: &mut PhotocraftApp, x: f64, y: f64, m: egui::Modifiers) {
+fn down(app: &mut MagicpicApp, x: f64, y: f64, m: egui::Modifiers) {
     crate::canvas::tool_event(app, ToolEvent::Down { x, y, pressure: 1.0 }, m);
 }
-fn mv(app: &mut PhotocraftApp, x: f64, y: f64, m: egui::Modifiers) {
+fn mv(app: &mut MagicpicApp, x: f64, y: f64, m: egui::Modifiers) {
     crate::canvas::tool_event(app, ToolEvent::Move { x, y, pressure: 1.0 }, m);
 }
-fn up(app: &mut PhotocraftApp, x: f64, y: f64) {
+fn up(app: &mut MagicpicApp, x: f64, y: f64) {
     crate::canvas::tool_event(app, ToolEvent::Up { x, y }, egui::Modifiers::NONE);
 }
 
-fn ruler(app: &PhotocraftApp) -> Option<Ruler> {
+fn ruler(app: &MagicpicApp) -> Option<Ruler> {
     app.session.active().unwrap().doc.measurement.ruler
 }
 
@@ -57,7 +57,7 @@ fn menu_selects_tools_and_toggles_panels() {
 #[test]
 fn arbitrary_rotation_starts_at_the_ruler_angle() {
     let (mut app, ctx) = app();
-    let open = |app: &mut PhotocraftApp| {
+    let open = |app: &mut MagicpicApp| {
         let r = crate::menus::invoke(app, &ctx, "image.rotation.arbitrary", json!({})).unwrap();
         let f = &app.ui.dialog_mut(r["dialog"].as_u64().unwrap()).unwrap().fields;
         (f["angle"].as_f64().unwrap(), f["direction"].clone())
@@ -90,7 +90,7 @@ fn ruler_drag_protractor_and_clear() {
     down(&mut app, 10.0, 10.0, egui::Modifiers::ALT);
     mv(&mut app, 60.0, 10.0, none);
     up(&mut app, 60.0, 10.0);
-    let info = photocraft_engine::analysis_cmds::ruler_info(&ruler(&app).unwrap(), &Default::default());
+    let info = magicpic_engine::analysis_cmds::ruler_info(&ruler(&app).unwrap(), &Default::default());
     assert!((info["angle"].as_f64().unwrap() - 90.0).abs() < 1e-6, "{info}");
     // A click without a drag far away keeps the ruler (#11980); Clear removes it.
     let before = ruler(&app);
@@ -110,7 +110,7 @@ fn count_tool_add_move_remove() {
     up(&mut app, 20.0, 20.0);
     down(&mut app, 50.0, 50.0, egui::Modifiers::NONE);
     up(&mut app, 50.0, 50.0);
-    let pts = |app: &PhotocraftApp| app.session.active().unwrap().doc.measurement.count_groups[0].points.clone();
+    let pts = |app: &MagicpicApp| app.session.active().unwrap().doc.measurement.count_groups[0].points.clone();
     assert_eq!(pts(&app).len(), 2);
     // Drag marker 1.
     down(&mut app, 20.5, 20.5, egui::Modifiers::NONE);
@@ -201,7 +201,7 @@ fn dialogs_open_and_run_their_commands() {
 fn color_sampler_tool_places_moves_and_removes_points() {
     let (mut app, ctx) = app();
     app.ui.tool = Tool::ColorSampler;
-    let pts = |app: &PhotocraftApp| app.session.active().unwrap().color_samplers.clone();
+    let pts = |app: &MagicpicApp| app.session.active().unwrap().color_samplers.clone();
     down(&mut app, 20.0, 20.0, egui::Modifiers::NONE);
     up(&mut app, 20.0, 20.0);
     down(&mut app, 60.0, 40.0, egui::Modifiers::NONE);
@@ -278,7 +278,7 @@ fn color_sampler_is_per_document_and_inert_without_one() {
     app.run("document.activate", json!({"document": 0})).unwrap();
     assert_eq!(app.session.active().unwrap().color_samplers, vec![[10.5, 10.5]]);
     // With no document the tool says so (no dialog, no panic) and the commands error.
-    let mut empty = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut empty = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     empty.ui.tool = Tool::ColorSampler;
     down(&mut empty, 5.0, 5.0, egui::Modifiers::NONE);
     assert_eq!(empty.ui.status, "No document open");
@@ -303,11 +303,11 @@ fn count_size_fields_send_whole_numbers_the_engine_applies() {
 // ---------------------------------------------------------------- Straighten Layer button (#12033)
 
 /// The Ruler options bar, drawn wide enough for its buttons to show.
-fn ruler_bar(mut app: PhotocraftApp) -> egui_kittest::Harness<'static, PhotocraftApp> {
+fn ruler_bar(mut app: MagicpicApp) -> egui_kittest::Harness<'static, MagicpicApp> {
     use egui::vec2;
     app.ui.tool = Tool::Ruler;
     let mut h = egui_kittest::Harness::builder().with_size(vec2(1400.0, 60.0)).build_ui_state(
-        |ui: &mut egui::Ui, app: &mut PhotocraftApp| {
+        |ui: &mut egui::Ui, app: &mut MagicpicApp| {
             if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
             }
@@ -315,54 +315,54 @@ fn ruler_bar(mut app: PhotocraftApp) -> egui_kittest::Harness<'static, Photocraf
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Pro);
+    MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::Pro);
     h.run_steps(4);
     h
 }
 
 /// A ruler line to straighten by, without one the button is off for every target.
-fn rule(app: &mut PhotocraftApp) {
+fn rule(app: &mut MagicpicApp) {
     app.run("image.analysis.rulerTool", json!({"start": [10, 30], "end": [150, 25]})).unwrap();
 }
 
 /// The message of every open error dialog, in the order they were opened.
-fn alerts(app: &PhotocraftApp) -> Vec<&str> {
+fn alerts(app: &MagicpicApp) -> Vec<&str> {
     app.ui.dialogs.iter().filter(|d| d.kind == DialogKind::Error).filter_map(|d| d.fields.get("message").and_then(|m| m.as_str())).collect()
 }
 
 /// Each case opens one of the targets #12033 measured, on top of the plain document `app()` makes.
-fn add_layer(app: &mut PhotocraftApp, name: &str) -> u64 {
+fn add_layer(app: &mut MagicpicApp, name: &str) -> u64 {
     app.run("layer.new.layer", json!({"name": name})).unwrap()["layer"].as_u64().unwrap()
 }
 
-fn on_a_layer(app: &mut PhotocraftApp) {
+fn on_a_layer(app: &mut MagicpicApp) {
     add_layer(app, "Paint");
 }
 
-fn on_the_background(_: &mut PhotocraftApp) {}
+fn on_the_background(_: &mut MagicpicApp) {}
 
-fn on_two_layers(app: &mut PhotocraftApp) {
+fn on_two_layers(app: &mut MagicpicApp) {
     let a = add_layer(app, "One");
     let b = add_layer(app, "Two");
     app.run("layer.select", json!({"layer": a})).unwrap();
     app.run("layer.select", json!({"layer": b, "mode": "add"})).unwrap();
 }
 
-fn on_a_group(app: &mut PhotocraftApp) {
+fn on_a_group(app: &mut MagicpicApp) {
     add_layer(app, "Inner");
     app.run("layer.groupLayers", json!({})).unwrap();
 }
 
-fn locked(app: &mut PhotocraftApp, key: &str) {
+fn locked(app: &mut MagicpicApp, key: &str) {
     let l = add_layer(app, "Colors");
     app.run("layer.setProps", json!({"layer": l, "locks": {key: true}})).unwrap();
 }
 
-fn on_lock_all(app: &mut PhotocraftApp) {
+fn on_lock_all(app: &mut MagicpicApp) {
     locked(app, "all");
 }
 
-fn on_lock_position(app: &mut PhotocraftApp) {
+fn on_lock_position(app: &mut MagicpicApp) {
     locked(app, "position");
 }
 
@@ -372,7 +372,7 @@ fn on_lock_position(app: &mut PhotocraftApp) {
 #[test]
 fn the_straighten_layer_button_greys_out_where_the_command_is_off() {
     use egui_kittest::kittest::{NodeT, Queryable};
-    type Case = (&'static str, fn(&mut PhotocraftApp), bool);
+    type Case = (&'static str, fn(&mut MagicpicApp), bool);
     let cases: [Case; 6] = [
         ("a pixel layer", on_a_layer, true),
         ("the Background", on_the_background, false),
@@ -394,7 +394,7 @@ fn the_straighten_layer_button_greys_out_where_the_command_is_off() {
     }
 }
 
-/// A refused click says so. `PhotocraftApp::run` reports what the *command* answered in the status
+/// A refused click says so. `MagicpicApp::run` reports what the *command* answered in the status
 /// line, but a refusal raised before it runs - the automation gate a control/MCP-driven click goes
 /// through - returns early, so the button has to report it itself. As the toolbar flyout does
 /// (`a_failed_edit_toolbar_from_the_flyout_reports_its_error_in_the_status_bar`).
@@ -437,7 +437,7 @@ fn a_hidden_layer_keeps_the_button_and_the_click_shows_the_alert() {
     h.get_by_label("Straighten Layer").click();
     h.run_steps(2);
     let st = h.state();
-    assert_eq!(alerts(st), [photocraft_engine::analysis_cmds::STRAIGHTEN_HIDDEN_ERROR], "one alert with the reference's text");
+    assert_eq!(alerts(st), [magicpic_engine::analysis_cmds::STRAIGHTEN_HIDDEN_ERROR], "one alert with the reference's text");
     let now = st.session.active().unwrap();
     assert!(std::sync::Arc::ptr_eq(&before, &now.doc), "the document was not touched");
     assert_eq!(now.history.past_len(), steps, "no History step");

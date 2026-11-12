@@ -8,7 +8,9 @@
 //! The catalogs live in [storytold/craft-i18n](https://github.com/storytold/craft-i18n)
 //! (`locales/<code>/common.tsv`, shared by the Crafting Apps, and `photocraft.tsv`), not in this
 //! repository. `build.rs` embeds them from `CRAFT_I18N_DIR` (CI and releases check out the commit
-//! in `craft-i18n.rev`); without it the build is English only. Lookup, fallback (PhotoCraft's rows
+//! in `craft-i18n.rev`); without it the build is English only. The rows were written for PhotoCraft,
+//! which MagicPic was forked from: `build.rs` embeds a copy with the product name replaced on both
+//! sides of each row, so texts that name the product keep their translations. Lookup, fallback (MagicPic's rows
 //! over shared ones), plural forms (CLDR) and language names are the `craft-i18n` crate's
 //! (craft-libs). Which languages are offered, how the system locale picks one, reading direction
 //! and `{name}` placeholders stay here.
@@ -59,7 +61,7 @@ static I18N: LazyLock<I18n> = LazyLock::new(|| {
     i18n
 });
 
-/// One UI language PhotoCraft offers, when its catalogs are embedded: what the app needs beyond
+/// One UI language MagicPic offers, when its catalogs are embedded: what the app needs beyond
 /// them. Its name and translations come from craft-i18n.
 pub struct LangInfo {
     /// BCP 47 code, lowercase (`ja`, `zh-hans`, `pt-br`, `sr-latn`). Also the `interface.language`
@@ -159,7 +161,7 @@ pub static LANGUAGES: [LangInfo; LANGUAGE_COUNT] = [
     LangInfo { code: "ka", complete_menus: true },
 ];
 
-/// Per language of [`LANGUAGES`], PhotoCraft's own catalog rows as written (escaped): (context,
+/// Per language of [`LANGUAGES`], MagicPic's own catalog rows as written (escaped): (context,
 /// source) to translation, read on first use ([`Lang::owns`]).
 static OWN_ROWS: [OnceLock<HashMap<(&'static str, &'static str), &'static str>>; LANGUAGE_COUNT] = [const { OnceLock::new() }; LANGUAGE_COUNT];
 
@@ -249,10 +251,10 @@ impl Lang {
         dir_for_code(self.code())
     }
 
-    /// Whether `translated`, the lookup's text for (`context`, `source`), comes from PhotoCraft's
+    /// Whether `translated`, the lookup's text for (`context`, `source`), comes from MagicPic's
     /// own catalog (`photocraft.tsv`, not the shared `common.tsv`). The shared catalog's `@id` rows
     /// are keyed by the other apps' command ids, which can name another command, so command-id
-    /// lookups ask this; every `@id` row PhotoCraft had is in its own catalog. Comparing the text,
+    /// lookups ask this; every `@id` row MagicPic had is in its own catalog. Comparing the text,
     /// not only the key, keeps a shared row out when craft-i18n skipped a malformed own row. A test
     /// fixture has no shared catalog: its rows are its own.
     fn owns(self, context: &str, source: &str, translated: &str) -> bool {
@@ -277,7 +279,7 @@ impl Lang {
 }
 
 impl Lang {
-    /// The embedded catalog texts this language reads, the shared one then PhotoCraft's; none for
+    /// The embedded catalog texts this language reads, the shared one then MagicPic's; none for
     /// English. For checks that the interface fonts draw every translation.
     #[cfg(test)]
     pub(crate) fn catalog_texts(self) -> impl Iterator<Item = &'static str> {
@@ -286,7 +288,7 @@ impl Lang {
     }
 }
 
-/// PhotoCraft's own embedded catalog text (`photocraft.tsv`) in the locale `code`; empty when
+/// MagicPic's own embedded catalog text (`photocraft.tsv`) in the locale `code`; empty when
 /// there is none.
 fn app_catalog(code: &str) -> &'static str {
     CRAFT_I18N.iter().find(|(c, ..)| c.eq_ignore_ascii_case(code)).map_or("", |(_, _, app)| *app)
@@ -340,7 +342,7 @@ fn candidates(tag: &str) -> Vec<String> {
     }
     if primary == "sr" && !out.iter().any(|c| c == "sr-latn") {
         // The only Serbian catalog is Latin (`sr-latn`). Plain, regional (`sr-RS`, `sr-ME`) and
-        // Cyrillic (`sr-Cyrl-RS`) tags read it rather than English, as when it was PhotoCraft's
+        // Cyrillic (`sr-Cyrl-RS`) tags read it rather than English, as when it was MagicPic's
         // `sr` catalog; craft-i18n's own matching never takes `sr` to a script it doesn't name.
         out.insert(out.len() - 1, "sr-latn".to_string());
     }
@@ -407,7 +409,7 @@ pub fn language_scope(lang: Lang) -> impl Drop {
 pub fn sync_context(ctx: &egui::Context, language: &str) {
     let lang = Lang::from_pref(language);
     set_current(lang);
-    let id = egui::Id::unique("photocraft-ui-language");
+    let id = egui::Id::unique("magicpic-ui-language");
     let changed = ctx.data(|data| data.get_temp::<Lang>(id) != Some(lang));
     if changed {
         ctx.data_mut(|data| data.insert_temp(id, lang));
@@ -437,12 +439,12 @@ pub fn tr_ctx<'a>(lang: Lang, context: &str, s: &'a str) -> &'a str {
 }
 
 /// A string keyed by its command id, falling back to the translation of the English `label`. Only
-/// PhotoCraft's own `@id` rows count ([`own_id`]).
+/// MagicPic's own `@id` rows count ([`own_id`]).
 pub fn tr_id<'a>(lang: Lang, id: &str, label: &'a str) -> &'a str {
     if own_id(lang, id, label) { lang.i18n().tid(lang.lang, id, label) } else { tr(lang, label) }
 }
 
-/// Whether `lang` has PhotoCraft's own `@id` row for `id` ([`Lang::owns`]: command ids are each
+/// Whether `lang` has MagicPic's own `@id` row for `id` ([`Lang::owns`]: command ids are each
 /// app's own) and it keeps the `{placeholders}` and trailing `…` of the English `label`. craft-i18n
 /// can't check that, because an `@id` row's source is the id, so a row that doesn't is skipped
 /// here and the label's translation shows instead.
@@ -476,12 +478,12 @@ pub fn fmt(template: &str, args: &[(&str, &str)]) -> String {
 
 /// A plural-aware message: `one`/`other` are the English forms (with `{n}` where the count goes).
 /// The form is the language's CLDR category; `{n}` is written in `0`–`9` without grouping or
-/// isolate marks, as PhotoCraft always has.
+/// isolate marks, as MagicPic always has.
 pub fn trn(lang: Lang, n: u64, one: &str, other: &str) -> String {
     lang.i18n().trn_plain(lang.lang, n, one, other)
 }
 
-/// A test language whose PhotoCraft catalog is `source` (catalog format), so tests of lookup code
+/// A test language whose MagicPic catalog is `source` (catalog format), so tests of lookup code
 /// don't depend on the embedded catalogs' wording. `code` picks the CLDR plural rules.
 #[cfg(test)]
 pub(crate) fn fixture_lang(code: &'static str, source: &'static str) -> Lang {

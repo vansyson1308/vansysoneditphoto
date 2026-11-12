@@ -6,10 +6,10 @@
 //! `{"layer": id, "removeLayer": true}`, so the whole session is one undo step that leaves no
 //! layer behind. Scripts can skip the layer and pass `type.create`'s keys directly.
 
-use photocraft_algo::selection::{self as sel, SelectionMode};
-use photocraft_doc::text::AntiAlias;
-use photocraft_doc::{Document, LayerContent, TextLayer};
-use photocraft_geom::Rect;
+use magicpic_algo::selection::{self as sel, SelectionMode};
+use magicpic_doc::text::AntiAlias;
+use magicpic_doc::{Document, LayerContent, TextLayer};
+use magicpic_geom::Rect;
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;
@@ -49,7 +49,7 @@ fn coverage(doc: &Document, t: &TextLayer) -> Result<(Vec<f32>, Rect)> {
     for r in &mut t.runs {
         r.style.color.alpha = 1.0;
     }
-    let mut eng = photocraft_text::shared().lock().unwrap_or_else(|e| e.into_inner());
+    let mut eng = magicpic_text::shared().lock().unwrap_or_else(|e| e.into_inner());
     let surface = eng.render(&t, doc.resolution_dpi, doc.pixel_format()).1.surface;
     let area = surface.content_bounds();
     if area.is_empty() {
@@ -99,7 +99,7 @@ fn create_selection(s: &mut Session, p: &Value) -> Result<Value> {
     // With an unusual earlier selection (not 8-bit grey) that the mode reads, it keeps its format
     // through more: the combined grey tiles and their float copy (1 + 4), the copy widened to every
     // channel and its growth while collected (8 per channel), and its own new tiles.
-    let unusual = doc.selection.as_ref().filter(|o| mode != SelectionMode::Replace && o.format() != photocraft_color::PixelFormat::GRAY8);
+    let unusual = doc.selection.as_ref().filter(|o| mode != SelectionMode::Replace && o.format() != magicpic_color::PixelFormat::GRAY8);
     let per_pixel = unusual.map_or(1, |old| 5 + 8 * old.channels() + old.format().bytes_per_pixel());
     let bytes = (text_area.width() as usize).checked_mul(text_area.height() as usize).and_then(|n| n.checked_mul(per_pixel));
     let bytes = bytes.ok_or_else(|| crate::allocation::error(PURPOSE, "requested size overflowed"))?;
@@ -147,7 +147,7 @@ mod off_canvas_tests;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_doc::LayerId;
+    use magicpic_doc::LayerId;
 
     fn session() -> Session {
         let mut s = Session::new();

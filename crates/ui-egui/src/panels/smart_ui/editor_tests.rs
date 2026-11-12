@@ -3,16 +3,16 @@ use egui_kittest::{Harness, kittest::Queryable};
 use serde_json::json;
 
 use crate::{
-    PhotocraftApp,
+    MagicpicApp,
     smart_filter_dialog::tests::{app, smart},
 };
 
 /// The app with a recorded Smart Object, in a `width`-point dock and the given theme, ready to click.
-fn harness(width: f32, scale: f32, theme: crate::theme::ThemeKind) -> Harness<'static, PhotocraftApp> {
+fn harness(width: f32, scale: f32, theme: crate::theme::ThemeKind) -> Harness<'static, MagicpicApp> {
     let (app, _) = app(8, "rgb");
     let mut h =
         Harness::builder().with_size(vec2(1200.0, 850.0)).with_pixels_per_point(scale).with_step_dt(1.0 / 60.0).with_max_steps(64).build_eframe(move |cc| {
-            PhotocraftApp::setup_context(&cc.egui_ctx, theme);
+            MagicpicApp::setup_context(&cc.egui_ctx, theme);
             app
         });
     let ctx = h.ctx.clone();
@@ -26,7 +26,7 @@ fn harness(width: f32, scale: f32, theme: crate::theme::ThemeKind) -> Harness<'s
 }
 
 /// Click `at` with the primary button, hovering first so the row reacts.
-fn click(h: &mut Harness<'_, PhotocraftApp>, at: egui::Pos2) {
+fn click(h: &mut Harness<'_, MagicpicApp>, at: egui::Pos2) {
     h.hover_at(at);
     h.run_steps(1);
     h.event(egui::Event::PointerButton { pos: at, button: PointerButton::Primary, pressed: true, modifiers: Modifiers::NONE });
@@ -130,8 +130,8 @@ fn stored_after_confirming_unedited(mode: &str, command: &str, recorded: &serde_
     let sm = smart(&app, layer).clone();
     let index = sm.smart_filters.len() - 1;
     assert_eq!(sm.smart_filters[index].command, command);
-    let mut h = Harness::builder().with_size(vec2(1200.0, 900.0)).build_ui_state(|ui, app: &mut PhotocraftApp| crate::dialogs::show(app, ui.ctx()), app);
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    let mut h = Harness::builder().with_size(vec2(1200.0, 900.0)).build_ui_state(|ui, app: &mut MagicpicApp| crate::dialogs::show(app, ui.ctx()), app);
+    MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     let ctx = h.ctx.clone();
     super::open_editor(h.state_mut(), &ctx, layer.0, &sm, index);
     let dialog = h.state().ui.dialogs.last().unwrap().id;
@@ -147,12 +147,12 @@ fn stored_after_confirming_unedited(mode: &str, command: &str, recorded: &serde_
 /// read over the recorded ones.
 #[test]
 fn confirming_an_unedited_adjustment_smart_filter_keeps_what_it_renders() {
-    use photocraft_doc::ColorMode::{Cmyk, Lab, Rgb};
-    use photocraft_engine::adjust_params::{default_for, from_params};
+    use magicpic_doc::ColorMode::{Cmyk, Lab, Rgb};
+    use magicpic_engine::adjust_params::{default_for, from_params};
     let dim = json!([[0, 0], [128, 64], [255, 255]]);
     let lift = json!([[0, 40], [255, 255]]);
-    let drawn: Vec<f64> = (0..photocraft_doc::adjust::CURVE_MAP_LEN).map(|level| level as f64 * 0.5).collect();
-    let jagged: Vec<f64> = (0..photocraft_doc::adjust::CURVE_MAP_LEN).map(|level| if level % 2 == 0 { 40.0 } else { 200.0 }).collect();
+    let drawn: Vec<f64> = (0..magicpic_doc::adjust::CURVE_MAP_LEN).map(|level| level as f64 * 0.5).collect();
+    let jagged: Vec<f64> = (0..magicpic_doc::adjust::CURVE_MAP_LEN).map(|level| if level % 2 == 0 { 40.0 } else { 200.0 }).collect();
     let cases = [
         ("lab", Lab, "curves", json!({"pencil": true, "smooth": 2, "points": jagged})),
         ("rgb", Rgb, "curves", json!({"pencil": true, "smooth": 2, "points": jagged})),
@@ -237,7 +237,7 @@ fn smart_and_layer_masks_have_separate_thumbnail_cache_entries() {
     let ctx = egui::Context::default();
     let first = app.mask_thumb(&ctx, &doc, layer, mask);
     let mut other = mask.clone();
-    other.surface.fill_rect(photocraft_geom::Rect::new(0, 0, 64, 48), &[0.0]);
+    other.surface.fill_rect(magicpic_geom::Rect::new(0, 0, 64, 48), &[0.0]);
     let second = app.mask_thumb_kind(&ctx, &doc, layer, &other, crate::mask_thumbs_ui::THUMB_SMART_MASK);
     assert_ne!(first, second);
     assert_eq!(first, app.mask_thumb(&ctx, &doc, layer, mask));
@@ -249,14 +249,14 @@ fn ctrl_i_uses_existing_invert_command_and_undo_redo_keep_the_source() {
     let mut h = harness(290.0, 1.0, Default::default());
     let layer = h.state().session.active().unwrap().active_layer.unwrap();
     let before = smart(h.state(), layer).clone();
-    let source = photocraft_engine::smart_cmds::contents_of(&h.state().session.active().unwrap().doc, layer).unwrap();
+    let source = magicpic_engine::smart_cmds::contents_of(&h.state().session.active().unwrap().doc, layer).unwrap();
     let steps = h.state().session.active().unwrap().history.past_len();
     h.key_press_modifiers(Modifiers::COMMAND, egui::Key::I);
     h.run_steps(4);
     let sm = smart(h.state(), layer);
     assert_eq!(sm.smart_filters.len(), 3);
     assert_eq!(sm.smart_filters[2].command, "image.adjustments.invert");
-    assert_eq!(photocraft_engine::smart_cmds::contents_of(&h.state().session.active().unwrap().doc, layer).unwrap(), source);
+    assert_eq!(magicpic_engine::smart_cmds::contents_of(&h.state().session.active().unwrap().doc, layer).unwrap(), source);
     assert_ne!(sm.cache.as_ref().unwrap().pixel(8, 8), before.cache.as_ref().unwrap().pixel(8, 8));
     assert_eq!(h.state().session.active().unwrap().history.past_len(), steps + 1);
     h.state_mut().run("edit.undo", json!({})).unwrap();
@@ -292,20 +292,20 @@ fn filter_editor_starts_missing_parameters_from_defaults_not_remembered_values()
 }
 
 /// A captured tone filter must visibly affect its CPU preview, not merely retain parameters.
-fn assert_tone_preview_is_non_neutral(app: &mut PhotocraftApp, ctx: &egui::Context) {
+fn assert_tone_preview_is_non_neutral(app: &mut MagicpicApp, ctx: &egui::Context) {
     let idx = app.session.active_index().unwrap();
     let id = app.ui.dialogs.last().unwrap().id;
     let saved = app.ui.dialogs.last().unwrap().fields.clone();
     let kind = saved["__adjust"].as_str().unwrap();
     let mode = app.session.active().unwrap().doc.mode;
     crate::canvas::ensure_filter_preview(app, idx, ctx).unwrap();
-    let rendered = photocraft_compose::flatten(app.filter_preview.as_ref().unwrap().result.as_ref().unwrap()).px.clone();
-    let neutral = photocraft_engine::adjust_params::to_params(&photocraft_engine::adjust_params::default_for(kind, mode).unwrap());
+    let rendered = magicpic_compose::flatten(app.filter_preview.as_ref().unwrap().result.as_ref().unwrap()).px.clone();
+    let neutral = magicpic_engine::adjust_params::to_params(&magicpic_engine::adjust_params::default_for(kind, mode).unwrap());
     let fields = &mut app.ui.dialog_mut(id).unwrap().fields;
     fields.retain(|key, _| key.starts_with("__"));
     fields.extend(neutral.as_object().unwrap().clone());
     crate::canvas::ensure_filter_preview(app, idx, ctx).unwrap();
-    let identity = photocraft_compose::flatten(app.filter_preview.as_ref().unwrap().result.as_ref().unwrap()).px.clone();
+    let identity = magicpic_compose::flatten(app.filter_preview.as_ref().unwrap().result.as_ref().unwrap()).px.clone();
     assert_ne!(rendered, identity, "{mode:?} {kind}: the recorded filter must affect the preview");
     app.ui.dialog_mut(id).unwrap().fields = saved;
     crate::canvas::ensure_filter_preview(app, idx, ctx).unwrap();
@@ -315,7 +315,7 @@ fn assert_tone_preview_is_non_neutral(app: &mut PhotocraftApp, ctx: &egui::Conte
 /// even when a colour component, alpha, Quick Mask or either layer-mask UI target is selected.
 #[test]
 fn tone_filter_editor_ignores_current_channel_target() {
-    use photocraft_engine::{adjust_params, channel_cmds::ChannelTarget};
+    use magicpic_engine::{adjust_params, channel_cmds::ChannelTarget};
     for mode in ["rgb", "lab", "cmyk"] {
         for kind in ["levels", "curves"] {
             for view in 0..6 {
@@ -356,7 +356,7 @@ fn tone_filter_editor_ignores_current_channel_target() {
                 let before = app.session.active().unwrap().doc.clone();
                 let filters = smart(&app, layer).clone();
                 let mut h = Harness::builder().with_size(vec2(1200.0, 900.0)).build_ui_state(|ui, app| crate::dialogs::show(app, ui.ctx()), app);
-                PhotocraftApp::setup_context(&h.ctx, Default::default());
+                MagicpicApp::setup_context(&h.ctx, Default::default());
                 let ctx = h.ctx.clone();
                 super::open_editor(h.state_mut(), &ctx, layer.0, &filters, 2);
                 let id = h.state().ui.dialogs.last().unwrap().id;
@@ -381,13 +381,9 @@ fn tone_filter_editor_ignores_current_channel_target() {
                 assert!(crate::canvas::ensure_filter_preview(h.state_mut(), idx, &ctx).is_some());
                 assert_tone_preview_is_non_neutral(h.state_mut(), &ctx);
                 assert!(std::sync::Arc::ptr_eq(&h.state().session.active().unwrap().doc, &before), "preview never writes to the selected plane");
-                let shown = photocraft_compose::flatten(h.state().filter_preview.as_ref().unwrap().result.as_ref().unwrap()).px.clone();
+                let shown = magicpic_compose::flatten(h.state().filter_preview.as_ref().unwrap().result.as_ref().unwrap()).px.clone();
                 crate::dialogs::confirm(h.state_mut(), id).unwrap();
-                assert_eq!(
-                    shown,
-                    photocraft_compose::flatten(&h.state().session.active().unwrap().doc).px,
-                    "{mode} {kind} view={view}: preview matches commit"
-                );
+                assert_eq!(shown, magicpic_compose::flatten(&h.state().session.active().unwrap().doc).px, "{mode} {kind} view={view}: preview matches commit");
                 assert_eq!(smart(h.state(), layer).smart_filters.len(), 3);
                 assert_eq!(read(&smart(h.state(), layer).smart_filters[2].params), read(&recorded));
                 let after = &h.state().session.active().unwrap().doc;
@@ -412,7 +408,7 @@ fn rabbit_whole_image_curves_alias_survives_reopening() {
                 let (mut app, layer) = app(depth, mode);
                 app.run("image.adjustments.curves", recorded.clone()).unwrap();
                 let before = app.session.active().unwrap().doc.clone();
-                let original = photocraft_compose::flatten(&before).px.clone();
+                let original = magicpic_compose::flatten(&before).px.clone();
                 let filters = smart(&app, layer).clone();
                 let ctx = egui::Context::default();
                 super::open_editor(&mut app, &ctx, layer.0, &filters, 2);
@@ -421,11 +417,11 @@ fn rabbit_whole_image_curves_alias_survives_reopening() {
                 assert!(fields.get("gray").is_none(), "the alias must be consumed before defaults");
                 let idx = app.session.active_index().unwrap();
                 crate::canvas::ensure_filter_preview(&mut app, idx, &ctx).unwrap();
-                let shown = photocraft_compose::flatten(app.filter_preview.as_ref().unwrap().result.as_ref().unwrap()).px.clone();
+                let shown = magicpic_compose::flatten(app.filter_preview.as_ref().unwrap().result.as_ref().unwrap()).px.clone();
                 assert_eq!(shown, original, "{mode} {depth}: reopening preserves the stored effect");
                 assert!(std::sync::Arc::ptr_eq(&before, &app.session.active().unwrap().doc));
                 crate::dialogs::confirm(&mut app, id).unwrap();
-                assert_eq!(shown, photocraft_compose::flatten(&app.session.active().unwrap().doc).px, "{mode} {depth}: confirm matches preview");
+                assert_eq!(shown, magicpic_compose::flatten(&app.session.active().unwrap().doc).px, "{mode} {depth}: confirm matches preview");
                 assert_eq!(smart(&app, layer).smart_filters.len(), filters.smart_filters.len());
             }
         }
@@ -445,7 +441,7 @@ fn rabbit_stale_tone_filter_dialog_hides_controls_until_the_original_document_re
         let other = app.session.active().unwrap().doc.clone();
         assert!(app.session.set_active(0));
         let mut h = Harness::builder().with_size(vec2(1200.0, 900.0)).build_ui_state(|ui, app| crate::dialogs::show(app, ui.ctx()), app);
-        PhotocraftApp::setup_context(&h.ctx, Default::default());
+        MagicpicApp::setup_context(&h.ctx, Default::default());
         let ctx = h.ctx.clone();
         super::open_editor(h.state_mut(), &ctx, layer.0, &filters, 2);
         let id = h.state().ui.dialogs.last().unwrap().id;
@@ -499,11 +495,11 @@ fn rabbit_whole_image_levels_alias_is_visible_and_editable() {
             let (mut app, layer) = app(depth, mode);
             // A neutral CMYK adjustment still takes the existing colour-conversion path.
             // Compare with the same public neutral command, rather than omitting that stage.
-            let mut oracle = photocraft_engine::Session::new();
+            let mut oracle = magicpic_engine::Session::new();
             oracle.add_document(app.session.active().unwrap().doc.as_ref().clone(), None);
             oracle.select_layer(layer).unwrap();
             oracle.execute("image.adjustments.levels", json!({"gamma":1})).unwrap();
-            let neutral = photocraft_compose::flatten(&oracle.active().unwrap().doc).px.clone();
+            let neutral = magicpic_compose::flatten(&oracle.active().unwrap().doc).px.clone();
             app.run("image.adjustments.levels", json!({"gray":{"gamma":2}})).unwrap();
             let filters = smart(&app, layer).clone();
             let ctx = egui::Context::default();
@@ -515,41 +511,41 @@ fn rabbit_whole_image_levels_alias_is_visible_and_editable() {
             fields.insert("gamma".into(), json!(1.0));
             let idx = app.session.active_index().unwrap();
             crate::canvas::ensure_filter_preview(&mut app, idx, &ctx).unwrap();
-            let shown = photocraft_compose::flatten(app.filter_preview.as_ref().unwrap().result.as_ref().unwrap()).px.clone();
+            let shown = magicpic_compose::flatten(app.filter_preview.as_ref().unwrap().result.as_ref().unwrap()).px.clone();
             assert!(shown == neutral, "{mode} {depth}: the visible edit matches a neutral Levels command");
             crate::dialogs::confirm(&mut app, id).unwrap();
-            assert_eq!(shown, photocraft_compose::flatten(&app.session.active().unwrap().doc).px);
+            assert_eq!(shown, magicpic_compose::flatten(&app.session.active().unwrap().doc).px);
             assert!(smart(&app, layer).smart_filters[2].params.get("gray").is_none());
         }
     }
 }
 
 /// A smart object in a `mode` document with `command` recorded as its one smart filter, and its layer id.
-fn adjustment_filter(mode: &str, command: &str, params: serde_json::Value) -> (PhotocraftApp, u64) {
-    let mut s = photocraft_engine::Session::new();
+fn adjustment_filter(mode: &str, command: &str, params: serde_json::Value) -> (MagicpicApp, u64) {
+    let mut s = magicpic_engine::Session::new();
     s.execute("file.new", json!({"width": 64, "height": 48, "mode": mode})).unwrap();
     s.execute("layer.new.layer", json!({})).unwrap();
     s.execute("edit.fill", json!({"contents": "black"})).unwrap();
     let id = s.execute("layer.smartObjects.convertToSmartObject", json!({})).unwrap()["layer"].as_u64().unwrap();
     s.execute(command, params).unwrap();
-    let mut app = PhotocraftApp::new(s, crate::Services::default());
+    let mut app = MagicpicApp::new(s, crate::Services::default());
     app.background_jobs = false;
     (app, id)
 }
 
 /// The smart object on layer `id`.
-fn recorded(app: &PhotocraftApp, id: u64) -> photocraft_doc::SmartObject {
-    match &app.session.active().unwrap().doc.layer(photocraft_doc::LayerId(id)).unwrap().content {
-        photocraft_doc::LayerContent::Smart(sm) => sm.clone(),
+fn recorded(app: &MagicpicApp, id: u64) -> magicpic_doc::SmartObject {
+    match &app.session.active().unwrap().doc.layer(magicpic_doc::LayerId(id)).unwrap().content {
+        magicpic_doc::LayerContent::Smart(sm) => sm.clone(),
         other => panic!("expected a smart object, got {}", other.kind_name()),
     }
 }
 
 /// The app in a harness with the editor of the layer's first smart filter open, and the dialog's id.
-fn edit_first_filter(app: PhotocraftApp, id: u64) -> (Harness<'static, PhotocraftApp>, u64) {
+fn edit_first_filter(app: MagicpicApp, id: u64) -> (Harness<'static, MagicpicApp>, u64) {
     let sm = recorded(&app, id);
-    let mut h = Harness::builder().with_size(vec2(1200.0, 900.0)).build_ui_state(|ui, app: &mut PhotocraftApp| crate::dialogs::show(app, ui.ctx()), app);
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    let mut h = Harness::builder().with_size(vec2(1200.0, 900.0)).build_ui_state(|ui, app: &mut MagicpicApp| crate::dialogs::show(app, ui.ctx()), app);
+    MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     let ctx = h.ctx.clone();
     super::open_editor(h.state_mut(), &ctx, id, &sm, 0);
     let dialog = h.state().ui.dialogs.last().unwrap().id;
@@ -574,8 +570,8 @@ fn a_channel_mixer_smart_filter_turned_off_monochrome_keeps_its_red_row() {
 
     let sm = recorded(h.state(), id);
     assert_eq!(sm.smart_filters.len(), 1, "no filter was stacked");
-    let adjustment = photocraft_engine::adjust_params::from_params("channelMixer", &sm.smart_filters[0].params, None, photocraft_doc::ColorMode::Rgb).unwrap();
-    let photocraft_doc::Adjustment::ChannelMixer { matrix, monochrome } = adjustment else { panic!("Channel Mixer params") };
+    let adjustment = magicpic_engine::adjust_params::from_params("channelMixer", &sm.smart_filters[0].params, None, magicpic_doc::ColorMode::Rgb).unwrap();
+    let magicpic_doc::Adjustment::ChannelMixer { matrix, monochrome } = adjustment else { panic!("Channel Mixer params") };
     assert!(!monochrome);
     assert!(matrix[0].iter().zip([0.7, 0.3, 0.0, 0.0]).all(|(a, b)| (a - b).abs() < 1e-5), "the edited Red row renders: {:?}", matrix[0]);
 }
@@ -598,9 +594,9 @@ fn a_lab_curves_smart_filter_keeps_a_lightness_edit() {
 
     let sm = recorded(h.state(), id);
     assert_eq!(sm.smart_filters.len(), 1, "no filter was stacked");
-    let read = |params: &serde_json::Value| photocraft_engine::adjust_params::from_params("curves", params, None, photocraft_doc::ColorMode::Lab).unwrap();
-    let photocraft_doc::Adjustment::Curves { per_channel, .. } = read(&sm.smart_filters[0].params) else { panic!("Curves params") };
-    let photocraft_doc::Adjustment::Curves { per_channel: wanted, .. } = read(&json!({"lightness": edited})) else { panic!("Curves params") };
+    let read = |params: &serde_json::Value| magicpic_engine::adjust_params::from_params("curves", params, None, magicpic_doc::ColorMode::Lab).unwrap();
+    let magicpic_doc::Adjustment::Curves { per_channel, .. } = read(&sm.smart_filters[0].params) else { panic!("Curves params") };
+    let magicpic_doc::Adjustment::Curves { per_channel: wanted, .. } = read(&json!({"lightness": edited})) else { panic!("Curves params") };
     assert_eq!(per_channel[0], wanted[0], "the edited Lightness renders");
     assert!(sm.smart_filters[0].params.get("points").is_none(), "the removed alias is not stored");
 }

@@ -14,8 +14,8 @@ struct Language {
 }
 
 /// `cargo xtask i18n-report` (the last `cargo xtask ci` step): per registered language, how many
-/// of PhotoCraft's English UI strings have a translation in the craft-i18n checkout
-/// `CRAFT_I18N_DIR` names, looked up as the app does (the `craft-i18n` crate: PhotoCraft's rows
+/// of MagicPic's English UI strings have a translation in the craft-i18n checkout
+/// `CRAFT_I18N_DIR` names, looked up as the app does (the `craft-i18n` crate: MagicPic's rows
 /// over the shared ones, a region falling back to its language), the strings it lacks, and how
 /// many rows are kept in English (a translation that is the English text itself). It never fails
 /// on a missing translation: that string shows in English, and translators fill it in craft-i18n.
@@ -76,6 +76,8 @@ fn embedded(dir: &Path) -> Result<&'static craft_i18n::Embedded, String> {
         // A locale without the file is skipped (or reads without a shared catalog); a file that is
         // there but can't be read is an error, not a gap in the coverage.
         let Some(app) = read_optional(&path.join("photocraft.tsv"))? else { continue };
+        // As `crates/ui-egui/build.rs` embeds it: the product named as this program names itself.
+        let app = app.replace("PhotoCraft", "MagicPic").replace("photocraft", "magicpic");
         let shared = read_optional(&path.join("common.tsv"))?.unwrap_or_default();
         out.push((Box::leak(code.into_boxed_str()), Box::leak(shared.into_boxed_str()), Box::leak(app.into_boxed_str())));
     }

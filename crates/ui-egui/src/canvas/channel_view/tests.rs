@@ -1,6 +1,6 @@
 use super::*;
-use photocraft_engine::Session;
-use photocraft_engine::channel_cmds::ChannelTarget;
+use magicpic_engine::Session;
+use magicpic_engine::channel_cmds::ChannelTarget;
 use serde_json::json;
 
 fn session() -> Session {
@@ -16,7 +16,7 @@ fn composite_bands_keep_the_downsample_grid() {
     s.execute("edit.fill", json!({"color": "#398db2"})).unwrap();
     let doc = &s.active().unwrap().doc;
     let rect = doc.bounds();
-    let full = photocraft_compose::render(doc, rect);
+    let full = magicpic_compose::render(doc, rect);
     let full_ref = &full;
     for factor in [1, 2, 3, 5] {
         let expected: Vec<_> = (0..rect.height())
@@ -35,7 +35,7 @@ fn composite_bands_keep_the_downsample_grid() {
 
 #[test]
 fn channel_eyes_reuse_composite_until_pixels_change() {
-    let mut app = PhotocraftApp::new(Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 64, "height": 32})).unwrap();
     app.run("edit.fill", json!({"color": "#4080c0"})).unwrap();
     app.sync_views();
@@ -99,14 +99,14 @@ fn spot_overlay_previews_with_the_spot_dot_gain() {
     let st = s.active_mut().unwrap();
     let doc = std::sync::Arc::make_mut(&mut st.doc);
     let ch = doc.channels.last_mut().unwrap();
-    ch.surface.write_region(photocraft_geom::Rect::new(0, 0, 1, 1), &[0.5]);
+    ch.surface.write_region(magicpic_geom::Rect::new(0, 0, 1, 1), &[0.5]);
     let i = doc.channels.len() - 1;
     st.channel_view.alpha_visible = vec![false; i + 1];
     st.channel_view.alpha_visible[i] = true;
     let st = s.active().unwrap();
     let px = render(&st.doc, &st.channel_view, st.doc.bounds(), 1, Look::default(), st.active_layer).unwrap();
-    let gain = photocraft_compose::multichannel::spot_dot_gain();
-    let paper = 1.0 - photocraft_compose::multichannel::dot_gain(0.5, gain);
+    let gain = magicpic_compose::multichannel::spot_dot_gain();
+    let paper = 1.0 - magicpic_compose::multichannel::dot_gain(0.5, gain);
     assert!(px[0].a() == 255 && (f32::from(px[0].r()) / 255.0 - paper).abs() <= 1.5 / 255.0, "{:?} vs {paper} at {gain} %", px[0]);
 }
 
@@ -197,7 +197,7 @@ fn layer_mask_views_show_the_feathered_mask() {
     let bounds = st.doc.bounds();
     let layer = st.doc.layer(st.active_layer.unwrap()).unwrap();
     let raw = layer.mask.as_ref().unwrap().surface.sample_channel(0, 0, 0);
-    let effective = photocraft_compose::masks::combined_mask(layer, bounds).unwrap();
+    let effective = magicpic_compose::masks::combined_mask(layer, bounds).unwrap();
     let softened = effective.sample_channel(0, 0, 0);
     assert!((softened - raw).abs() > 0.01, "the fixture has a visible feather at its edge");
 
@@ -232,7 +232,7 @@ fn layer_mask_overlay_takes_its_display_options() {
     assert_eq!(render(&st.doc, &st.channel_view, b, 1, green, st.active_layer).unwrap()[0], Color32::from_rgb(0, 255, 191));
 }
 
-/// `cargo test --release -p photocraft-ui-egui --lib mask_view_switch_24mp -- --ignored --nocapture`
+/// `cargo test --release -p magicpic-ui-egui --lib mask_view_switch_24mp -- --ignored --nocapture`
 #[test]
 #[ignore = "benchmark"]
 fn mask_view_switch_24mp() {
@@ -303,7 +303,7 @@ fn show_channels_in_color_lab_lightness_stays_gray() {
 /// The canvas texture cache is keyed by the preference, so toggling it rebuilds the view.
 #[test]
 fn ensure_honours_show_channels_in_color() {
-    let mut app = PhotocraftApp::new(Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     app.sync_views();
     app.run("channel.target", json!({"channel": "green"})).unwrap();
@@ -400,13 +400,13 @@ fn cmyk_channel_views_use_the_document_profile() {
     s.execute("channel.setVisible", json!({"channel": "black", "visible": false})).unwrap();
     let st = s.active().unwrap();
     let params =
-        photocraft_cms::synth::CmykParams { description: "Test Uncoated".into(), tvi: [0.26, 0.26, 0.26, 0.3], grid_a2b: 5, grid_b2a: 9, ..Default::default() };
+        magicpic_cms::synth::CmykParams { description: "Test Uncoated".into(), tvi: [0.26, 0.26, 0.26, 0.3], grid_a2b: 5, grid_b2a: 9, ..Default::default() };
     let mut doc = (*st.doc).clone();
-    doc.icc_profile = Some(photocraft_cms::synth::cmyk_profile(&params).to_bytes());
-    let space = photocraft_compose::cmyk_space(&doc).expect("a profile other than the built-in one");
+    doc.icc_profile = Some(magicpic_cms::synth::cmyk_profile(&params).to_bytes());
+    let space = magicpic_compose::cmyk_space(&doc).expect("a profile other than the built-in one");
     let fmt = doc.pixel_format();
     let inks: Vec<f32> = [0.0, 0.5, 0.5, 0.0].into_iter().chain(fmt.alpha.then_some(1.0)).collect();
-    let tagged = photocraft_color::convert::with_cmyk_space(Some(&space), || to_rgba(&fmt, &inks));
+    let tagged = magicpic_color::convert::with_cmyk_space(Some(&space), || to_rgba(&fmt, &inks));
     let builtin = to_rgba(&fmt, &inks);
     // 8-bit inks: within one level of the tagged conversion, well away from the built-in one.
     let off = |c: [f32; 4], px: Color32| [px.r(), px.g(), px.b()].iter().zip(c).map(|(p, c)| (i32::from(*p) - i32::from(q(c))).abs()).max().unwrap();
@@ -436,7 +436,7 @@ fn cmyk_inks_from_the_proxy_match_the_document() {
 /// the sampled composite one of them cached is not reused by the other.
 #[test]
 fn cmyk_ink_samples_and_the_spot_composite_are_cached_apart() {
-    let mut app = PhotocraftApp::new(Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 16, "height": 8, "mode": "cmyk", "background": "white"})).unwrap();
     app.run("tools.setColors", json!({"foregroundCmyk": [1.0, 1.0, 1.0, 0.0]})).unwrap();
     app.run("edit.fillForeground", json!({})).unwrap();
@@ -446,7 +446,7 @@ fn cmyk_ink_samples_and_the_spot_composite_are_cached_apart() {
     app.sync_views();
     let ctx = egui::Context::default();
     let id = app.session.active().unwrap().doc.id.0;
-    let source = |app: &PhotocraftApp| app.channel_views.get(&id).and_then(|c| c.source.as_ref()).map(|s| (s.inks, s.pixels.clone()));
+    let source = |app: &MagicpicApp| app.channel_views.get(&id).and_then(|c| c.source.as_ref()).map(|s| (s.inks, s.pixels.clone()));
     app.run("channel.setVisible", json!({"channel": "black", "visible": false})).unwrap();
     assert!(ensure(&mut app, &ctx, 0, None).is_some());
     let doc = app.session.active().unwrap().doc.clone();
@@ -458,9 +458,9 @@ fn cmyk_ink_samples_and_the_spot_composite_are_cached_apart() {
 
 /// A white-backed `mode`/`depth` document, 3×1, with a 0.8/0.4/0.2 picture and two overlapping
 /// spot inks (`a` covers 1, ½, 0 of the pixels; `b` the reverse).
-fn spot_doc(mode: ColorMode, depth: photocraft_color::SampleType, sa: f32, sb: f32) -> Document {
-    use photocraft_color::{Color, PixelFormat};
-    let mut doc = Document::with_background("spots", photocraft_geom::Size::new(3, 1), mode, depth, Color::rgb(0.8, 0.4, 0.2));
+fn spot_doc(mode: ColorMode, depth: magicpic_color::SampleType, sa: f32, sb: f32) -> Document {
+    use magicpic_color::{Color, PixelFormat};
+    let mut doc = Document::with_background("spots", magicpic_geom::Size::new(3, 1), mode, depth, Color::rgb(0.8, 0.4, 0.2));
     let fmt = PixelFormat::new(ColorMode::Grayscale, depth, false);
     for (name, rgb, s, vals) in [("a", [0.0, 0.6, 0.65], sa, [1.0, 0.5, 0.0]), ("b", [0.9, 0.2, 0.5], sb, [0.0, 0.5, 1.0])] {
         let mut sf = Surface::new(fmt);
@@ -475,7 +475,7 @@ fn spot_doc(mode: ColorMode, depth: photocraft_color::SampleType, sa: f32, sb: f
 #[test]
 fn spot_eyes_overprint_the_composite() {
     for mode in [ColorMode::Rgb, ColorMode::Cmyk] {
-        for depth in [photocraft_color::SampleType::U8, photocraft_color::SampleType::U16] {
+        for depth in [magicpic_color::SampleType::U8, magicpic_color::SampleType::U16] {
             for (sa, sb) in [(0.0, 0.0), (0.5, 1.0), (1.0, 0.5)] {
                 for swapped in [false, true] {
                     let mut doc = spot_doc(mode, depth, sa, sb);
@@ -486,8 +486,8 @@ fn spot_eyes_overprint_the_composite() {
                     v.set_alpha_visible(0, true);
                     v.set_alpha_visible(1, true);
                     let px = render(&doc, &v, doc.bounds(), 1, Look::default(), None).unwrap();
-                    let mut want = photocraft_compose::Buffer { rect: doc.bounds(), px: composite(&doc, doc.bounds(), 1) };
-                    photocraft_compose::multichannel::overprint(&mut want, &doc, |_| true);
+                    let mut want = magicpic_compose::Buffer { rect: doc.bounds(), px: composite(&doc, doc.bounds(), 1) };
+                    magicpic_compose::multichannel::overprint(&mut want, &doc, |_| true);
                     for (x, (got, w)) in px.iter().zip(&want.px).enumerate() {
                         assert_eq!(got.a(), 255, "{mode:?} {depth:?}: opaque");
                         let w = [q(w[0]), q(w[1]), q(w[2])];
@@ -496,8 +496,8 @@ fn spot_eyes_overprint_the_composite() {
                     // Only the visible ink prints; where it has none the canvas shows through.
                     v.set_alpha_visible(1, false);
                     let one = render(&doc, &v, doc.bounds(), 1, Look::default(), None).unwrap();
-                    let mut want = photocraft_compose::Buffer { rect: doc.bounds(), px: composite(&doc, doc.bounds(), 1) };
-                    photocraft_compose::multichannel::overprint(&mut want, &doc, |i| i == 0);
+                    let mut want = magicpic_compose::Buffer { rect: doc.bounds(), px: composite(&doc, doc.bounds(), 1) };
+                    magicpic_compose::multichannel::overprint(&mut want, &doc, |i| i == 0);
                     let (solid, bare) = if swapped { (2, 0) } else { (0, 2) };
                     let w = want.px[solid];
                     assert_eq!([one[solid].r(), one[solid].g(), one[solid].b()], [q(w[0]), q(w[1]), q(w[2])]);
@@ -514,8 +514,8 @@ fn spot_eyes_overprint_the_composite() {
 #[test]
 fn uninked_pixels_leave_the_canvas_alone() {
     for factor in [1, 2] {
-        let mut doc = spot_doc(ColorMode::Rgb, photocraft_color::SampleType::U8, 1.0, 1.0);
-        doc.size = photocraft_geom::Size::new(4, 2);
+        let mut doc = spot_doc(ColorMode::Rgb, magicpic_color::SampleType::U8, 1.0, 1.0);
+        doc.size = magicpic_geom::Size::new(4, 2);
         let fmt = doc.channels[0].surface.format();
         let mut sparse = Surface::new(fmt);
         sparse.write_pixel(0, 0, &[1.0]);
@@ -548,10 +548,10 @@ fn uninked_pixels_leave_the_canvas_alone() {
 /// same as over the whole composite; ink everywhere renders the whole one, kept for the cache.
 #[test]
 fn sparse_inks_composite_only_their_bounding_box() {
-    use photocraft_doc::{Layer, LayerContent};
+    use magicpic_doc::{Layer, LayerContent};
     for factor in [1, 2, 3] {
-        let mut doc = spot_doc(ColorMode::Rgb, photocraft_color::SampleType::U8, 0.5, 1.0);
-        doc.size = photocraft_geom::Size::new(60, 40);
+        let mut doc = spot_doc(ColorMode::Rgb, magicpic_color::SampleType::U8, 0.5, 1.0);
+        doc.size = magicpic_geom::Size::new(60, 40);
         let mut ramp = Surface::new(doc.pixel_format());
         for y in 0..40 {
             for x in 0..60 {
@@ -574,7 +574,7 @@ fn sparse_inks_composite_only_their_bounding_box() {
         let got = render_with_source(&doc, &v, b, factor, Look::default(), None, source).unwrap();
         assert!(fresh.is_none(), "/{factor}: two inked pixels render no whole composite");
         let whole = composite_sampled(&doc, b, factor);
-        let ink = photocraft_compose::multichannel::Ink::of(&doc, &doc.channels[0]);
+        let ink = magicpic_compose::multichannel::Ink::of(&doc, &doc.channels[0]);
         let w = 60usize.div_ceil(factor as usize);
         let f = factor as usize;
         let inked = [(12 / f, 0), (18 / f, 6 / f)];
@@ -584,7 +584,7 @@ fn sparse_inks_composite_only_their_bounding_box() {
                 continue;
             };
             let mut want = [whole[k]];
-            let gain = photocraft_compose::multichannel::spot_dot_gain();
+            let gain = magicpic_compose::multichannel::spot_dot_gain();
             ink.apply_with_gain(&mut want, [doc.channels[0].surface.pixel((x * f) as i32, (y * f) as i32)[0]], gain);
             let want = Color32::from_rgb(q(want[0][0]), q(want[0][1]), q(want[0][2]));
             assert_eq!(*px, want, "/{factor} ({x}, {y})");
@@ -604,7 +604,7 @@ fn sparse_inks_composite_only_their_bounding_box() {
 /// spot with ink shown later draws one.
 #[test]
 fn uninked_spot_draws_no_texture() {
-    let mut app = PhotocraftApp::new(Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 16, "height": 8, "background": "white"})).unwrap();
     // No selection: an empty spot channel, shown over the composite.
     app.run("channel.newSpot", json!({"color": "#00ffff", "solidity": 0})).unwrap();
@@ -627,12 +627,12 @@ fn uninked_spot_draws_no_texture() {
 /// canvas around them does.
 #[test]
 fn printed_inks_follow_the_display_transform() {
-    use photocraft_cms::{Builtin, TransformOptions};
-    let doc = spot_doc(ColorMode::Rgb, photocraft_color::SampleType::U8, 1.0, 1.0);
+    use magicpic_cms::{Builtin, TransformOptions};
+    let doc = spot_doc(ColorMode::Rgb, magicpic_color::SampleType::U8, 1.0, 1.0);
     let mut v = ChannelView::default();
     v.set_alpha_visible(0, true);
     let plain = render(&doc, &v, doc.bounds(), 1, Look::default(), None).unwrap();
-    let t = photocraft_cms::transform::cached(Builtin::Srgb.profile(), Builtin::DisplayP3.profile(), TransformOptions::default()).unwrap();
+    let t = magicpic_cms::transform::cached(Builtin::Srgb.profile(), Builtin::DisplayP3.profile(), TransformOptions::default()).unwrap();
     let screen = Screen { encode_srgb: false, transform: Some(t.clone()) };
     let shown =
         render_with_source(&doc, &v, doc.bounds(), 1, Look::default(), None, CompositeSource { cached: None, fresh: &mut None, screen: &screen }).unwrap();
@@ -649,8 +649,8 @@ fn printed_inks_follow_the_display_transform() {
 /// brightened one.
 #[test]
 fn printed_inks_keep_their_colour_in_a_linear_document() {
-    let mut doc = spot_doc(ColorMode::Rgb, photocraft_color::SampleType::F32, 1.0, 1.0);
-    doc.icc_profile = Some(photocraft_cms::Builtin::LinearSrgb.profile().to_bytes());
+    let mut doc = spot_doc(ColorMode::Rgb, magicpic_color::SampleType::F32, 1.0, 1.0);
+    doc.icc_profile = Some(magicpic_cms::Builtin::LinearSrgb.profile().to_bytes());
     let mut v = ChannelView::default();
     v.set_alpha_visible(0, true);
     let encoded = Screen { encode_srgb: true, transform: None };
@@ -663,8 +663,8 @@ fn printed_inks_keep_their_colour_in_a_linear_document() {
 /// Alpha channels and Quick Mask still tint, over the printed inks.
 #[test]
 fn alpha_tint_draws_over_the_inks() {
-    let mut doc = spot_doc(ColorMode::Rgb, photocraft_color::SampleType::U8, 1.0, 1.0);
-    let mut sel = Surface::new(photocraft_color::PixelFormat::new(ColorMode::Grayscale, photocraft_color::SampleType::U8, false));
+    let mut doc = spot_doc(ColorMode::Rgb, magicpic_color::SampleType::U8, 1.0, 1.0);
+    let mut sel = Surface::new(magicpic_color::PixelFormat::new(ColorMode::Grayscale, magicpic_color::SampleType::U8, false));
     sel.write_region(Rect::new(0, 0, 3, 1), &[0.0, 0.0, 0.0]);
     doc.channels.push(AlphaChannel::new("Alpha 1", sel));
     let mut v = ChannelView::default();
@@ -681,14 +681,14 @@ fn alpha_tint_draws_over_the_inks() {
 /// Editing a spot (colour, solidity, visibility) or the picture under it refreshes the canvas texture.
 #[test]
 fn spot_edits_refresh_the_overlay() {
-    let mut app = PhotocraftApp::new(Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 16, "height": 8, "background": "white"})).unwrap();
     app.run("select.all", json!({})).unwrap();
     let spot = app.run("channel.newSpot", json!({"color": "#00ffff", "solidity": 0})).unwrap()["channel"].as_u64().unwrap();
     app.sync_views();
     let ctx = egui::Context::default();
     let id = app.session.active().unwrap().doc.id.0;
-    let pixel = |app: &PhotocraftApp| {
+    let pixel = |app: &MagicpicApp| {
         let st = app.session.active().unwrap();
         render(&st.doc, &st.channel_view, st.doc.bounds(), 1, Look::default(), st.active_layer).map(|px| px[0])
     };
@@ -721,13 +721,13 @@ fn spot_edits_refresh_the_overlay() {
 /// with the inks printed over it the same way.
 #[test]
 fn proxy_composite_matches_the_full_resolution_one() {
-    use photocraft_color::{BlendMode, SampleType};
-    use photocraft_doc::{Layer, LayerContent, LayerMask};
+    use magicpic_color::{BlendMode, SampleType};
+    use magicpic_doc::{Layer, LayerContent, LayerMask};
     for mode in [ColorMode::Rgb, ColorMode::Cmyk] {
         for depth in [SampleType::U8, SampleType::U16] {
             for factor in [2, 3, 4] {
                 let mut doc = spot_doc(mode, depth, 0.5, 1.0);
-                doc.size = photocraft_geom::Size::new(37, 23);
+                doc.size = magicpic_geom::Size::new(37, 23);
                 let mut s = Surface::new(doc.pixel_format());
                 for y in 0..23 {
                     for x in 0..37 {
@@ -762,13 +762,13 @@ fn proxy_composite_matches_the_full_resolution_one() {
                 v.set_alpha_visible(0, true);
                 v.set_alpha_visible(1, true);
                 let got = render(&doc, &v, b, factor, Look::default(), None).unwrap();
-                let mut want = photocraft_compose::Buffer {
+                let mut want = magicpic_compose::Buffer {
                     rect: Rect::new(0, 0, 37usize.div_ceil(factor as usize) as i32, 23usize.div_ceil(factor as usize) as i32),
                     px: full,
                 };
                 let mut small = doc.clone();
-                small.channels.iter_mut().for_each(|c| c.surface = photocraft_compose::proxy::downsample(&c.surface, factor));
-                photocraft_compose::multichannel::overprint(&mut want, &small, |_| true);
+                small.channels.iter_mut().for_each(|c| c.surface = magicpic_compose::proxy::downsample(&c.surface, factor));
+                magicpic_compose::multichannel::overprint(&mut want, &small, |_| true);
                 let sw = want.rect.width();
                 let inked = |i: usize| {
                     let (x, y) = ((i as u32 % sw) as i32, (i as u32 / sw) as i32);
@@ -787,8 +787,8 @@ fn proxy_composite_matches_the_full_resolution_one() {
 /// the full-resolution composite.
 #[test]
 fn feathered_masks_keep_the_full_resolution_composite() {
-    use photocraft_doc::{Layer, LayerContent, LayerMask};
-    let mut doc = spot_doc(ColorMode::Rgb, photocraft_color::SampleType::U8, 1.0, 1.0);
+    use magicpic_doc::{Layer, LayerContent, LayerMask};
+    let mut doc = spot_doc(ColorMode::Rgb, magicpic_color::SampleType::U8, 1.0, 1.0);
     assert!(proxy_matches(&doc));
     let mut mask = LayerMask::reveal_all();
     mask.feather = 4.0;
@@ -812,13 +812,13 @@ fn feathered_masks_keep_the_full_resolution_composite() {
 /// the proxy.
 #[test]
 fn uncached_pattern_fills_keep_the_full_resolution_composite() {
-    use photocraft_doc::{Fill, FillCache, Layer, LayerContent};
+    use magicpic_doc::{Fill, FillCache, Layer, LayerContent};
     let pattern = Fill::Pattern { name: "p".into(), scale: 1.0, id: "p".into(), angle: 0.0, link: true, phase: (0.0, 0.0) };
-    let mut doc = spot_doc(ColorMode::Rgb, photocraft_color::SampleType::U8, 1.0, 1.0);
+    let mut doc = spot_doc(ColorMode::Rgb, magicpic_color::SampleType::U8, 1.0, 1.0);
     doc.layers.push(Layer::group("group", vec![Layer::new("pattern", LayerContent::Fill(pattern.clone()))]));
     assert!(!proxy_matches(&doc));
     let mut stale = Layer::new("pattern", LayerContent::Fill(pattern.clone()));
-    stale.fill_cache = Some(FillCache { fill: Fill::Solid(photocraft_color::Color::WHITE), surface: Surface::new(doc.pixel_format()) });
+    stale.fill_cache = Some(FillCache { fill: Fill::Solid(magicpic_color::Color::WHITE), surface: Surface::new(doc.pixel_format()) });
     doc.layers.pop();
     doc.layers.push(stale);
     assert!(!proxy_matches(&doc));
@@ -834,7 +834,7 @@ fn uncached_pattern_fills_keep_the_full_resolution_composite() {
 #[test]
 fn solo_spot_is_grayscale_and_edits_without_layer_mask() {
     for mode in [ColorMode::Rgb, ColorMode::Cmyk] {
-        let mut app = PhotocraftApp::new(Session::new(), crate::Services::default());
+        let mut app = MagicpicApp::new(Session::new(), crate::Services::default());
         let mode_str = if mode == ColorMode::Rgb { "rgb" } else { "cmyk" };
         app.run("file.new", json!({"width": 8, "height": 4, "mode": mode_str})).unwrap();
         // Plain document has a background layer and no layer mask.
@@ -864,7 +864,7 @@ fn solo_spot_is_grayscale_and_edits_without_layer_mask() {
 #[test]
 fn solo_spot_wins_over_an_unrelated_layer_mask() {
     for mode in ["rgb", "cmyk"] {
-        let mut app = PhotocraftApp::new(Session::new(), crate::Services::default());
+        let mut app = MagicpicApp::new(Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 8, "height": 4, "mode": mode})).unwrap();
         app.run("layer.layerMask.revealAll", json!({})).unwrap();
         app.run("select.rect", json!({"x": 0, "y": 0, "width": 4, "height": 4})).unwrap();

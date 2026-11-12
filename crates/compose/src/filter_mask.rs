@@ -8,9 +8,9 @@
 //! keep the mixed result as their pixels, so PSD import mixes ([`mix`]) and export unmixes
 //! ([`unmix`]).
 
-use photocraft_color::SampleType;
-use photocraft_doc::LayerMask;
-use photocraft_raster::Surface;
+use magicpic_color::SampleType;
+use magicpic_doc::LayerMask;
+use magicpic_raster::Surface;
 
 /// `filtered` mixed over `base` (the unfiltered pixels) through `mask`: premultiplied, any
 /// channel layout. Pixels the mask hides entirely are `base`'s.
@@ -148,7 +148,7 @@ struct UnmixScratch {
 }
 
 /// Recover a tile with the same pixel arithmetic on the serial and bounded parallel paths.
-fn unmix_tile(base: &Surface, mixed: &Surface, mask: &LayerMask, area: photocraft_geom::Rect, scratch: &mut UnmixScratch) {
+fn unmix_tile(base: &Surface, mixed: &Surface, mask: &LayerMask, area: magicpic_geom::Rect, scratch: &mut UnmixScratch) {
     let fmt = base.format();
     let n = fmt.channels();
     let UnmixScratch { base: b, mixed: x, mask: k, output: o } = scratch;
@@ -220,9 +220,9 @@ fn unmix_tile(base: &Surface, mixed: &Surface, mask: &LayerMask, area: photocraf
 
 #[cfg(test)]
 mod tests {
-    use photocraft_color::{ColorMode, PixelFormat, SampleType};
-    use photocraft_doc::LayerMask;
-    use photocraft_raster::Surface;
+    use magicpic_color::{ColorMode, PixelFormat, SampleType};
+    use magicpic_doc::LayerMask;
+    use magicpic_raster::Surface;
 
     use super::*;
 
@@ -268,13 +268,13 @@ mod tests {
                         bp[colors] = 0.25;
                         fp[colors] = 0.75;
                     }
-                    base.fill_rect(photocraft_geom::Rect::new(0, 0, 256, 256), &bp);
+                    base.fill_rect(magicpic_geom::Rect::new(0, 0, 256, 256), &bp);
                     base.write_pixel(-2, -1, &bp);
-                    filtered.fill_rect(photocraft_geom::Rect::new(256, 0, 261, 1), &fp);
+                    filtered.fill_rect(magicpic_geom::Rect::new(256, 0, 261, 1), &fp);
                     filtered.write_pixel(260, 257, &fp);
                     let mut mask = LayerMask::reveal_all();
                     mask.surface = Surface::with_default(PixelFormat::new(ColorMode::Grayscale, SampleType::F32, false), &[0.5]);
-                    mask.surface.fill_rect(photocraft_geom::Rect::new(0, 256, 256, 258), &[0.]);
+                    mask.surface.fill_rect(magicpic_geom::Rect::new(0, 256, 256, 258), &[0.]);
                     mask.surface.write_pixel(256, 0, &[1.]);
                     if sample == SampleType::F32 {
                         let tiny = f32::from_bits(1);
@@ -327,17 +327,17 @@ mod tests {
         let serial = rayon::ThreadPoolBuilder::new().num_threads(1).build().unwrap();
         let parallel = rayon::ThreadPoolBuilder::new().num_threads(2).build().unwrap();
         let fmt = PixelFormat::RGBA32F;
-        let bounds = photocraft_geom::Rect::new(-1, -1, 770, 258);
+        let bounds = magicpic_geom::Rect::new(-1, -1, 770, 258);
         let mut base = Surface::new(fmt);
         let mut mixed = Surface::new(fmt);
         base.fill_rect(bounds, &[-2., 3., 4., 0.75]);
         mixed.fill_rect(bounds, &[3., -0.5, 2.5, 0.75]);
         let mut mask = LayerMask::reveal_all();
         mask.surface = Surface::with_default(PixelFormat::new(ColorMode::Grayscale, SampleType::F32, false), &[0.5]);
-        let hidden = photocraft_geom::Rect::new(0, 0, 256, 256);
+        let hidden = magicpic_geom::Rect::new(0, 0, 256, 256);
         base.fill_rect(hidden, &[1., 2., 3., 0.]);
         mask.surface.fill_rect(hidden, &[0.]);
-        let empty = photocraft_geom::Rect::new(256, 0, 512, 256);
+        let empty = magicpic_geom::Rect::new(256, 0, 512, 256);
         base.fill_rect(empty, &[1., 2., 3., 1.]);
         mixed.fill_rect(empty, &[4., 5., 6., 0.]);
         let expected = serial.install(|| unmix(&base, &mixed, &mask));
@@ -348,7 +348,7 @@ mod tests {
     #[test]
     /// Verify inverse scratch reuse clears skipped outputs and matches fresh pixels across sparse native formats.
     fn reused_unmix_scratch_matches_fresh_pixels_and_clears_early_continue_outputs() {
-        use photocraft_geom::Rect;
+        use magicpic_geom::Rect;
 
         for mode in [ColorMode::Rgb, ColorMode::Grayscale, ColorMode::Cmyk, ColorMode::Lab, ColorMode::Multichannel] {
             for sample in SampleType::ALL {

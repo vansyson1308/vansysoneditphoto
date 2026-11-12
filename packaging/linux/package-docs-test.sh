@@ -31,7 +31,7 @@ def assert_docs(directory):
         assert path.read_bytes() == (root / "docs" / name).read_bytes(), f"changed packaged document: {path}"
 
 
-with tempfile.TemporaryDirectory(prefix="photocraft-package-docs-") as temporary:
+with tempfile.TemporaryDirectory(prefix="magicpic-package-docs-") as temporary:
     temp = Path(temporary)
     fixture = temp / "source with spaces"
     fixture.mkdir()
@@ -47,9 +47,9 @@ with tempfile.TemporaryDirectory(prefix="photocraft-package-docs-") as temporary
         else:
             shutil.copy2(source, destination)
 
-    binary = "#!/usr/bin/env bash\nprintf 'PhotoCraft packaging fixture\\n'\n"
+    binary = "#!/usr/bin/env bash\nprintf 'MagicPic packaging fixture\\n'\n"
     target = fixture / "target"
-    for name in ("photocraft", "photocraft-cli"):
+    for name in ("magicpic", "magicpic-cli"):
         path = target / "release" / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(binary)
@@ -73,21 +73,21 @@ verify_appimagetool_override() { return 1; }
     env = os.environ.copy()
     for key in ("CROSS_TARGET", "CROSS_COMPILE", "EMULATOR", "APPIMAGETOOL", "CRAFT_FONTS_DIR"):
         env.pop(key, None)
-    env.update(CARGO_TARGET_DIR=str(target), DIST=str(temp / "dist"), CROSS_ARCH="x86_64", PHOTOCRAFT_BUILD_DATE="2026-01-01")
+    env.update(CARGO_TARGET_DIR=str(target), DIST=str(temp / "dist"), CROSS_ARCH="x86_64", MAGICPIC_BUILD_DATE="2026-01-01")
     run(["bash", "packaging/linux/package.sh", "--skip-build", "--formats", "tar appimage"], fixture, env)
-    assert_docs(target / "linux-package/root/usr/share/doc/photocraft")
-    assert_docs(target / "linux-package/PhotoCraft.AppDir/usr/share/doc/photocraft")
+    assert_docs(target / "linux-package/root/usr/share/doc/magicpic")
+    assert_docs(target / "linux-package/MagicPic.AppDir/usr/share/doc/magicpic")
     archives = list((temp / "dist").glob("*.tar.gz"))
     assert len(archives) == 1, f"expected one tarball, found {archives}"
     unpacked = temp / "unpacked"
     unpacked.mkdir()
     run(["tar", "-xzf", str(archives[0]), "-C", str(unpacked)], fixture, env)
     bundle = next(unpacked.iterdir())
-    assert_docs(bundle / "share/doc/photocraft")
-    assert (bundle / "bin/photocraft-cli").read_text() == binary
+    assert_docs(bundle / "share/doc/magicpic")
+    assert (bundle / "bin/magicpic-cli").read_text() == binary
     print("PASS: FHS stage, tarball and AppDir retain both protocol documents")
 
-    # The source manifest must request both packages; a missing -p photocraft-cli leaves
+    # The source manifest must request both packages; a missing -p magicpic-cli leaves
     # no CLI for its real install command to copy. Do not seed its build with staged bins.
     shutil.rmtree(target)
     tools = temp / "tools"
@@ -101,23 +101,23 @@ for index, arg in enumerate(args[:-1]):
     if arg == "-p":
         path = Path("target/release") / args[index + 1]
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text("#!/usr/bin/env bash\\nprintf 'PhotoCraft packaging fixture\\\\n'\\n")
+        path.write_text("#!/usr/bin/env bash\\nprintf 'MagicPic packaging fixture\\\\n'\\n")
         path.chmod(0o755)
 ''')
     cargo.chmod(0o755)
     env["PATH"] = str(tools) + os.pathsep + env["PATH"]
     for suffix, directory in ((".yml", fixture), (".bundle.yml", bundle)):
-        manifest = yaml.safe_load((root / f"packaging/linux/flatpak/ai.storyteller.photocraft{suffix}").read_text())
+        manifest = yaml.safe_load((root / f"packaging/linux/flatpak/io.github.vansyson1308.magicpic{suffix}").read_text())
         app = temp / ("flatpak-source" if suffix == ".yml" else "flatpak-bundle")
-        # Other modules, such as cups-client, build their own sources; only photocraft is checked here.
-        module = next(m for m in manifest["modules"] if isinstance(m, dict) and m.get("name") == "photocraft")
+        # Other modules, such as cups-client, build their own sources; only magicpic is checked here.
+        module = next(m for m in manifest["modules"] if isinstance(m, dict) and m.get("name") == "magicpic")
         for command in module["build-commands"]:
             # Redirect only the sandbox output root, preserving the manifest's commands.
             command = command.replace("/app/", shlex.quote(str(app)) + "/")
             run(["bash", "-euo", "pipefail", "-c", command], directory, env)
-        cli = app / "bin/photocraft-cli"
+        cli = app / "bin/magicpic-cli"
         assert cli.is_file() and os.access(cli, os.X_OK), f"missing executable CLI in {suffix}"
         assert cli.read_text() == binary, f"changed CLI bytes in {suffix}"
-        assert_docs(app / "share/doc/photocraft")
+        assert_docs(app / "share/doc/magicpic")
         print(f"PASS: Flatpak {suffix} build commands install the CLI and both protocol documents")
 PY

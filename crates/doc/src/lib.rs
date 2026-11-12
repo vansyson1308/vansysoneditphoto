@@ -1,4 +1,4 @@
-//! The PhotoCraft document model: pure data, no rendering, no UI.
+//! The MagicPic document model: pure data, no rendering, no UI.
 //!
 //! Layer order: inside every group (and the root), `children[0]` is the **bottom** layer, matching
 //! compositing order and the PSD file order. UIs display the list reversed.
@@ -38,11 +38,11 @@ pub use effects::{
     GradientStyle, Satin, Shadow, StrokeFx, StrokePosition,
 };
 pub use frame::Frame;
+pub use magicpic_color::{BlendMode, Color, ColorMode, PixelFormat, SampleType};
+pub use magicpic_geom::{Affine, Rect, Size};
+pub use magicpic_raster::Surface;
 pub use mode::{ColorTable, Duotone, DuotoneInk, StackMode};
 pub use pattern::Pattern;
-pub use photocraft_color::{BlendMode, Color, ColorMode, PixelFormat, SampleType};
-pub use photocraft_geom::{Affine, Rect, Size};
-pub use photocraft_raster::Surface;
 use serde::{Deserialize, Serialize};
 pub use slices::{Slice, SliceKind, SliceOrigin, Slices};
 pub use text_styles::TextStyles;
@@ -312,7 +312,7 @@ pub struct Effects {
 /// PSD export, `.pcraft` save and load) recurses once per level, so deeper trees risk
 /// overflowing the 1 MiB main-thread stacks of Windows and wasm. PSD import and the engine
 /// commands that nest layers (`layer.groupLayers`, `layer.moveTo`, Artboard from Layers) enforce
-/// this up front; `photocraft-format` refuses to save deeper trees.
+/// this up front; `magicpic-format` refuses to save deeper trees.
 pub const MAX_GROUP_DEPTH: usize = 100;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -537,7 +537,7 @@ pub struct SmartObject {
     pub filter_mask: Option<LayerMask>,
     /// Edit › Transform › Warp on the smart object, in source-image coordinates; applied before
     /// `transform` when re-rendering from the source, so warping stays lossless.
-    pub warp: Option<photocraft_geom::warp::Warp>,
+    pub warp: Option<magicpic_geom::warp::Warp>,
     /// Layer › Smart Objects › Stack Mode: when set, the source's top-level layers are combined
     /// per pixel with this statistic instead of composited.
     pub stack_mode: Option<StackMode>,
@@ -877,7 +877,7 @@ pub struct Metadata {
     /// Historical conversion information; never consulted by native rendering or editing.
     /// Shared so document/history clones do not duplicate report entries, strings or retained payloads.
     pub import_conversion: Option<Arc<import_conversion::ImportConversion>>,
-    /// The XMP packet as stored, kept as text so properties PhotoCraft doesn't model survive.
+    /// The XMP packet as stored, kept as text so properties MagicPic doesn't model survive.
     /// Shared like the other payloads here: cloning a document or a history state never copies
     /// it (#4535).
     pub xmp: Option<Arc<str>>,
@@ -1040,7 +1040,7 @@ impl Document {
         bg.locks.position = true;
         if let Some(s) = bg.surface_mut() {
             let rgba = fill.to_rgb();
-            let px = photocraft_raster::from_rgba(&s.format(), [rgba[0], rgba[1], rgba[2], fill.alpha]);
+            let px = magicpic_raster::from_rgba(&s.format(), [rgba[0], rgba[1], rgba[2], fill.alpha]);
             s.fill_rect(d.bounds(), &px);
         }
         d.layers.push(bg);
@@ -1127,7 +1127,7 @@ impl Document {
     /// and exports of this document check it; other documents are unaffected. Free when no
     /// tile in the process has failed.
     pub fn scratch_health(&self) -> Result<(), String> {
-        if !photocraft_raster::spill::any_failed() {
+        if !magicpic_raster::spill::any_failed() {
             return Ok(());
         }
         let mut health = Ok(());

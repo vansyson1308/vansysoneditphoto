@@ -1,7 +1,7 @@
 use super::tabs::{open_on_double_click, paint_dots};
-use super::{PhotocraftApp, Rect, Sense};
+use super::{MagicpicApp, Rect, Sense};
 
-pub(super) fn start_screen(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
+pub(super) fn start_screen(app: &mut MagicpicApp, ui: &mut egui::Ui) {
     let area = ui.available_rect_before_wrap();
     paint_dots(ui, area, app.session.prefs().interface.show_canvas_dots);
     open_on_double_click(app, ui, area);
@@ -45,7 +45,7 @@ pub(super) fn start_screen(app: &mut PhotocraftApp, ui: &mut egui::Ui) {
     }
 }
 
-fn render_start_actions_row(app: &mut PhotocraftApp, ui: &mut egui::Ui, avail_w: f32) {
+fn render_start_actions_row(app: &mut MagicpicApp, ui: &mut egui::Ui, avail_w: f32) {
     let t = crate::theme::Tokens::get(ui.ctx());
     let btn_w = ((avail_w - 12.0) / 2.0).clamp(0.0, 150.0);
 
@@ -81,7 +81,7 @@ fn render_start_actions_row(app: &mut PhotocraftApp, ui: &mut egui::Ui, avail_w:
     });
 }
 
-fn render_start_rail(app: &mut PhotocraftApp, ui: &mut egui::Ui, rail_w: f32) {
+fn render_start_rail(app: &mut MagicpicApp, ui: &mut egui::Ui, rail_w: f32) {
     let t = crate::theme::Tokens::get(ui.ctx());
 
     ui.add_space(8.0);
@@ -160,7 +160,7 @@ fn render_start_rail(app: &mut PhotocraftApp, ui: &mut egui::Ui, rail_w: f32) {
         learn_color,
     );
     if learn_resp.clicked() {
-        crate::links::open(app, ui.ctx(), crate::links::TUTORIALS);
+        crate::links::open(app, ui.ctx(), crate::links::GUIDE);
     }
 
     // 5. Bottom pinned community links
@@ -174,12 +174,11 @@ fn render_start_rail(app: &mut PhotocraftApp, ui: &mut egui::Ui, rail_w: f32) {
 
     ui.add_space(8.0);
 
-    render_rail_link(app, ui, rail_w, tl!("Website"), "link", crate::links::APP_PAGE);
-    render_rail_link(app, ui, rail_w, tl!("Discord"), "message-square", crate::links::DISCORD);
+    render_rail_link(app, ui, rail_w, tl!("User guide"), "link", crate::links::GUIDE);
     render_rail_link(app, ui, rail_w, tl!("GitHub"), "link-2", crate::links::GITHUB);
 }
 
-fn render_rail_link(app: &mut PhotocraftApp, ui: &mut egui::Ui, rail_w: f32, label: &str, icon_name: &str, url: &str) {
+fn render_rail_link(app: &mut MagicpicApp, ui: &mut egui::Ui, rail_w: f32, label: &str, icon_name: &str, url: &str) {
     let t = crate::theme::Tokens::get(ui.ctx());
     let (rect, resp) = ui.allocate_exact_size(egui::vec2(rail_w, 28.0), Sense::click());
     let resp = resp.on_hover_cursor(egui::CursorIcon::PointingHand).on_hover_text(url);
@@ -195,20 +194,13 @@ fn render_rail_link(app: &mut PhotocraftApp, ui: &mut egui::Ui, rail_w: f32, lab
     }
 }
 
-fn render_start_content(app: &mut PhotocraftApp, ui: &mut egui::Ui, recent: &[String], content_w: f32) {
+fn render_start_content(app: &mut MagicpicApp, ui: &mut egui::Ui, recent: &[String], content_w: f32) {
     let t = crate::theme::Tokens::get(ui.ctx());
     ui.add_space(8.0);
 
-    // Top Row: [01] PhotoCraft
+    // Top row: the product name.
     ui.horizontal(|ui| {
-        let badge_size = egui::vec2(24.0, 19.0);
-        let (badge_rect, _) = ui.allocate_exact_size(badge_size, Sense::hover());
-        ui.painter().rect_filled(badge_rect, 3.0, egui::Color32::from_rgb(26, 115, 232));
-        ui.painter().text(badge_rect.center(), egui::Align2::CENTER_CENTER, "01", crate::theme::semibold(10.5), egui::Color32::WHITE);
-
-        ui.add_space(10.0);
-
-        let title_galley = ui.painter().layout_no_wrap(tl!("PhotoCraft").into(), crate::theme::semibold(20.0), t.text);
+        let title_galley = ui.painter().layout_no_wrap(tl!("MagicPic").into(), crate::theme::semibold(20.0), t.text);
         let (title_r, _) = ui.allocate_exact_size(title_galley.size(), Sense::hover());
         ui.painter().galley(title_r.min, title_galley, t.text);
     });
@@ -230,7 +222,7 @@ fn render_start_content(app: &mut PhotocraftApp, ui: &mut egui::Ui, recent: &[St
     ui.add_space(24.0);
 }
 
-fn render_first_run_content(app: &mut PhotocraftApp, ui: &mut egui::Ui, content_w: f32) {
+fn render_first_run_content(app: &mut MagicpicApp, ui: &mut egui::Ui, content_w: f32) {
     let t = crate::theme::Tokens::get(ui.ctx());
 
     let drop_w = 540.0f32.min(content_w - 24.0);
@@ -275,7 +267,7 @@ fn render_first_run_content(app: &mut PhotocraftApp, ui: &mut egui::Ui, content_
 }
 
 /// Hint displayed on the start screen for opening files.
-pub(crate) fn start_screen_drop_hint(_app: &PhotocraftApp) -> std::borrow::Cow<'static, str> {
+pub(crate) fn start_screen_drop_hint(_app: &MagicpicApp) -> std::borrow::Cow<'static, str> {
     tl!("Drop an image or PSD anywhere to open it.").into()
 }
 

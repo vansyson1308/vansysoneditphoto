@@ -5,11 +5,11 @@
 //! Check Spelling is not implemented: it needs a word list per language, and no permissively
 //! licensed dictionary small enough to bundle (or a pure-Rust checker with one) was available.
 
-use photocraft_color::{BlendMode, PixelFormat};
-use photocraft_doc::vector::Path;
-use photocraft_doc::{DocId, Document, Layer, LayerContent, LayerId};
-use photocraft_geom::Rect;
-use photocraft_raster::{Surface, from_rgba_into, to_rgba};
+use magicpic_color::{BlendMode, PixelFormat};
+use magicpic_doc::vector::Path;
+use magicpic_doc::{DocId, Document, Layer, LayerContent, LayerId};
+use magicpic_geom::Rect;
+use magicpic_raster::{Surface, from_rgba_into, to_rgba};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
@@ -206,7 +206,7 @@ fn export_import(s: &mut Session, p: &Value) -> Result<Value> {
                 format: PRESET_FORMAT.into(),
                 version: 1,
                 brushes: if want("brushes") {
-                    let mut out: Vec<photocraft_paint::BrushPreset> =
+                    let mut out: Vec<magicpic_paint::BrushPreset> =
                         s.tools.presets.iter().filter(|b| !b.builtin || bool_or(p, "includeBuiltins", false)).cloned().collect();
                     // The file embeds every bitmap: load the tips the preset store keeps (#1843).
                     for b in &mut out {

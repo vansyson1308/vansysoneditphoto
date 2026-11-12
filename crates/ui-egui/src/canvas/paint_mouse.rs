@@ -5,10 +5,10 @@
 //! with `"erase": true`, so one undo step, with the pen pressure and tilt of a normal stroke.
 
 use egui::{PointerButton, Pos2, Response};
-use photocraft_engine::BrushSettings;
-use photocraft_engine::prefs::RightClickPaint;
+use magicpic_engine::BrushSettings;
+use magicpic_engine::prefs::RightClickPaint;
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::state::Tool;
 
 /// The brush is a tool option, kept per tool like Photoshop's options bar: switching from the
@@ -20,7 +20,7 @@ use crate::state::Tool;
 /// The foreground and background colours, the erase flag and the stroke seed belong to the
 /// session rather than to the tool, so a swap never carries them between tools: picking a colour
 /// or painting with the Eraser works with any tool's brush.
-pub fn sync_tool_brush(app: &mut PhotocraftApp) {
+pub fn sync_tool_brush(app: &mut MagicpicApp) {
     let tool = app.ui.tool;
     if !has_brush_picker(tool) || app.ui.brush_tool == tool {
         return;
@@ -51,7 +51,7 @@ pub fn sync_tool_brush(app: &mut PhotocraftApp) {
             let opacity = if tool == Tool::ArtHistoryBrush { BrushSettings::default().opacity } else { current.opacity };
             // The Remove tool starts at its measured 19 px; the rest is the current brush (#12548).
             let size = if tool == Tool::Remove { REMOVE_TOOL_SIZE } else { current.size };
-            BrushSettings { smoothing: first_smoothing(), mode: photocraft_color::BlendMode::Normal, opacity, size, ..current }
+            BrushSettings { smoothing: first_smoothing(), mode: magicpic_color::BlendMode::Normal, opacity, size, ..current }
         }
     };
     // The picked preset was the outgoing tool's brush: forget it, so Update Brush can't overwrite
@@ -62,7 +62,7 @@ pub fn sync_tool_brush(app: &mut PhotocraftApp) {
 }
 
 /// The brush `tool` had when it was last active.
-fn save_brush(app: &mut PhotocraftApp, tool: Tool, brush: BrushSettings) {
+fn save_brush(app: &mut MagicpicApp, tool: Tool, brush: BrushSettings) {
     match app.ui.tool_brushes.iter_mut().find(|(t, _)| *t == tool) {
         Some(e) => e.1 = brush,
         None => app.ui.tool_brushes.push((tool, brush)),
@@ -115,13 +115,13 @@ pub(crate) fn fresh_brush(tool: Tool, current: &BrushSettings) -> BrushSettings 
 }
 
 /// Photoshop's 10 % stroke smoothing, what a tool's brush starts at.
-fn first_smoothing() -> photocraft_engine::paint::brush::Smoothing {
-    photocraft_engine::paint::brush::Smoothing { amount: 0.1, ..Default::default() }
+fn first_smoothing() -> magicpic_engine::paint::brush::Smoothing {
+    magicpic_engine::paint::brush::Smoothing { amount: 0.1, ..Default::default() }
 }
 
 /// Does a stroke with `tool` starting now paint in Photoshop's Clear mode, erasing with its own
 /// brush (#3439)? Clear chosen in its Mode dropdown, or `~` held (`hold_keys::erase_held`).
-pub fn clears(app: &PhotocraftApp, tool: Tool) -> bool {
+pub fn clears(app: &MagicpicApp, tool: Tool) -> bool {
     let chosen = match tool {
         Tool::Brush => app.ui.tool_options.brush_clear,
         Tool::Pencil => app.ui.tool_options.pencil_clear,
@@ -151,7 +151,7 @@ pub fn right_click_picker(tool: Tool) -> bool {
 }
 
 /// Does a right-button drag with `tool` erase (rather than open the picker)?
-pub fn right_erases(app: &PhotocraftApp, tool: Tool) -> bool {
+pub fn right_erases(app: &MagicpicApp, tool: Tool) -> bool {
     matches!(tool, Tool::Brush | Tool::Eraser) && app.session.prefs().tools.right_click_with_painting_tools == RightClickPaint::Erase
 }
 
@@ -351,7 +351,7 @@ pub fn track_right_press_view(response: &Response, view: &crate::state::View, fl
 /// Route the canvas response's buttons: the left one drives the tool; the right one resizes the
 /// brush with Alt held (#297), erases (Erase preference) or opens the Brush Preset picker. Arms
 /// `secondary_erase` or `brush_resize_armed` for this frame's `Down`.
-pub fn canvas_buttons(app: &mut PhotocraftApp, response: &Response, tool: Tool) -> Buttons {
+pub fn canvas_buttons(app: &mut MagicpicApp, response: &Response, tool: Tool) -> Buttons {
     if crate::brush_mode_menu::blocks_canvas(app, &response.ctx) {
         app.secondary_erase = false;
         return Buttons::default();
@@ -436,7 +436,7 @@ pub fn canvas_buttons(app: &mut PhotocraftApp, response: &Response, tool: Tool) 
 /// Alt+right-drag brush resize, `brush_resize_armed` for its `Down`; or an erasing right stroke,
 /// `secondary_erase` armed for its `Down`). Otherwise a right-click with a painting tool opens
 /// the Brush Preset picker at screen point `at`, and nothing paints.
-pub fn pointer_secondary(app: &mut PhotocraftApp, ctx: &egui::Context, down: bool, mods: egui::Modifiers, at: [f32; 2]) -> bool {
+pub fn pointer_secondary(app: &mut MagicpicApp, ctx: &egui::Context, down: bool, mods: egui::Modifiers, at: [f32; 2]) -> bool {
     let tool = app.ui.tool;
     // Shift+Alt+right is Photoshop's HUD Color Picker (#6098): the down opens it, the up closes
     // it. As on the canvas, the right-erase preference wins over the HUD, and a tool whose
@@ -478,7 +478,7 @@ pub fn pointer_secondary(app: &mut PhotocraftApp, ctx: &egui::Context, down: boo
 /// The Brush Preset picker a right-click or the options-bar brush chip opened, at the pointer. It
 /// edits the session brush like the Brushes panel; a press outside, Escape, Enter or a
 /// double-click on a preset closes it.
-pub fn show_picker(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn show_picker(app: &mut MagicpicApp, ctx: &egui::Context) {
     let opened_id = crate::brush_picker::opened_id();
     let Some([x, y]) = app.ui.brush_picker else {
         ctx.data_mut(|d| d.remove_temp::<crate::brush_picker::Opened>(opened_id));

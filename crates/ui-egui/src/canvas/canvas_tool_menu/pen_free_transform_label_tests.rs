@@ -8,13 +8,13 @@ use egui_kittest::kittest::{NodeT, Queryable};
 
 use super::tests::{app, choose_open, harness, right_click};
 use super::{PEN_MENU, rows};
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::state::Tool;
 
 const LABELS: [&str; 3] = ["Free Transform", "Free Transform Points", "Free Transform Path"];
 
 /// Pen clicks at document points `at`, as on the canvas.
-fn pen_clicks(app: &mut PhotocraftApp, at: &[(f64, f64)]) {
+fn pen_clicks(app: &mut MagicpicApp, at: &[(f64, f64)]) {
     app.ui.tool = Tool::Pen;
     for &(x, y) in at {
         crate::vector_ui::pen_down(app, x, y, false);
@@ -24,7 +24,7 @@ fn pen_clicks(app: &mut PhotocraftApp, at: &[(f64, f64)]) {
 
 /// Right-click the middle of the canvas with `tool`: the one transform row label the path menu
 /// shows, and whether that row is enabled. `ui.inspect` lists the row the same way.
-fn transform_row(mut app: PhotocraftApp, tool: Tool) -> (&'static str, bool) {
+fn transform_row(mut app: MagicpicApp, tool: Tool) -> (&'static str, bool) {
     app.ui.tool = tool;
     let mut h = harness(app);
     let center = h.state().last_canvas_rect.center();

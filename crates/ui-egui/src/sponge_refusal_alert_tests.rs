@@ -79,6 +79,6 @@ fn the_brush_and_the_other_tools_keep_todays_behaviour() {
     app.run("layer.setProps", json!({"layer": id, "visible": false})).unwrap();
     stroke(&mut app);
     assert!(alerts(&app).is_empty());
-    assert_eq!(app.ui.status, photocraft_engine::hidden_target::HIDDEN);
+    assert_eq!(app.ui.status, magicpic_engine::hidden_target::HIDDEN);
     assert_eq!(tool_name(&app, Tool::Dodge), None);
 }

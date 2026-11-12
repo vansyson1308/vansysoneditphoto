@@ -1,6 +1,6 @@
 //! Shared round-trip invariant for the `.atn` parser contract suite.
-use photocraft_psd::atn::{self, AtnFile};
-use photocraft_psd::descriptor::{Descriptor, Value};
+use magicpic_psd::atn::{self, AtnFile};
+use magicpic_psd::descriptor::{Descriptor, Value};
 
 fn scalar(value: &mut f64, bits: &mut Vec<u64>) {
     bits.push(value.to_bits());

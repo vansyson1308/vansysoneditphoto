@@ -3,11 +3,11 @@
 //! undoable engine commands (`view.newGuide` / `view.moveGuide` / `view.deleteGuide`).
 
 use egui::{Align2, Color32, Pos2, Rect, Sense, Stroke, pos2, vec2};
-use photocraft_doc::Document;
-use photocraft_engine::prefs::{GuidesGridAndSlices, Unit};
+use magicpic_doc::Document;
+use magicpic_engine::prefs::{GuidesGridAndSlices, Unit};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::canvas::ViewXform;
 use crate::theme::Tokens;
 
@@ -15,12 +15,12 @@ pub const RULER: f32 = 16.0;
 
 /// A `#rrggbb` preference colour.
 fn pref_color(s: &str, fallback: Color32) -> Color32 {
-    photocraft_engine::prefs::parse_hex(s).map_or(fallback, |c| Color32::from_rgb(c[0], c[1], c[2]))
+    magicpic_engine::prefs::parse_hex(s).map_or(fallback, |c| Color32::from_rgb(c[0], c[1], c[2]))
 }
 
 /// Draw a line in a Guides/Grid preference style (lines, dashed lines, dots).
-fn styled_line(painter: &egui::Painter, a: Pos2, b: Pos2, stroke: Stroke, style: photocraft_engine::prefs::LineStyle) {
-    use photocraft_engine::prefs::LineStyle;
+fn styled_line(painter: &egui::Painter, a: Pos2, b: Pos2, stroke: Stroke, style: magicpic_engine::prefs::LineStyle) {
+    use magicpic_engine::prefs::LineStyle;
     match style {
         LineStyle::Lines => {
             painter.line_segment([a, b], stroke);
@@ -132,7 +132,7 @@ impl GuideDrag {
 
     /// Whether the pointer is still where it went down: let go there, an existing guide is clicked
     /// (selected), not moved. One ⌥ turned is never held in place.
-    fn held_in_place(&self, app: &PhotocraftApp) -> bool {
+    fn held_in_place(&self, app: &MagicpicApp) -> bool {
         !self.flipped && (self.pointer - self.press).abs() * f64::from(app.point_zoom().max(0.01)) < 0.5
     }
 
@@ -143,7 +143,7 @@ impl GuideDrag {
     /// first nor hold it on a target it sits on. Not while the pointer is still where it went down,
     /// so a Shift-click selects the guide without moving it, nor off the document, where letting go
     /// removes the guide; a tick past the document's edge leaves the guide on the edge.
-    pub fn follow_pointer(&mut self, app: &mut PhotocraftApp, raw: [f64; 2], p: [f64; 2], mods: egui::Modifiers) {
+    pub fn follow_pointer(&mut self, app: &mut MagicpicApp, raw: [f64; 2], p: [f64; 2], mods: egui::Modifiers) {
         self.track(if mods.shift { raw } else { p }, mods.alt);
         self.pointer = self.pos;
         if !mods.shift {
@@ -163,7 +163,7 @@ impl GuideDrag {
 }
 
 /// Canvas area left after the rulers.
-pub fn content_rect(app: &PhotocraftApp, rect: Rect) -> Rect {
+pub fn content_rect(app: &MagicpicApp, rect: Rect) -> Rect {
     if app.ui.extras.rulers { Rect::from_min_max(rect.min + vec2(RULER, RULER), rect.max) } else { rect }
 }
 
@@ -171,7 +171,7 @@ pub fn content_rect(app: &PhotocraftApp, rect: Rect) -> Rect {
 /// there is removed, as in Photoshop, and either ruler removes it (#6286): the top ruler measures
 /// document x and the left one y, so the ruler the guide was not dragged out of can lie over a
 /// coordinate that is still inside the document on the guide's own axis.
-pub(crate) fn dropped_on_a_ruler(app: &PhotocraftApp, full: Rect, p: Pos2) -> bool {
+pub(crate) fn dropped_on_a_ruler(app: &MagicpicApp, full: Rect, p: Pos2) -> bool {
     if !app.ui.extras.rulers {
         return false;
     }
@@ -194,7 +194,7 @@ pub(crate) fn grid_major_px(g: &GuidesGridAndSlices, dpi: f64, size: [f64; 2], p
 
 /// View › Show › Grid, from Preferences › Guides, Grid & Slices (spacing, subdivisions, colour,
 /// style). Photoshop's default is a gridline every inch with 4 subdivisions.
-pub fn draw_grid(app: &PhotocraftApp, painter: &egui::Painter, xf: &ViewXform, doc: &Document) {
+pub fn draw_grid(app: &MagicpicApp, painter: &egui::Painter, xf: &ViewXform, doc: &Document) {
     let g = &app.session.prefs().guides_grid_and_slices;
     let ppi = app.session.prefs().units_and_rulers.point_size.per_inch();
     let (w, h) = (doc.size.width as f64, doc.size.height as f64);
@@ -246,7 +246,7 @@ pub fn guide_cursor(xf: &ViewXform, vertical: bool) -> egui::CursorIcon {
     crate::tool_cursor::resize(if vertical { [1.0, 0.0] } else { [0.0, 1.0] }, xf)
 }
 
-pub fn draw_guides(app: &PhotocraftApp, painter: &egui::Painter, xf: &ViewXform, doc: &Document) {
+pub fn draw_guides(app: &MagicpicApp, painter: &egui::Painter, xf: &ViewXform, doc: &Document) {
     let clip = painter.clip_rect();
     let drag = app.guide_drag;
     let g = &app.session.prefs().guides_grid_and_slices;
@@ -287,21 +287,21 @@ pub fn draw_guides(app: &PhotocraftApp, painter: &egui::Painter, xf: &ViewXform,
 /// The position readout of a guide being dragged: `X:` for a vertical guide, `Y:` for a horizontal
 /// one, measured from the ruler zero point in the ruler unit. Pixels keep one decimal, as
 /// Photoshop's "X: 103.2 px".
-pub fn guide_drag_readout(app: &PhotocraftApp, d: GuideDrag) -> Option<(&'static str, String)> {
+pub fn guide_drag_readout(app: &MagicpicApp, d: GuideDrag) -> Option<(&'static str, String)> {
     let doc = &app.session.active()?.doc;
     let ur = &app.session.prefs().units_and_rulers;
     let axis = usize::from(!d.shows_vertical());
     let px = d.pos - doc.ruler_origin.get(axis).copied().unwrap_or(0.0);
     let extent = if d.shows_vertical() { doc.size.width } else { doc.size.height } as f64;
     let value = match ur.rulers {
-        Unit::Pixels => photocraft_engine::prefs::fmt_decimals(px, 1),
+        Unit::Pixels => magicpic_engine::prefs::fmt_decimals(px, 1),
         _ => ur.format(px, f64::from(doc.resolution_dpi), extent),
     };
     Some((if d.shows_vertical() { "X:" } else { "Y:" }, format!("{value} {}", ur.rulers.suffix())))
 }
 
 /// Draw [`guide_drag_readout`] beside the pointer while a guide is dragged.
-pub fn draw_guide_drag_readout(app: &PhotocraftApp, ctx: &egui::Context) {
+pub fn draw_guide_drag_readout(app: &MagicpicApp, ctx: &egui::Context) {
     let (Some(d), Some(at)) = (app.guide_drag, ctx.pointer_latest_pos()) else { return };
     if let Some((label, value)) = guide_drag_readout(app, d) {
         crate::canvas::draw_value_readout(app, ctx, "guide-drag-readout", at, [label], [value]);
@@ -309,7 +309,7 @@ pub fn draw_guide_drag_readout(app: &PhotocraftApp, ctx: &egui::Context) {
 }
 
 /// Existing guide under a document point (within 4 screen px).
-pub fn guide_at(app: &PhotocraftApp, x: f64, y: f64) -> Option<(bool, usize)> {
+pub fn guide_at(app: &MagicpicApp, x: f64, y: f64) -> Option<(bool, usize)> {
     // Hidden canvas guides are not interactive: the Move tool must reach the layer below.
     // Keep hit testing consistent with the visibility gate in canvas::draw.
     if !app.ui.extras.guides || !app.ui.view.shows(app.ui.view.show.canvas_guides) || app.ui.extras.lock_guides {
@@ -333,7 +333,7 @@ pub fn guide_at(app: &PhotocraftApp, x: f64, y: f64) -> Option<(bool, usize)> {
 /// Finish a guide drag: create, move, or delete (dropped outside the canvas or on a ruler). An
 /// existing guide released where it was pressed is a click: it's selected and stays put, as in
 /// Photoshop; a moved one stays selected.
-pub fn finish_drag(app: &mut PhotocraftApp, d: GuideDrag) {
+pub fn finish_drag(app: &mut MagicpicApp, d: GuideDrag) {
     let Some(size) = app.session.active().map(|s| s.doc.size) else { return };
     // A drop on a ruler removes the guide even when the drag held its own axis, which otherwise
     // reads as a click: dragged sideways onto the left ruler, a horizontal guide never moves in y.
@@ -415,7 +415,7 @@ fn snap_px_to_tick(px: f64, origin: f64, tick: f64) -> f64 {
 
 /// Where a zero-point drag from the ruler corner lands for the pointer at document `d`: on the
 /// nearest ruler tick (`ticks`, px per axis) with Shift, else View › Snap To targets.
-fn origin_drop(app: &mut PhotocraftApp, d: [f64; 2], shift: bool, origin: [f64; 2], ticks: [f64; 2]) -> [f64; 2] {
+fn origin_drop(app: &mut MagicpicApp, d: [f64; 2], shift: bool, origin: [f64; 2], ticks: [f64; 2]) -> [f64; 2] {
     if shift {
         [snap_px_to_tick(d[0], origin[0], ticks[0]), snap_px_to_tick(d[1], origin[1], ticks[1])]
     } else {
@@ -434,12 +434,12 @@ fn ruler_pos(xf: &ViewXform, vertical: bool, u: f64, px_per_unit: f64, zero: [f6
 /// Document pixels per ruler unit and the labelled tick step (in ruler units) of the top ruler
 /// (`y_axis` false) or the left one, from Preferences › Units & Rulers and the zoom. Minor ticks
 /// sit at tenths of the step.
-fn ruler_scale(app: &PhotocraftApp, xf: &ViewXform, y_axis: bool) -> (f64, f64) {
+fn ruler_scale(app: &MagicpicApp, xf: &ViewXform, y_axis: bool) -> (f64, f64) {
     ruler_scale_of(app, app.session.active().map(|d| &*d.doc), xf, y_axis)
 }
 
 /// [`ruler_scale`] for the view of `doc`.
-fn ruler_scale_of(app: &PhotocraftApp, doc: Option<&photocraft_doc::Document>, xf: &ViewXform, y_axis: bool) -> (f64, f64) {
+fn ruler_scale_of(app: &MagicpicApp, doc: Option<&magicpic_doc::Document>, xf: &ViewXform, y_axis: bool) -> (f64, f64) {
     let ur = &app.session.prefs().units_and_rulers;
     let (unit, ppi) = (ur.rulers, ur.point_size.per_inch());
     let (dpi, size) = doc.map_or((72.0, [1.0, 1.0]), |d| (d.resolution_dpi.max(1.0) as f64, [d.size.width as f64, d.size.height as f64]));
@@ -461,7 +461,7 @@ fn snap_tick(unit: Unit, px_per_unit: f64, step: f64) -> f64 {
 /// `pos` (document px) moved to the nearest tick mark the ruler draws (counted from the zero point): where a guide lands when
 /// Shift is held while dragging it out of a ruler or moving it, as in Photoshop (#3770). In pixels, on whole pixels at least
 /// ([`snap_tick`]).
-fn snap_to_tick(app: &PhotocraftApp, xf: &ViewXform, vertical: bool, pos: f64) -> f64 {
+fn snap_to_tick(app: &MagicpicApp, xf: &ViewXform, vertical: bool, pos: f64) -> f64 {
     // A vertical guide sits at an x position, which the top ruler measures.
     let (px_per_unit, step) = ruler_scale(app, xf, !vertical);
     // Ticks count from the zero point (#2955), which a vertical guide measures along x.
@@ -480,13 +480,7 @@ fn ruler_label(v: f64, step: f64, whole: bool) -> String {
 /// Returns the top, left and corner rects, the painter, the zero point and the tick sizes Shift
 /// snaps to ([`snap_tick`]).
 #[allow(clippy::type_complexity)]
-fn paint(
-    app: &PhotocraftApp,
-    ui: &egui::Ui,
-    full: Rect,
-    xf: &ViewXform,
-    doc: &photocraft_doc::Document,
-) -> (Rect, Rect, Rect, egui::Painter, [f64; 2], [f64; 2]) {
+fn paint(app: &MagicpicApp, ui: &egui::Ui, full: Rect, xf: &ViewXform, doc: &magicpic_doc::Document) -> (Rect, Rect, Rect, egui::Painter, [f64; 2], [f64; 2]) {
     let t = Tokens::get(ui.ctx());
     let top = Rect::from_min_max(pos2(full.left() + RULER, full.top()), pos2(full.right(), full.top() + RULER));
     let left = Rect::from_min_max(pos2(full.left(), full.top() + RULER), pos2(full.left() + RULER, full.bottom()));
@@ -548,13 +542,13 @@ fn paint(
 /// Rulers for a document view that isn't the active one (another tile of Window › Arrange, a
 /// floating window): shown as the active view's are, but guides and the zero point are dragged
 /// in the active view (#6017).
-pub fn paint_rulers(app: &PhotocraftApp, ui: &egui::Ui, full: Rect, xf: &ViewXform, doc: &photocraft_doc::Document) {
+pub fn paint_rulers(app: &MagicpicApp, ui: &egui::Ui, full: Rect, xf: &ViewXform, doc: &magicpic_doc::Document) {
     paint(app, ui, full, xf, doc);
 }
 
 /// Rulers along the top and left of `full` (the canvas rect before `content_rect`), with the
 /// pointer position marked; dragging out of a ruler creates a guide.
-pub fn draw_rulers(app: &mut PhotocraftApp, ui: &mut egui::Ui, full: Rect, xf: &ViewXform) {
+pub fn draw_rulers(app: &mut MagicpicApp, ui: &mut egui::Ui, full: Rect, xf: &ViewXform) {
     let Some(doc) = app.session.active().map(|d| d.doc.clone()) else { return };
     let (top, left, corner, p, origin, ticks) = paint(app, ui, full, xf, &doc);
     let t = Tokens::get(ui.ctx());
@@ -606,7 +600,7 @@ pub fn draw_rulers(app: &mut PhotocraftApp, ui: &mut egui::Ui, full: Rect, xf: &
 
 /// The ruler corner: drag the zero point out of it (cross hairs mark where it lands; Shift snaps
 /// to the ruler ticks), double-click it to put the zero point back at the image's top-left.
-fn corner_origin(app: &mut PhotocraftApp, ui: &egui::Ui, resp: &egui::Response, p: &egui::Painter, xf: &ViewXform, origin: [f64; 2], ticks: [f64; 2]) {
+fn corner_origin(app: &mut MagicpicApp, ui: &egui::Ui, resp: &egui::Response, p: &egui::Painter, xf: &ViewXform, origin: [f64; 2], ticks: [f64; 2]) {
     let id = resp.id.with("origin-drag");
     if resp.hovered() || resp.dragged() {
         ui.ctx().set_cursor_icon(egui::CursorIcon::Crosshair);

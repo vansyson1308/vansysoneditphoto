@@ -6,10 +6,10 @@ use super::super::tests::{bar_harness, session, type_into_bar_field_with};
 use super::*;
 use egui_kittest::kittest::{NodeT, Queryable};
 
-type Harness = egui_kittest::Harness<'static, PhotocraftApp>;
+type Harness = egui_kittest::Harness<'static, MagicpicApp>;
 
 /// An Arc warp over the test box, so Bend, H and V are live.
-fn arc(app: &mut PhotocraftApp) {
+fn arc(app: &mut MagicpicApp) {
     let t = app.ui.transform.as_mut().unwrap();
     t.warp = Some(Warp { style: WarpStyle::Arc, bend: 50.0, ..Warp::none(t.rect) });
 }
@@ -152,20 +152,20 @@ fn click_with(h: &mut Harness, pos: egui::Pos2, button: egui::PointerButton) {
 
 /// The whole options bar (tool preset picker included) over the test box, warping or not.
 fn full_bar(warping: bool) -> Harness {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.ui.transform = Some(session());
     if warping {
         arc(&mut app);
     }
     let mut h = egui_kittest::Harness::builder().with_size(vec2(1400.0, 300.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut MagicpicApp| {
             if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 crate::panels::options_bar(app, ui);
             }
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
+    MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
     h.run_steps(6);
     h
 }

@@ -6,26 +6,26 @@ use serde_json::{Value, json};
 
 use super::PathRef;
 use super::convert_point_history_tests::drag;
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::anchor_tools::delete_anchor_targeted_path_tests::{group_shape, select_layer, select_saved_path, setup, shape_path, steps};
 use crate::state::Tool;
 
 const CORNER: [f64; 2] = [450.0, 100.0];
 const PULLED: [f64; 2] = [490.0, 70.0];
 
-fn active(app: &PhotocraftApp) -> Option<u64> {
+fn active(app: &MagicpicApp) -> Option<u64> {
     app.session.active().unwrap().active_layer.map(|l| l.0)
 }
 
 /// The shape's knot at `CORNER`.
-fn corner(app: &mut PhotocraftApp, shape: u64) -> Value {
+fn corner(app: &mut MagicpicApp, shape: u64) -> Value {
     let path = shape_path(app, shape);
     let knots = path["subpaths"][0]["knots"].as_array().unwrap();
     knots.iter().find(|k| k["anchor"] == json!([450.0, 100.0])).unwrap().clone()
 }
 
 /// The gesture leaves the shape, the active layer and History as they were.
-fn changes_nothing(app: &mut PhotocraftApp, shape: u64, gesture: impl FnOnce(&mut PhotocraftApp)) {
+fn changes_nothing(app: &mut MagicpicApp, shape: u64, gesture: impl FnOnce(&mut MagicpicApp)) {
     let (before, layer, n) = (shape_path(app, shape), active(app), steps(app));
     gesture(app);
     assert_eq!(shape_path(app, shape), before);

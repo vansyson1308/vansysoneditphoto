@@ -2,11 +2,11 @@
 //! the whole page, `push` then `composite` after every point, as painting does per frame. Small
 //! tips are the everyday case; a long stroke grows the stroke's tile map to thousands of tiles,
 //! and the time per dab must not grow with it.
-//! `cargo run --release -p photocraft-paint --example stroke_bench -- [size] [hardness] [dabs]`
-use photocraft_color::PixelFormat;
-use photocraft_geom::Rect;
-use photocraft_paint::{BrushSettings, StrokePoint, StrokeRenderer};
-use photocraft_raster::Surface;
+//! `cargo run --release -p magicpic-paint --example stroke_bench -- [size] [hardness] [dabs]`
+use magicpic_color::PixelFormat;
+use magicpic_geom::Rect;
+use magicpic_paint::{BrushSettings, StrokePoint, StrokeRenderer};
+use magicpic_raster::Surface;
 use std::time::Instant;
 
 fn main() {

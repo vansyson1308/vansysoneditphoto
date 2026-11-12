@@ -31,8 +31,8 @@ use std::any::Any;
 use std::sync::atomic::{AtomicU8, AtomicU32, Ordering};
 use std::sync::{Arc, Condvar, Mutex, PoisonError, Weak};
 
-use photocraft_doc::{DocId, Document, LayerId};
-use photocraft_raster::Interrupt;
+use magicpic_doc::{DocId, Document, LayerId};
+use magicpic_raster::Interrupt;
 use serde::Serialize;
 use serde_json::{Value, json};
 
@@ -702,31 +702,31 @@ fn independent_of_document(id: &str) -> bool {
 fn import_path(
     name: &str,
     path: &str,
-    opts: &photocraft_io::ImportOptions,
+    opts: &magicpic_io::ImportOptions,
     expected: Option<&SourceFingerprint>,
-    ctl: &photocraft_raster::Interrupt,
-    opened: &mut Option<photocraft_io::FileIdentity>,
-) -> std::result::Result<(photocraft_io::ImportResult, bool), photocraft_io::IoError> {
+    ctl: &magicpic_raster::Interrupt,
+    opened: &mut Option<magicpic_io::FileIdentity>,
+) -> std::result::Result<(magicpic_io::ImportResult, bool), magicpic_io::IoError> {
     let expected = match expected {
         None => None,
         Some(SourceFingerprint::Path { identity, .. }) => Some(identity),
-        Some(SourceFingerprint::Bytes { .. }) => return Err(photocraft_io::IoError::SourceChanged),
+        Some(SourceFingerprint::Bytes { .. }) => return Err(magicpic_io::IoError::SourceChanged),
     };
     // Bounded reads, and a clear error for a file larger than memory (#375); a PSD/PSB is
     // streamed from the open file instead of being read whole.
-    photocraft_io::import_file_for_open_verified(name, std::path::Path::new(path), expected, opts, ctl, opened)
+    magicpic_io::import_file_for_open_verified(name, std::path::Path::new(path), expected, opts, ctl, opened)
 }
 
 #[cfg(target_arch = "wasm32")]
 fn import_path(
     _: &str,
     path: &str,
-    _: &photocraft_io::ImportOptions,
+    _: &magicpic_io::ImportOptions,
     _: Option<&SourceFingerprint>,
-    _: &photocraft_raster::Interrupt,
-    _: &mut Option<photocraft_io::FileIdentity>,
-) -> std::result::Result<(photocraft_io::ImportResult, bool), photocraft_io::IoError> {
-    Err(photocraft_io::IoError::Read(format!("cannot open paths on the web: {path}")))
+    _: &magicpic_raster::Interrupt,
+    _: &mut Option<magicpic_io::FileIdentity>,
+) -> std::result::Result<(magicpic_io::ImportResult, bool), magicpic_io::IoError> {
+    Err(magicpic_io::IoError::Read(format!("cannot open paths on the web: {path}")))
 }
 
 /// Run a job-capable command's heavy part. `work` runs on a worker thread when the command was
@@ -747,12 +747,12 @@ pub fn run<T: Send + 'static>(
     // The job reads the active document it captured; only that document's pixels gate it.
     let source = s.active().map(|d| d.doc.clone());
     let work = move |ctx: &JobCtx| -> Result<T> {
-        photocraft_compose::discard_unreadable_pixel_caches();
-        let health = || source.as_deref().map_or(Ok(()), photocraft_doc::Document::scratch_health).map_err(EngineError::Other);
+        magicpic_compose::discard_unreadable_pixel_caches();
+        let health = || source.as_deref().map_or(Ok(()), magicpic_doc::Document::scratch_health).map_err(EngineError::Other);
         health()?;
-        let generation = photocraft_raster::spill::read_error_generation();
+        let generation = magicpic_raster::spill::read_error_generation();
         let value = work(ctx)?;
-        photocraft_raster::spill::check_since(generation).map_err(EngineError::Other)?;
+        magicpic_raster::spill::check_since(generation).map_err(EngineError::Other)?;
         health()?;
         Ok(value)
     };
@@ -773,7 +773,7 @@ pub fn run<T: Send + 'static>(
         let label_w = label.to_string();
         // The work closure is moved into the thread. If spawning fails (thread limits), there is
         // no way to get it back, so the error is reported instead.
-        let spawned = std::thread::Builder::new().name(format!("photocraft-job-{}", job.id.0)).spawn(move || {
+        let spawned = std::thread::Builder::new().name(format!("magicpic-job-{}", job.id.0)).spawn(move || {
             let _authorization = AuthorizationScope::enter(authorization);
             let _document = crate::doc_path::scope(document.as_deref());
             let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| work(&wctx).map(|t| Box::new(t) as Payload)))
@@ -932,14 +932,14 @@ pub fn edit_job<R: Send + 'static>(
 /// asks each layer for its bounds, a multi-second scan on a multi-gigabyte PSB (#4024).
 /// `check` runs between layers (cancellation).
 pub fn warm_layer_bounds(doc: &Document, mut check: impl FnMut() -> Result<()>) -> Result<()> {
-    let mut pending: Vec<&photocraft_doc::Layer> = doc.layers.iter().collect();
+    let mut pending: Vec<&magicpic_doc::Layer> = doc.layers.iter().collect();
     while let Some(layer) = pending.pop() {
         check()?;
         if let Some(children) = layer.children() {
             pending.extend(children);
         }
         if let Some(surface) = layer.surface() {
-            photocraft_compose::bounds::content_bounds(surface);
+            magicpic_compose::bounds::content_bounds(surface);
         }
     }
     Ok(())
@@ -958,8 +958,8 @@ pub enum OpenSource {
 pub const OPEN_JOB: &str = "file.open";
 
 /// The import settings files are opened and placed with.
-pub fn import_options(prefs: &crate::prefs::Preferences) -> photocraft_io::ImportOptions {
-    photocraft_io::ImportOptions {
+pub fn import_options(prefs: &crate::prefs::Preferences) -> magicpic_io::ImportOptions {
+    magicpic_io::ImportOptions {
         max_group_depth: prefs.file_handling.rasterize_svg_groups_deeper_than as usize,
         demosaic: prefs.raw_defaults.demosaic.method(),
         pdf_dpi: prefs.file_handling.pdf_dpi,
@@ -976,16 +976,16 @@ pub fn import_options(prefs: &crate::prefs::Preferences) -> photocraft_io::Impor
 
 /// Fingerprint verifying that a source has not changed between preflight and approval.
 ///
-/// A path's fingerprint is the [`photocraft_io::FileIdentity`] of an opened handle, never a path
+/// A path's fingerprint is the [`magicpic_io::FileIdentity`] of an opened handle, never a path
 /// stat made before a separate open: the importer takes it from the very handle it decodes
-/// (`photocraft_io::import_file_for_open_verified`), so a path replaced or rewritten between
+/// (`magicpic_io::import_file_for_open_verified`), so a path replaced or rewritten between
 /// the estimate and the approval is refused with [`EngineError::SourceChanged`]. The Unix
 /// identity includes the inode change time and nanoseconds, so restoring a modification time
 /// cannot hide a same-size rewrite.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SourceFingerprint {
     Bytes { len: usize, identity: usize },
-    Path { path: String, identity: photocraft_io::FileIdentity },
+    Path { path: String, identity: magicpic_io::FileIdentity },
 }
 
 impl SourceFingerprint {
@@ -998,18 +998,18 @@ impl SourceFingerprint {
         match source {
             OpenSource::Bytes(b) => Ok(SourceFingerprint::Bytes { len: b.len(), identity: Arc::as_ptr(b) as usize }),
             OpenSource::Path(p) => {
-                Ok(Self::path(p.clone(), photocraft_io::FileIdentity::of_path(std::path::Path::new(p)).map_err(|e| EngineError::Other(format!("{p}: {e}")))?))
+                Ok(Self::path(p.clone(), magicpic_io::FileIdentity::of_path(std::path::Path::new(p)).map_err(|e| EngineError::Other(format!("{p}: {e}")))?))
             }
         }
     }
 
     /// Fingerprint of the file identity read from an opened handle for `path`.
-    pub fn path(path: String, identity: photocraft_io::FileIdentity) -> Self {
+    pub fn path(path: String, identity: magicpic_io::FileIdentity) -> Self {
         SourceFingerprint::Path { path, identity }
     }
 
     /// The handle identity a path fingerprint compares against, if this is one.
-    pub fn file_identity(&self) -> Option<&photocraft_io::FileIdentity> {
+    pub fn file_identity(&self) -> Option<&magicpic_io::FileIdentity> {
         match self {
             SourceFingerprint::Path { identity, .. } => Some(identity),
             SourceFingerprint::Bytes { .. } => None,
@@ -1262,9 +1262,9 @@ impl Session {
         let mut opts = import_options(self.prefs());
         opts.psd_high_memory_approved = approve_high_memory;
         opts.psd_approved_estimate = approved_estimate;
-        let test_memory_scope = photocraft_io::memory::TestMemoryScope::capture();
+        let test_memory_scope = magicpic_io::memory::TestMemoryScope::capture();
         enum WorkResult {
-            Decoded(Box<(photocraft_io::ImportResult, bool)>),
+            Decoded(Box<(magicpic_io::ImportResult, bool)>),
             PreflightNeeded { required: u64, soft_limit: u64, hard_limit: u64, available_ram: Option<u64>, source: OpenSource, fingerprint: SourceFingerprint },
         }
         self.start_job_with_spawn(
@@ -1296,19 +1296,19 @@ impl Session {
                     OpenSource::Bytes(bytes) => {
                         ctx.check()?;
                         ctx.progress(0.02, "Decoding");
-                        let res = ctx.stage(0.02, 0.95, "Decoding", |ctl| photocraft_io::import_for_open_with(&name_w, &bytes, &opts, ctl));
+                        let res = ctx.stage(0.02, 0.95, "Decoding", |ctl| magicpic_io::import_for_open_with(&name_w, &bytes, &opts, ctl));
                         match res {
                             Ok(imported) => WorkResult::Decoded(Box::new(imported)),
-                            Err(photocraft_io::IoError::PsdApprovalRequired { required, soft_limit, hard_limit, available_ram }) if confirm_damage => {
+                            Err(magicpic_io::IoError::PsdApprovalRequired { required, soft_limit, hard_limit, available_ram }) if confirm_damage => {
                                 // The buffer cannot change while it is decoded, so the identity
                                 // captured before reading is still exact.
                                 let fingerprint = initial_fingerprint.clone().ok_or_else(|| EngineError::Other("missing source identity".into()))?;
                                 WorkResult::PreflightNeeded { required, soft_limit, hard_limit, available_ram, source: OpenSource::Bytes(bytes), fingerprint }
                             }
-                            Err(photocraft_io::IoError::PsdApprovalRequired { required, soft_limit, hard_limit, available_ram }) => {
+                            Err(magicpic_io::IoError::PsdApprovalRequired { required, soft_limit, hard_limit, available_ram }) => {
                                 return Err(EngineError::PsdApprovalRequired { name: name_w.clone(), required, soft_limit, hard_limit, available_ram });
                             }
-                            Err(photocraft_io::IoError::Cancelled) => return Err(EngineError::Cancelled),
+                            Err(magicpic_io::IoError::Cancelled) => return Err(EngineError::Cancelled),
                             Err(e) => return Err(crate::error::io_open_error(&name_w, e)),
                         }
                     }
@@ -1317,7 +1317,7 @@ impl Session {
                         let res = ctx.stage(0.0, 0.95, "Decoding", |ctl| import_path(&name_w, &p, &opts, expected_fingerprint.as_ref(), ctl, &mut opened));
                         match res {
                             Ok(imported) => WorkResult::Decoded(Box::new(imported)),
-                            Err(photocraft_io::IoError::PsdApprovalRequired { required, soft_limit, hard_limit, available_ram }) if confirm_damage => {
+                            Err(magicpic_io::IoError::PsdApprovalRequired { required, soft_limit, hard_limit, available_ram }) if confirm_damage => {
                                 // This identity is the one read from the handle that was
                                 // estimated, and the verified import refused a handle that is
                                 // not the approved file or changed while preflighting.
@@ -1325,10 +1325,10 @@ impl Session {
                                 let fingerprint = SourceFingerprint::path(p.clone(), identity);
                                 WorkResult::PreflightNeeded { required, soft_limit, hard_limit, available_ram, source: OpenSource::Path(p), fingerprint }
                             }
-                            Err(photocraft_io::IoError::PsdApprovalRequired { required, soft_limit, hard_limit, available_ram }) => {
+                            Err(magicpic_io::IoError::PsdApprovalRequired { required, soft_limit, hard_limit, available_ram }) => {
                                 return Err(EngineError::PsdApprovalRequired { name: name_w.clone(), required, soft_limit, hard_limit, available_ram });
                             }
-                            Err(photocraft_io::IoError::Cancelled) => return Err(EngineError::Cancelled),
+                            Err(magicpic_io::IoError::Cancelled) => return Err(EngineError::Cancelled),
                             Err(e) => return Err(crate::error::io_open_error(&name_w, e)),
                         }
                     }
@@ -1341,7 +1341,7 @@ impl Session {
                         warm_layer_bounds(&imported.0.document, || ctx.check())?;
                         if crate::type_extra_cmds::has_type_layers(&imported.0.document) {
                             ctx.progress(0.97, "Loading fonts");
-                            let _ = photocraft_text::shared();
+                            let _ = magicpic_text::shared();
                             ctx.check()?;
                         }
                         Ok(outcome)
@@ -1354,7 +1354,7 @@ impl Session {
                     // capacity carries no fabricated number, and above the threshold it also
                     // says the process or tab may run out of memory. The UI shows both.
                     let capacity_unknown = available_ram.is_none();
-                    let uncertain_capacity = photocraft_io::memory::uncertain_capacity_warning(required, available_ram);
+                    let uncertain_capacity = magicpic_io::memory::uncertain_capacity_warning(required, available_ram);
                     let id = s.store_pending_preflight(PendingPsdPreflight {
                         id: 0,
                         name: name_a.clone(),
@@ -1381,7 +1381,7 @@ impl Session {
                     let (mut r, damaged) = *imported;
                     crate::file_cmds::tag_exr_colorspace(s, &name_a, &mut r.document);
                     crate::file_cmds::raw_defaults(s, &r.warnings, &mut r.document);
-                    let raw = r.warnings.iter().any(|w| w.contains(photocraft_io::raw::DEVELOPED_NOTE));
+                    let raw = r.warnings.iter().any(|w| w.contains(magicpic_io::raw::DEVELOPED_NOTE));
                     let damaged = confirm_damage && damaged;
                     let question = s.color.open_question(&r.document).filter(|_| !raw);
                     if damaged || question.is_some() {
@@ -1536,7 +1536,7 @@ impl Session {
     #[cfg(not(target_arch = "wasm32"))]
     fn reap_draining_jobs(&mut self) {
         if reap_draining(&mut self.jobs.draining) {
-            photocraft_raster::scratch::release();
+            magicpic_raster::scratch::release();
         }
     }
 
@@ -1685,7 +1685,7 @@ impl Session {
                 release |= d.release;
             }
             if release {
-                photocraft_raster::scratch::release();
+                magicpic_raster::scratch::release();
             }
         }
     }
@@ -1875,7 +1875,7 @@ impl Session {
         if docs_before.iter().any(|id| !self.docs.iter().any(|st| st.doc.id == *id)) {
             drop(before);
             drop(record_before);
-            photocraft_raster::scratch::release();
+            magicpic_raster::scratch::release();
         }
         out
     }
@@ -1904,13 +1904,13 @@ impl Session {
     }
 
     /// Grows the damage a command reported for the pixels it changed by what effects laid out
-    /// over a layer's frame repaint when it moved ([`photocraft_compose::relayout_damage`]): a
+    /// over a layer's frame repaint when it moved ([`magicpic_compose::relayout_damage`]): a
     /// stroke on a layer with a Gradient Overlay reports the stroke, but the gradient is laid out
     /// again over the whole grown layer (#4053). `before` is the active document before.
     fn add_relayout_damage(&mut self, before: &Arc<Document>) {
         let Some(st) = self.active_mut().filter(|st| st.doc.id == before.id && !Arc::ptr_eq(&st.doc, before)) else { return };
         let Some(d) = st.last_damage.filter(|d| !d.is_empty()) else { return };
-        let extra = photocraft_compose::relayout_damage(before, &st.doc);
+        let extra = magicpic_compose::relayout_damage(before, &st.doc);
         if !extra.is_empty() {
             st.last_damage = Some(d.union(&extra));
         }

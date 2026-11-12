@@ -1,12 +1,12 @@
-//! Flat raster formats via `photocraft-codecs`.
+//! Flat raster formats via `magicpic-codecs`.
 
 use std::sync::Arc;
 
-use photocraft_codecs::{self as codecs, ChannelLayout, Format, Image, SampleType as CSample};
-use photocraft_color::{BlendMode, ColorMode, PixelFormat, SampleType};
-use photocraft_doc::{AlphaChannel, Document, Layer, LayerContent};
-use photocraft_geom::{Rect, Size, TILE_SIZE};
-use photocraft_raster::{AllocationError, Interrupt, PruneCursor, RowWriteError, Surface};
+use magicpic_codecs::{self as codecs, ChannelLayout, Format, Image, SampleType as CSample};
+use magicpic_color::{BlendMode, ColorMode, PixelFormat, SampleType};
+use magicpic_doc::{AlphaChannel, Document, Layer, LayerContent};
+use magicpic_geom::{Rect, Size, TILE_SIZE};
+use magicpic_raster::{AllocationError, Interrupt, PruneCursor, RowWriteError, Surface};
 
 use crate::renderer::{BandRenderer, RenderError};
 use crate::{ExportOptions, ExportResult, ImportResult, IoError, TgaBits, XmpEmbed};
@@ -62,7 +62,7 @@ fn decode_limits(opts: &crate::ImportOptions) -> codecs::Limits {
 }
 
 pub fn import_flat(name: &str, bytes: &[u8]) -> Result<ImportResult, IoError> {
-    import_flat_with_options(name, bytes, &crate::ImportOptions::default(), &photocraft_raster::Interrupt::NONE)
+    import_flat_with_options(name, bytes, &crate::ImportOptions::default(), &magicpic_raster::Interrupt::NONE)
 }
 
 /// [`import_flat`] with cancellation and progress: checked after the decode and around the
@@ -90,7 +90,7 @@ pub(crate) fn import_flat_with_options(
     name: &str,
     bytes: &[u8],
     opts: &crate::ImportOptions,
-    ctl: &photocraft_raster::Interrupt,
+    ctl: &magicpic_raster::Interrupt,
 ) -> Result<ImportResult, IoError> {
     import_flat_impl_with_options(name, bytes, opts, ctl, Some(STREAM_MIN_BYTES))
 }
@@ -274,11 +274,11 @@ pub(crate) fn apply_flat_format(r: &mut ImportResult, bytes: &[u8], format: Opti
         && r.document.mode == ColorMode::Rgb
     {
         r.document.mode = ColorMode::Indexed;
-        r.document.color_table = Some(photocraft_doc::ColorTable { colors, transparent });
+        r.document.color_table = Some(magicpic_doc::ColorTable { colors, transparent });
     }
     // The decoder's count of frames or pages left out (set above) stays alongside the encoding.
     let encoding = file_encoding_as(format, bytes);
-    r.document.file_encoding = photocraft_doc::FileEncoding { source_images: r.document.file_encoding.source_images.or(encoding.source_images), ..encoding };
+    r.document.file_encoding = magicpic_doc::FileEncoding { source_images: r.document.file_encoding.source_images.or(encoding.source_images), ..encoding };
     if format == Some(Format::Tga) && img.is_some_and(|i| i.layout() == ChannelLayout::Rgba) {
         tga_alpha_to_channel(&mut r.document)?;
     }
@@ -288,8 +288,8 @@ pub(crate) fn apply_flat_format(r: &mut ImportResult, bytes: &[u8], format: Opti
     let d = &mut r.document;
     if d.icc_profile.is_none() && matches!(format, Some(Format::OpenExr | Format::Hdr)) {
         d.icc_profile = match d.mode {
-            ColorMode::Rgb => Some(photocraft_cms::Builtin::LinearSrgb.profile().to_bytes()),
-            ColorMode::Grayscale => Some(photocraft_cms::builtin::linear_gray().to_bytes()),
+            ColorMode::Rgb => Some(magicpic_cms::Builtin::LinearSrgb.profile().to_bytes()),
+            ColorMode::Grayscale => Some(magicpic_cms::builtin::linear_gray().to_bytes()),
             _ => None,
         };
     }
@@ -312,7 +312,7 @@ pub(crate) fn apply_flat_format(r: &mut ImportResult, bytes: &[u8], format: Opti
 fn hdr_fallback(img: &Image) -> Option<(Arc<Vec<u8>>, String)> {
     let c = img.cicp.filter(|c| c.is_hdr() && img.sample_type().is_float())?;
     let warning = format!("the HDR colour primaries (H.273 code {}) aren't supported; the image is read as linear sRGB", c.primaries);
-    Some((photocraft_cms::Builtin::LinearSrgb.profile().to_bytes(), warning))
+    Some((magicpic_cms::Builtin::LinearSrgb.profile().to_bytes(), warning))
 }
 
 /// The profile a HEIF's `nclx` colour description stands for, when the file has no ICC profile
@@ -327,7 +327,7 @@ fn cicp_profile(img: &Image) -> Option<Arc<Vec<u8>>> {
     }
     // Unspecified primaries on an HDR image: BT.2100's, which PQ and HLG are defined with.
     let primaries = if c.primaries == 2 && c.is_hdr() { 9 } else { c.primaries };
-    photocraft_cms::builtin::cicp_rgb(primaries, c.transfer, linear).map(|p| p.to_bytes())
+    magicpic_cms::builtin::cicp_rgb(primaries, c.transfer, linear).map(|p| p.to_bytes())
 }
 
 /// A frame import: the frames handed to the caller's callback and the decoder's warnings that
@@ -374,13 +374,13 @@ fn import_frames(name: &str, frames: Vec<codecs::AnimationFrame>, each: &mut dyn
 /// (estimated from its quantisation tables), a WebP's lossless or lossy encoding with its
 /// quality, and a PNG's `sTER` stereo pairing. A lossy WebP whose quality can't be read gets
 /// [`DEFAULT_LOSSY_WEBP_QUALITY`].
-pub fn file_encoding(bytes: &[u8]) -> photocraft_doc::FileEncoding {
+pub fn file_encoding(bytes: &[u8]) -> magicpic_doc::FileEncoding {
     file_encoding_as(codecs::detect(bytes), bytes)
 }
 
 /// [`file_encoding`] for `bytes` already detected as `format`.
-fn file_encoding_as(format: Option<Format>, bytes: &[u8]) -> photocraft_doc::FileEncoding {
-    let mut e = photocraft_doc::FileEncoding::default();
+fn file_encoding_as(format: Option<Format>, bytes: &[u8]) -> magicpic_doc::FileEncoding {
+    let mut e = magicpic_doc::FileEncoding::default();
     match format {
         Some(Format::Jpeg) => e.jpeg_quality = codecs::jpeg_quality(bytes),
         Some(Format::Png) => e.png_stereo = codecs::png_stereo(bytes).map(codecs::PngStereo::mode),
@@ -452,7 +452,7 @@ fn tga_alpha_to_channel(doc: &mut Document) -> Result<(), IoError> {
     layer.name = "Background".into();
     layer.locks.transparency = true;
     layer.locks.position = true;
-    doc.channels.push(photocraft_doc::AlphaChannel::new("Alpha 1", alpha));
+    doc.channels.push(magicpic_doc::AlphaChannel::new("Alpha 1", alpha));
     Ok(())
 }
 
@@ -500,7 +500,7 @@ pub fn tga_alpha_channel_to_transparency(doc: &mut Document) {
 /// or [`IoError::PsdImportBudget`]. Callers that can ask the user or carry cancellation use
 /// [`import_tiff_page_with_options`].
 pub fn import_tiff_page(name: &str, bytes: &[u8], page: Option<usize>) -> Result<ImportResult, IoError> {
-    import_tiff_page_with_options(name, bytes, page, &crate::ImportOptions::default(), &photocraft_raster::Interrupt::NONE)
+    import_tiff_page_with_options(name, bytes, page, &crate::ImportOptions::default(), &magicpic_raster::Interrupt::NONE)
 }
 
 /// [`import_tiff_page`] with the user's import settings and the job's cancellation.
@@ -514,7 +514,7 @@ pub fn import_tiff_page_with_options(
     bytes: &[u8],
     page: Option<usize>,
     opts: &crate::ImportOptions,
-    ctl: &photocraft_raster::Interrupt,
+    ctl: &magicpic_raster::Interrupt,
 ) -> Result<ImportResult, IoError> {
     ctl.check().map_err(|_| IoError::Cancelled)?;
     let bands = codecs::TiffBands::open(bytes, page, &codecs::Limits::banded())?;
@@ -549,7 +549,7 @@ fn import_tiff_layered(
     page: Option<usize>,
     bands: codecs::TiffBands<'_>,
     opts: &crate::ImportOptions,
-    ctl: &photocraft_raster::Interrupt,
+    ctl: &magicpic_raster::Interrupt,
 ) -> Result<ImportResult, IoError> {
     let plan = crate::tiff_layers::preflight(&bands)?;
     // A file this machine cannot open is refused here, before any composite pixel is decoded,
@@ -593,7 +593,7 @@ fn tiff_admission(
     required: u64,
     spillable: u64,
     opts: &crate::ImportOptions,
-    ctl: &photocraft_raster::Interrupt,
+    ctl: &magicpic_raster::Interrupt,
 ) -> Result<crate::psd_gate::AdmissionGuard, IoError> {
     let caller_limit = opts.psd_max_pixel_bytes;
     let admit = |snapshot: crate::memory::MemorySnapshot| {
@@ -624,7 +624,7 @@ fn import_tiff_with_extras(
     bytes: &[u8],
     page: Option<usize>,
     opts: &crate::ImportOptions,
-    ctl: &photocraft_raster::Interrupt,
+    ctl: &magicpic_raster::Interrupt,
 ) -> Result<ImportResult, IoError> {
     ctl.check().map_err(|_| IoError::Cancelled)?;
     let keep = codecs::DecodeOptions { keep_orientation: true, limits: decode_limits(opts) };
@@ -654,7 +654,7 @@ fn tiff_to_document(
     mut bands: codecs::TiffBands<'_>,
     available: impl FnOnce() -> Option<u64>,
     budget: usize,
-    ctl: &photocraft_raster::Interrupt,
+    ctl: &magicpic_raster::Interrupt,
 ) -> Result<ImportResult, IoError> {
     let (w, h) = bands.dimensions();
     let (layout, sample) = (bands.layout(), bands.sample_type());
@@ -675,7 +675,7 @@ fn tiff_to_document(
         crate::memory::check_fits(w, h, needed, available())?;
     }
     let mut s = Surface::new(fmt);
-    let out_of_memory = |e: photocraft_raster::AllocationError| {
+    let out_of_memory = |e: magicpic_raster::AllocationError| {
         let gb = (u64::from(w) * u64::from(h)).saturating_mul(bpp) as f64 / 1e9;
         IoError::Unsupported(format!("not enough memory to open this {w} × {h} px image: it needs about {gb:.1} GB ({e})"))
     };
@@ -927,7 +927,7 @@ fn flat_document(
         warnings.extend(crate::unequal_resolution_warning(f64::from(x), f64::from(y)));
     }
     // Guides in the Photoshop resources a JPEG (APP13) or TIFF carries: resource 1032.
-    let guides = meta.photoshop_resources.as_deref().and_then(|r| photocraft_psd::tiff::resources_from_bytes(r).ok());
+    let guides = meta.photoshop_resources.as_deref().and_then(|r| magicpic_psd::tiff::resources_from_bytes(r).ok());
     if let Some(g) = guides.as_ref().and_then(|(res, _)| res.iter().find(|r| r.id == 1032)) {
         crate::psd_import::parse_guides(&g.data, &mut doc);
     }
@@ -1024,12 +1024,12 @@ impl PngStream {
     }
 
     /// Drops one bounded batch of those tiles from where `cursor` left off; true when done.
-    pub(crate) fn prune_step(&mut self, cursor: &mut photocraft_raster::PruneCursor) -> bool {
+    pub(crate) fn prune_step(&mut self, cursor: &mut magicpic_raster::PruneCursor) -> bool {
         !self.scans() || self.surface.prune_batch(cursor, PRUNE_BATCH)
     }
 
     /// A cursor for [`PngStream::prune_step`].
-    pub(crate) fn prune_cursor(&self) -> photocraft_raster::PruneCursor {
+    pub(crate) fn prune_cursor(&self) -> magicpic_raster::PruneCursor {
         self.surface.prune_cursor()
     }
 
@@ -1141,7 +1141,7 @@ fn single_layer_document(
         warnings.extend(crate::unequal_resolution_warning(f64::from(x), f64::from(y)));
     }
     // Guides in the Photoshop resources a JPEG (APP13) or TIFF carries: resource 1032.
-    let guides = meta.photoshop_resources.as_deref().and_then(|r| photocraft_psd::tiff::resources_from_bytes(r).ok());
+    let guides = meta.photoshop_resources.as_deref().and_then(|r| magicpic_psd::tiff::resources_from_bytes(r).ok());
     if let Some(g) = guides.as_ref().and_then(|(res, _)| res.iter().find(|r| r.id == 1032)) {
         crate::psd_import::parse_guides(&g.data, &mut doc);
     }
@@ -1293,8 +1293,8 @@ fn plain_layer(l: &Layer, mode: ColorMode) -> bool {
         && l.effects.items.is_empty()
         && l.effects.psd_raw.is_none()
         && matches!(l.blend, BlendMode::Normal | BlendMode::PassThrough)
-        && photocraft_compose::channel_weights(l, mode).is_none()
-        && !photocraft_compose::blend_if_active(l, mode)
+        && magicpic_compose::channel_weights(l, mode).is_none()
+        && !magicpic_compose::blend_if_active(l, mode)
 }
 
 pub(crate) fn layout_for(mode: ColorMode, alpha: bool) -> ChannelLayout {
@@ -1378,7 +1378,7 @@ fn document_to_preview_with_renderer(doc: &Document, warnings: &mut Vec<String>,
     Ok(Image::from_raw(w, h, ChannelLayout::Rgba, CSample::U8, data)?)
 }
 
-/// A full-size preview as an 8-bit RGBA PNG: what [`photocraft_compose::thumbnail`] returns at
+/// A full-size preview as an 8-bit RGBA PNG: what [`magicpic_compose::thumbnail`] returns at
 /// the document's own size, rendered through `renderer` when one is supplied. Keeping previews
 /// at 8-bit RGBA stops a 16-bit document's preview from outgrowing the preview size limit; saved
 /// exports still keep the document's native depth. Like the CPU preview, it carries no export
@@ -1431,10 +1431,10 @@ struct FlatSource<'a> {
     mode: ColorMode,
     sample: CSample,
     /// A CMYK composite mixed on ink values by the native CMYK compositor, so opaque pixels keep
-    /// their exact inks ([`photocraft_compose::cmyk::renders_inks`]).
+    /// their exact inks ([`magicpic_compose::cmyk::renders_inks`]).
     inks: bool,
     /// The CMYK profile any other CMYK composite is converted back through, for a CMYK target.
-    space: Option<Arc<photocraft_color::convert::CmykSpace>>,
+    space: Option<Arc<magicpic_color::convert::CmykSpace>>,
     icc: Option<Vec<u8>>,
     /// Rows per band; 0 picks them from the size (tests ask for small bands).
     rows: i32,
@@ -1461,7 +1461,7 @@ impl<'a> FlatSource<'a> {
             // A CMYK target is written as CMYK with the document's own profile (#2220), which it
             // therefore needs; RGB-only targets keep the compositor's own handling (built-in
             // coated CMYK when the embedded profile is unusable).
-            use photocraft_cms::{Builtin, ColorSpace, Intent, Profile, Transform};
+            use magicpic_cms::{Builtin, ColorSpace, Intent, Profile, Transform};
             let profile = match doc.icc_profile.as_ref() {
                 Some(bytes) => Profile::parse(bytes).map_err(|e| IoError::Unsupported(format!("invalid CMYK composite profile: {e}")))?,
                 None => Builtin::CoatedCmyk.profile().clone(),
@@ -1475,13 +1475,13 @@ impl<'a> FlatSource<'a> {
             if icc.is_none() {
                 icc = Some(profile.to_bytes().to_vec());
             }
-            let inks = photocraft_compose::cmyk::renders_inks(doc);
+            let inks = magicpic_compose::cmyk::renders_inks(doc);
             let space = if inks {
                 None
             } else {
                 // Through RGB and back: the colour model is kept, exact ink values are not.
                 warnings.push("CMYK composite converted back through the document's CMYK profile; ink values can differ from the layers'".to_string());
-                photocraft_compose::cmyk_space(doc)
+                magicpic_compose::cmyk_space(doc)
             };
             return Ok(Self { doc, native: None, mode: ColorMode::Cmyk, sample, inks, space, icc, rows: 0 });
         }
@@ -1489,14 +1489,14 @@ impl<'a> FlatSource<'a> {
             // RGB-only targets use the sRGB composite directly, without separating CMYK; the
             // compositor renders Lab documents in sRGB. Either way the file is tagged sRGB.
             warnings.push(format!("{:?} composite written as sRGB RGB (colour-managed conversion)", fmt.mode));
-            icc = Some(photocraft_cms::Builtin::Srgb.profile().to_bytes().to_vec());
+            icc = Some(magicpic_cms::Builtin::Srgb.profile().to_bytes().to_vec());
         }
         let mode = if fmt.mode == ColorMode::Grayscale { ColorMode::Grayscale } else { ColorMode::Rgb };
         Ok(Self { doc, native: None, mode, sample, inks: false, space: None, icc, rows: 0 })
     }
 
     /// The full-size preview source: the composite as 8-bit RGBA whatever the document's model
-    /// and depth, matching [`photocraft_compose::thumbnail`] at the document's own size. Nothing
+    /// and depth, matching [`magicpic_compose::thumbnail`] at the document's own size. Nothing
     /// is written to `warnings`: previews do not report flattening or colour conversion, which
     /// describe exports, not the image on screen.
     fn preview(doc: &'a Document, _warnings: &mut Vec<String>) -> Result<Self, IoError> {
@@ -1589,7 +1589,7 @@ impl<'a> FlatSource<'a> {
                 r.push_diagnostic("custom renderer unsupported: CMYK ink mixing uses the CPU compositor; falling back to CPU".into());
             }
             // Mixed on ink values, rendered and quantised in bands.
-            let rendered = photocraft_compose::cmyk::render_cmyk_bands(doc, doc.bounds(), self.rows, |band| -> Result<(), IoError> {
+            let rendered = magicpic_compose::cmyk::render_cmyk_bands(doc, doc.bounds(), self.rows, |band| -> Result<(), IoError> {
                 let translucent = band.px.iter().any(|p| p[4] < 1.0 || p[4].is_nan());
                 let parts = crate::pixels::par_map(crate::pixels::bands(band.px.len()), |range| {
                     let mut out = Vec::with_capacity(range.len() * 5 * cs.bytes());
@@ -1624,18 +1624,18 @@ impl<'a> FlatSource<'a> {
             let translucent = px.iter().any(|p| p[3] < 1.0 || p[3].is_nan());
             let parts = crate::pixels::par_map(crate::pixels::bands(px.len()), |range| {
                 // A CMYK composite came through the document's CMYK profile: convert back through it.
-                photocraft_color::convert::with_cmyk_space(space.as_ref(), || {
+                magicpic_color::convert::with_cmyk_space(space.as_ref(), || {
                     let mut out = Vec::with_capacity(range.len() * (colors + 1) * cs.bytes());
                     let mut converted = [0.0; 5];
                     for p in px.get(range).unwrap_or_default() {
                         if cmyk {
-                            let channels = photocraft_raster::from_rgba_into(&fmt, *p, &mut converted);
+                            let channels = magicpic_raster::from_rgba_into(&fmt, *p, &mut converted);
                             for value in converted.iter().take(channels) {
                                 put(&mut out, *value);
                             }
                             continue;
                         } else if gray {
-                            put(&mut out, photocraft_color::convert::rgb_to_gray([p[0], p[1], p[2]]));
+                            put(&mut out, magicpic_color::convert::rgb_to_gray([p[0], p[1], p[2]]));
                         } else {
                             put(&mut out, p[0]);
                             put(&mut out, p[1]);
@@ -1652,7 +1652,7 @@ impl<'a> FlatSource<'a> {
         if let Some(r) = renderer {
             r.render_bands(doc, doc.bounds(), self.rows, ctl, &mut |band| render_one_band(band.rect, band.pixels))?;
         } else {
-            photocraft_compose::render_bands(doc, doc.bounds(), self.rows, |band| render_one_band(band.rect, band.into_px()))?;
+            magicpic_compose::render_bands(doc, doc.bounds(), self.rows, |band| render_one_band(band.rect, band.into_px()))?;
         }
         if expected_y != h as i32 {
             return Err(IoError::Render(RenderError::Execution(format!("incomplete bands: covered up to y={expected_y}, expected canvas height {h}"))));
@@ -1693,9 +1693,9 @@ pub fn opaque_surface(s: &Surface, r: Rect) -> bool {
     let fmt = s.format();
     let (ch, bps) = (fmt.channels(), fmt.sample.bytes());
     let a = ch - 1;
-    let alpha_ok = |px: &[u8]| photocraft_color::read_sample(px, fmt.sample, a) >= 1.0;
+    let alpha_ok = |px: &[u8]| magicpic_color::read_sample(px, fmt.sample, a) >= 1.0;
     let mut default = vec![0u8; ch * bps];
-    photocraft_raster::encode_pixel(&fmt, &s.default_pixel(), &mut default);
+    magicpic_raster::encode_pixel(&fmt, &s.default_pixel(), &mut default);
     r.tiles().all(|tc| {
         let tr = tc.rect().intersect(&r);
         match s.tile(tc) {
@@ -1721,12 +1721,12 @@ fn composite_share(format: Format) -> f32 {
 
 /// Flattens and encodes as `format`.
 pub fn export_flat(doc: &Document, format: Format, opts: &ExportOptions) -> Result<ExportResult, IoError> {
-    export_flat_with_renderer(doc, format, opts, &photocraft_raster::Interrupt::NONE, None)
+    export_flat_with_renderer(doc, format, opts, &magicpic_raster::Interrupt::NONE, None)
 }
 
 /// [`export_flat`] reporting a coarse step through `ctl` once the composite is rendered; the
 /// encoder does the rest (#3389).
-pub(crate) fn export_flat_with(doc: &Document, format: Format, opts: &ExportOptions, ctl: &photocraft_raster::Interrupt) -> Result<ExportResult, IoError> {
+pub(crate) fn export_flat_with(doc: &Document, format: Format, opts: &ExportOptions, ctl: &magicpic_raster::Interrupt) -> Result<ExportResult, IoError> {
     export_flat_with_renderer(doc, format, opts, ctl, None)
 }
 
@@ -1735,7 +1735,7 @@ pub fn export_flat_with_renderer(
     doc: &Document,
     format: Format,
     opts: &ExportOptions,
-    ctl: &photocraft_raster::Interrupt,
+    ctl: &magicpic_raster::Interrupt,
     mut renderer: Option<&mut dyn BandRenderer>,
 ) -> Result<ExportResult, IoError> {
     if let Some(mut r) = export_mode_specific(doc, format, opts)? {
@@ -1842,7 +1842,7 @@ fn strip_xmp(meta: &mut codecs::Metadata, opts: &ExportOptions) {
 /// format without CMYK, colours converted to what an untagged file means. Pixel by pixel, so a
 /// band of rows gets what the whole image would (and the same warnings).
 fn prepare_flat(mut img: Image, format: Format, warnings: &mut Vec<String>) -> Result<Image, IoError> {
-    use photocraft_cms::{Builtin, Intent};
+    use magicpic_cms::{Builtin, Intent};
     if img.layout().has_alpha() && !format.caps().alpha {
         // Flattened over white, as saving a transparent document without transparency does.
         img = matte_over_white(&img)?;
@@ -1857,7 +1857,7 @@ fn prepare_flat(mut img: Image, format: Format, warnings: &mut Vec<String>) -> R
         // see [`import_flat`]).
         if let Some(linear) = convert_rgb(&img, Builtin::LinearSrgb.profile(), Intent::RelativeColorimetric, false, CSample::F32)? {
             img = linear;
-        } else if let Some(linear) = convert_gray(&img, photocraft_cms::builtin::linear_gray(), CSample::F32)? {
+        } else if let Some(linear) = convert_gray(&img, magicpic_cms::builtin::linear_gray(), CSample::F32)? {
             img = linear;
         }
     } else if !format.caps().icc || (img.layout().is_gray() && !format.caps().layouts.iter().any(|l| l.is_gray())) {
@@ -1905,7 +1905,7 @@ fn streams_png(doc: &Document) -> bool {
 ///
 /// `rows`: rows per band, 0 to size them to the document.
 #[cfg(test)]
-pub(crate) fn export_png_streamed(doc: &Document, opts: &ExportOptions, ctl: &photocraft_raster::Interrupt, rows: i32) -> Result<ExportResult, IoError> {
+pub(crate) fn export_png_streamed(doc: &Document, opts: &ExportOptions, ctl: &magicpic_raster::Interrupt, rows: i32) -> Result<ExportResult, IoError> {
     export_png_streamed_with_renderer(doc, opts, ctl, rows, None)
 }
 
@@ -1913,7 +1913,7 @@ pub(crate) fn export_png_streamed(doc: &Document, opts: &ExportOptions, ctl: &ph
 pub fn export_png_streamed_with_renderer(
     doc: &Document,
     opts: &ExportOptions,
-    ctl: &photocraft_raster::Interrupt,
+    ctl: &magicpic_raster::Interrupt,
     rows: i32,
     renderer: Option<&mut dyn BandRenderer>,
 ) -> Result<ExportResult, IoError> {
@@ -1989,7 +1989,7 @@ fn opaque_bottom(doc: &Document) -> bool {
 fn stream_png(
     doc: &Document,
     opts: &ExportOptions,
-    ctl: &photocraft_raster::Interrupt,
+    ctl: &magicpic_raster::Interrupt,
     alpha: bool,
     rows: i32,
     progress: &mut f32,
@@ -2000,7 +2000,7 @@ fn stream_png(
 fn stream_png_with_renderer(
     doc: &Document,
     opts: &ExportOptions,
-    ctl: &photocraft_raster::Interrupt,
+    ctl: &magicpic_raster::Interrupt,
     alpha: bool,
     rows: i32,
     progress: &mut f32,
@@ -2228,8 +2228,8 @@ fn matte_over_white(img: &Image) -> Result<Image, IoError> {
 
 /// RGB pixels converted from their profile (sRGB when untagged) to `dst`, unclamped, untagged and
 /// stored as `sample`. `None` when the image isn't RGB or already holds `dst`'s colours.
-fn convert_rgb(img: &Image, dst: &photocraft_cms::Profile, intent: photocraft_cms::Intent, bpc: bool, sample: CSample) -> Result<Option<Image>, IoError> {
-    use photocraft_cms::{Builtin, ColorSpace, Profile};
+fn convert_rgb(img: &Image, dst: &magicpic_cms::Profile, intent: magicpic_cms::Intent, bpc: bool, sample: CSample) -> Result<Option<Image>, IoError> {
+    use magicpic_cms::{Builtin, ColorSpace, Profile};
     if !img.layout().is_rgb() {
         return Ok(None);
     }
@@ -2240,8 +2240,8 @@ fn convert_rgb(img: &Image, dst: &photocraft_cms::Profile, intent: photocraft_cm
 
 /// Gray pixels converted from their profile (sGray when untagged) to `dst`, unclamped, untagged
 /// and stored as `sample`. `None` when the image isn't gray or already holds `dst`'s colours.
-fn convert_gray(img: &Image, dst: &photocraft_cms::Profile, sample: CSample) -> Result<Option<Image>, IoError> {
-    use photocraft_cms::{Builtin, ColorSpace, Intent, Profile};
+fn convert_gray(img: &Image, dst: &magicpic_cms::Profile, sample: CSample) -> Result<Option<Image>, IoError> {
+    use magicpic_cms::{Builtin, ColorSpace, Intent, Profile};
     if !matches!(img.layout(), ChannelLayout::Gray | ChannelLayout::GrayA) {
         return Ok(None);
     }
@@ -2253,16 +2253,16 @@ fn convert_gray(img: &Image, dst: &photocraft_cms::Profile, sample: CSample) -> 
 /// `img`'s pixels converted from `src` to `dst` (see [`convert_rgb`]).
 fn convert_from(
     img: &Image,
-    src: &photocraft_cms::Profile,
-    dst: &photocraft_cms::Profile,
-    intent: photocraft_cms::Intent,
+    src: &magicpic_cms::Profile,
+    dst: &magicpic_cms::Profile,
+    intent: magicpic_cms::Intent,
     bpc: bool,
     sample: CSample,
 ) -> Result<Option<Image>, IoError> {
     if src.same_colors(dst) {
         return Ok(None);
     }
-    let t = photocraft_cms::Transform::new(src, dst, intent, bpc).map_err(|e| IoError::Unsupported(e.to_string()))?;
+    let t = magicpic_cms::Transform::new(src, dst, intent, bpc).map_err(|e| IoError::Unsupported(e.to_string()))?;
     let stride = img.layout().channels();
     let out = map_bands(img, img.layout(), sample, |mut vals| {
         t.apply(&mut vals, stride);
@@ -2274,7 +2274,7 @@ fn convert_from(
 /// Colour-managed CMYK → sRGB for formats that cannot store CMYK (the document's embedded
 /// CMYK profile when it parses, else the built-in coated CMYK; relative colorimetric + BPC).
 fn cmyk_image_to_srgb(img: &Image) -> Result<Image, IoError> {
-    use photocraft_cms::{Builtin, ColorSpace, Intent, Profile, Transform};
+    use magicpic_cms::{Builtin, ColorSpace, Intent, Profile, Transform};
     let src = img
         .icc
         .as_ref()
@@ -2334,9 +2334,9 @@ fn export_mode_specific(doc: &Document, format: Format, opts: &ExportOptions) ->
             let png_transparent_index = table.transparent.map(usize::from).filter(|_| format == Format::Png);
             let (opaque_indices, colors): (Vec<u8>, Vec<_>) =
                 table.colors.iter().copied().enumerate().filter(|(i, _)| Some(*i) != png_transparent_index).map(|(i, c)| (i as u8, c)).unzip();
-            let opaque = photocraft_doc::ColorTable { colors, transparent: None };
+            let opaque = magicpic_doc::ColorTable { colors, transparent: None };
             let mut idx = try_buffer(doc.size.area() as usize, 1)?;
-            photocraft_compose::render_bands(doc, doc.bounds(), 0, |band| -> Result<(), IoError> {
+            magicpic_compose::render_bands(doc, doc.bounds(), 0, |band| -> Result<(), IoError> {
                 for p in &band.px {
                     let i = match table.transparent {
                         Some(t) if p[3] < 0.5 => t,
@@ -2368,7 +2368,7 @@ fn export_mode_specific(doc: &Document, format: Format, opts: &ExportOptions) ->
         ColorMode::Duotone => {
             let Some(d) = doc.duotone.as_ref() else { return Ok(None) };
             let mut shown = doc.clone();
-            shown.layers.push(photocraft_doc::Layer::new("Duotone", photocraft_doc::LayerContent::Adjustment(d.display_adjustment())));
+            shown.layers.push(magicpic_doc::Layer::new("Duotone", magicpic_doc::LayerContent::Adjustment(d.display_adjustment())));
             shown.mode = ColorMode::Rgb;
             shown.icc_profile = None;
             shown.duotone = None;
@@ -2384,7 +2384,7 @@ fn export_mode_specific(doc: &Document, format: Format, opts: &ExportOptions) ->
 #[cfg(test)]
 mod cicp_tests {
     use super::*;
-    use photocraft_cms::{Builtin, Profile};
+    use magicpic_cms::{Builtin, Profile};
 
     fn tagged(sample: CSample, cicp: codecs::Cicp) -> Image {
         let mut img = Image::new(1, 1, ChannelLayout::Rgb, sample).unwrap();
@@ -2474,7 +2474,7 @@ mod tiff_banded_tests {
         let img = Image::from_raw(64, 64, ChannelLayout::Rgb, CSample::U8, vec![77; 64 * 64 * 3]).unwrap();
         let bytes = codecs::encode(&img, Format::Tiff, &codecs::EncodeOptions::default()).unwrap();
         let bands = codecs::TiffBands::open(&bytes, None, &codecs::Limits::banded()).unwrap();
-        let r = tiff_to_document("small.tif", bands.upright(), || Some(0), BAND_BYTES, &photocraft_raster::Interrupt::NONE).unwrap();
+        let r = tiff_to_document("small.tif", bands.upright(), || Some(0), BAND_BYTES, &magicpic_raster::Interrupt::NONE).unwrap();
         assert_eq!((r.document.size.width, r.document.size.height), (64, 64));
     }
 
@@ -2490,7 +2490,7 @@ mod tiff_banded_tests {
             let bytes = codecs::encode(&img, Format::Tiff, &codecs::EncodeOptions::default()).unwrap();
             let bands = codecs::TiffBands::open(&bytes, None, &codecs::Limits::banded()).unwrap();
             let row = w as usize * layout.channels() * sample.bytes();
-            let r = tiff_to_document("rounds.tif", bands, || None, 3 * row, &photocraft_raster::Interrupt::NONE).unwrap();
+            let r = tiff_to_document("rounds.tif", bands, || None, 3 * row, &magicpic_raster::Interrupt::NONE).unwrap();
             let f = document_format(layout, sample);
             let want = codecs::decode(&bytes).unwrap().convert(f.layout, f.sample);
             let LayerContent::Raster(s) = &r.document.layers[0].content else { panic!("not a raster layer") };
@@ -2527,8 +2527,8 @@ mod tiff_banded_tests {
 #[cfg(test)]
 mod assumed_profile_tests {
     use super::*;
-    use photocraft_cms::{Builtin, Profile};
-    use photocraft_color::Color;
+    use magicpic_cms::{Builtin, Profile};
+    use magicpic_color::Color;
 
     fn doc(mode: ColorMode) -> Document {
         Document::with_background("t", Size::new(16, 12), mode, SampleType::U8, Color::rgba(0.78, 0.39, 0.2, 1.0))
@@ -2546,7 +2546,7 @@ mod assumed_profile_tests {
                 let mut opts = ExportOptions::default();
                 opts.encode.embed_icc = embed;
                 let whole = export_flat(&d, Format::Png, &opts).unwrap();
-                let streamed = export_png_streamed(&d, &opts, &photocraft_raster::Interrupt::NONE, 3).unwrap();
+                let streamed = export_png_streamed(&d, &opts, &magicpic_raster::Interrupt::NONE, 3).unwrap();
                 assert_eq!(embedded(&streamed), embedded(&whole));
                 let expected = if mode == ColorMode::Rgb { Builtin::Srgb } else { Builtin::DotGain20Compat };
                 assert_eq!(embedded(&streamed), embed.then(|| expected.description().to_string()));
@@ -2590,7 +2590,7 @@ mod assumed_profile_tests {
 #[cfg(test)]
 mod streamed_png_tests {
     use super::*;
-    use photocraft_raster::Interrupt;
+    use magicpic_raster::Interrupt;
 
     fn layer(doc: &Document, fills: &[(Rect, &[f32])]) -> Layer {
         let mut s = Surface::new(doc.pixel_format());
@@ -2647,7 +2647,7 @@ mod streamed_png_tests {
         let mut rgba = Document::new("rgba", Size::new(130, 333), ColorMode::Rgb, SampleType::U8);
         rgba.layers = vec![layer(&rgba, &[(Rect::new(10, 20, 120, 300), &[0.3, 0.6, 0.9, 0.4])])];
         let mut cmyk = Document::new("cmyk", Size::new(97, 211), ColorMode::Cmyk, SampleType::U8);
-        cmyk.icc_profile = Some(photocraft_cms::Builtin::CoatedCmyk.profile().to_bytes());
+        cmyk.icc_profile = Some(magicpic_cms::Builtin::CoatedCmyk.profile().to_bytes());
         cmyk.layers = vec![layer(&cmyk, &[(cmyk.bounds(), &[0.3, 0.6, 0.1, 0.2, 1.0]), (Rect::new(0, 50, 97, 99), &[0.0, 0.9, 0.9, 0.0, 1.0])])];
         let mut gray = Document::new("gray", Size::new(64, 190), ColorMode::Grayscale, SampleType::U16);
         gray.layers = vec![layer(&gray, &[(gray.bounds(), &[0.25, 1.0]), (Rect::new(0, 0, 64, 77), &[0.6123, 1.0])])];
@@ -2667,7 +2667,7 @@ mod streamed_png_tests {
     fn a_composite_without_an_opaque_bottom_layer_keeps_its_alpha() {
         let mut doc = Document::new("masked", Size::new(80, 300), ColorMode::Rgb, SampleType::U8);
         let mut bottom = layer(&doc, &[(doc.bounds(), &[0.2, 0.4, 0.6, 1.0])]);
-        bottom.mask = Some(photocraft_doc::LayerMask {
+        bottom.mask = Some(magicpic_doc::LayerMask {
             surface: Surface::with_default(PixelFormat::GRAY8, &[1.0]),
             enabled: true,
             linked: true,
@@ -2691,7 +2691,7 @@ mod streamed_png_tests {
         let bottom = layer(&doc, &[(doc.bounds(), &[0.2, 0.4, 0.6, 1.0])]);
         let mut hole = layer(&doc, &[(Rect::new(8, 800, 56, 960), &[1.0, 1.0, 1.0, 1.0])]);
         hole.fill_opacity = 0.0;
-        hole.advanced.knockout = photocraft_doc::Knockout::Deep;
+        hole.advanced.knockout = magicpic_doc::Knockout::Deep;
         doc.layers = vec![bottom, hole];
         assert!(opaque_bottom(&doc));
         assert!(stream_png(&doc, &ExportOptions::default(), &Interrupt::NONE, false, 256, &mut 0.0).unwrap().is_none());

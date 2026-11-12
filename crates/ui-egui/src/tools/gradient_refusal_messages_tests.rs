@@ -5,12 +5,12 @@
 use egui::Modifiers;
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::canvas::{ToolEvent, tool_event};
 use crate::state::{DialogKind, Tool};
 
-fn app(classic: bool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app(classic: bool) -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 64, "height": 64})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     app.run("edit.fill", json!({"color": "#dc1e1e"})).unwrap();
@@ -20,26 +20,26 @@ fn app(classic: bool) -> PhotocraftApp {
     app
 }
 
-fn active(app: &PhotocraftApp) -> u64 {
+fn active(app: &MagicpicApp) -> u64 {
     app.session.active().unwrap().active_layer.unwrap().0
 }
 
-fn steps(app: &PhotocraftApp) -> usize {
+fn steps(app: &MagicpicApp) -> usize {
     app.session.active().unwrap().history.past_len()
 }
 
-fn drag(app: &mut PhotocraftApp) {
+fn drag(app: &mut MagicpicApp) {
     tool_event(app, ToolEvent::Down { x: 10.0, y: 32.0, pressure: 1.0 }, Modifiers::NONE);
     tool_event(app, ToolEvent::Move { x: 30.0, y: 32.0, pressure: 1.0 }, Modifiers::NONE);
     tool_event(app, ToolEvent::Move { x: 54.0, y: 32.0, pressure: 1.0 }, Modifiers::NONE);
     tool_event(app, ToolEvent::Up { x: 54.0, y: 32.0 }, Modifiers::NONE);
 }
 
-fn alerts(app: &PhotocraftApp) -> Vec<String> {
+fn alerts(app: &MagicpicApp) -> Vec<String> {
     app.ui.dialogs.iter().filter(|d| d.kind == DialogKind::Error).filter_map(|d| d.fields.get("message").and_then(Value::as_str).map(str::to_string)).collect()
 }
 
-fn refused(app: &mut PhotocraftApp, want: &str) {
+fn refused(app: &mut MagicpicApp, want: &str) {
     let before = steps(app);
     drag(app);
     assert_eq!(alerts(app), [want], "the alert, once");

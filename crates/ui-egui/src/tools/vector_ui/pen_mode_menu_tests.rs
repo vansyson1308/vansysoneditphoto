@@ -8,17 +8,17 @@ use egui_kittest::kittest::{NodeT, Queryable};
 use serde_json::json;
 
 use super::add_anchor_options_bar_tests::harness;
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::state::{Tool, ToolOptions};
 
 /// The options bar's Mode dropdown (the topmost one named Mode).
-fn combo<'a>(h: &'a Harness<'static, PhotocraftApp>) -> egui_kittest::Node<'a> {
+fn combo<'a>(h: &'a Harness<'static, MagicpicApp>) -> egui_kittest::Node<'a> {
     let combos = h.query_all_by_role(Role::ComboBox).filter(|n| n.accesskit_node().label().as_deref() == Some("Mode"));
     combos.min_by(|a, b| a.rect().top().total_cmp(&b.rect().top())).expect("the Mode dropdown")
 }
 
 /// Opens the options bar's Mode dropdown.
-fn open(h: &mut Harness<'static, PhotocraftApp>) {
+fn open(h: &mut Harness<'static, MagicpicApp>) {
     combo(h).click();
     h.run_steps(3);
     assert!(crate::widgets::dropdown_list_open(&h.ctx), "the list is open");
@@ -26,7 +26,7 @@ fn open(h: &mut Harness<'static, PhotocraftApp>) {
 
 /// The open list's rows top to bottom (the mode buttons below the dropdown), each with whether
 /// it is greyed.
-fn rows(h: &Harness<'static, PhotocraftApp>) -> Vec<(String, bool)> {
+fn rows(h: &Harness<'static, MagicpicApp>) -> Vec<(String, bool)> {
     let combo = combo(h).rect();
     let mut rows: Vec<_> = h
         .query_all_by_role(Role::Button)
@@ -38,14 +38,14 @@ fn rows(h: &Harness<'static, PhotocraftApp>) -> Vec<(String, bool)> {
 }
 
 /// Clicks the open list's row `label`.
-fn pick(h: &mut Harness<'static, PhotocraftApp>, label: &str) {
+fn pick(h: &mut Harness<'static, MagicpicApp>, label: &str) {
     let combo = combo(h).rect();
     let row = h.query_all_by_label(label).find(|n| n.rect().top() >= combo.bottom()).expect("the row");
     row.click();
     h.run_steps(3);
 }
 
-fn mode(h: &Harness<'static, PhotocraftApp>) -> String {
+fn mode(h: &Harness<'static, MagicpicApp>) -> String {
     h.state().ui.tool_options.vector_mode.clone()
 }
 

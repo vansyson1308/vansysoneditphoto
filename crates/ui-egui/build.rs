@@ -9,7 +9,7 @@
 //! A missing or malformed file gives empty tables (or no names) and a warning.
 //!
 //! - `CRAFT_I18N_DIR`, a craft-i18n checkout (storytold/craft-i18n, at the SHA in
-//!   `craft-i18n.rev`): `craft_i18n.rs` holds `CRAFT_I18N`, one (locale, shared catalog, PhotoCraft
+//!   `craft-i18n.rev`): `craft_i18n.rs` holds `CRAFT_I18N`, one (locale, shared catalog, MagicPic
 //!   catalog) entry per locale that has a `photocraft.tsv`, embedded raw. Unset, or not a checkout
 //!   (a warning), it is empty and the interface is English only; with `CRAFT_I18N_REQUIRED=1` (CI
 //!   and releases) that is an error instead. Recipe: craft-i18n's `docs/integration.md`.
@@ -35,8 +35,27 @@ fn main() {
     deflate_egui_fonts();
 }
 
-/// The catalog this app reads in each locale: `locales/<locale>/photocraft.tsv`.
+/// The catalog this app reads in each locale: `locales/<locale>/photocraft.tsv`. The file keeps the
+/// name the upstream craft-i18n repository gives it.
 const APP_CATALOG: &str = "photocraft.tsv";
+
+/// The catalog with the product named as this program names itself. craft-i18n's rows were written
+/// for PhotoCraft: left as they are, a row whose source text names the product matches nothing in
+/// MagicPic's interface (the text falls back to English), and a translation would name another
+/// program. Both sides of a row change together, so the lookup still pairs them.
+fn rebrand(catalog: &str) -> String {
+    catalog.replace("PhotoCraft", "MagicPic").replace("photocraft", "magicpic")
+}
+
+/// Write the rebranded copy of the catalog at `app` for `code` under `OUT_DIR` and return its path.
+fn rebranded(code: &str, app: &std::path::Path) -> Result<std::path::PathBuf, String> {
+    let text = std::fs::read_to_string(app).map_err(|e| format!("{}: {e}", app.display()))?;
+    let dir = std::path::PathBuf::from(std::env::var_os("OUT_DIR").unwrap_or_default()).join("craft_i18n");
+    std::fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+    let out = dir.join(format!("{code}.tsv"));
+    std::fs::write(&out, rebrand(&text)).map_err(|e| format!("{}: {e}", out.display()))?;
+    Ok(out)
+}
 
 /// `CRAFT_I18N` from `CRAFT_I18N_DIR`: the `Embedded` list the craft-i18n crate reads.
 fn craft_i18n() -> String {
@@ -60,21 +79,31 @@ fn craft_i18n() -> String {
             Vec::new()
         }
     };
-    let mut o = String::from("/// (locale, shared catalog, PhotoCraft's catalog), one entry per locale; `\"\"` for a missing file.\n");
+    let mut o = String::from("/// (locale, shared catalog, MagicPic's catalog), one entry per locale; `\"\"` for a missing file.\n");
     o.push_str("pub static CRAFT_I18N: &craft_i18n::Embedded = &[\n");
     for (code, shared, app) in entries {
         // `{:?}` escapes the path (Windows backslashes) as a Rust string literal.
         let shared = shared.map_or_else(|| "\"\"".to_string(), |p| format!("include_str!({p:?})"));
+        // A copy that can't be written leaves this locale out (its texts stay English) rather than
+        // embedding rows that name another program.
+        let app = match rebranded(&code, &app) {
+            Ok(app) => app,
+            Err(e) => {
+                let level = if required { "error" } else { "warning" };
+                println!("cargo::{level}=craft-i18n locale {code}: {e}; it is left out");
+                continue;
+            }
+        };
         let _ = writeln!(o, "    ({code:?}, {shared}, include_str!({app:?})),");
     }
     o.push_str("];\n");
     o
 }
 
-/// One embedded locale: its code, its `common.tsv` if it has one, and its PhotoCraft catalog.
+/// One embedded locale: its code, its `common.tsv` if it has one, and its MagicPic catalog.
 type Locale = (String, Option<std::path::PathBuf>, std::path::PathBuf);
 
-/// Every locale under `dir` with PhotoCraft's catalog, by code. An error when `dir` isn't a
+/// Every locale under `dir` with MagicPic's catalog, by code. An error when `dir` isn't a
 /// craft-i18n `locales/` directory.
 fn locales(dir: &std::path::Path) -> Result<Vec<Locale>, String> {
     // Build scripts run in the crate's directory and `include_str!` resolves against the

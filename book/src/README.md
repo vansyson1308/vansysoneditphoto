@@ -1,6 +1,8 @@
-# PhotoCraft Documentation
+# MagicPic Documentation
 
-PhotoCraft is a native image editor written in Rust. This book is the maintained entry point for installation, architecture, formats, automation, development, and security documentation.
+MagicPic is a native image editor written in Rust. This book is the maintained entry point for installation, architecture, formats, automation, development, and security documentation.
+
+> MagicPic is a fork of [PhotoCraft](https://github.com/storytold/photocraft). This book and the `docs/` directory were inherited from it and renamed. Pages about releases, installers, signing and CI describe the upstream project's process until MagicPic has its own, and links to `storytold/photocraft` issues and pull requests are kept as the history of the code.
 
 The repository's existing `docs/` directory remains authoritative for detailed design notes, parity reports, UI conventions, release procedures, and the complete control-protocol method reference. The book links to those documents instead of copying them.
 

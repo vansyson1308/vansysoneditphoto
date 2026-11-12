@@ -4,18 +4,18 @@
 
 use egui::{Key, Modifiers, vec2};
 use egui_kittest::{Harness, kittest::Queryable};
-use photocraft_doc::vector::Path;
+use magicpic_doc::vector::Path;
 use serde_json::json;
 
 use super::tests::{click, steps};
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::direct_select::{PathRef, active_paths, candidates};
 use crate::state::Tool;
 
 /// The issue's document: 800 x 600 with the saved path "Path 1", a corner square with an anchor
 /// at (300, 300), targeted in the Paths panel.
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 800, "height": 600, "background": "white"})).unwrap();
     let square = json!({"subpaths": [{"closed": true, "knots": [[100, 300], [300, 300], [300, 500], [100, 500]]}]});
     app.run("path.set", json!({"name": "Path 1", "path": square})).unwrap();
@@ -25,7 +25,7 @@ fn app() -> PhotocraftApp {
     app
 }
 
-fn escape(app: &mut PhotocraftApp) {
+fn escape(app: &mut MagicpicApp) {
     let ctx = egui::Context::default();
     let key = egui::Event::Key { key: Key::Escape, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::NONE };
     ctx.begin_pass(egui::RawInput { events: vec![key], ..Default::default() });
@@ -33,7 +33,7 @@ fn escape(app: &mut PhotocraftApp) {
     ctx.end_pass().textures_delta.clear();
 }
 
-fn path_1(app: &PhotocraftApp) -> Path {
+fn path_1(app: &MagicpicApp) -> Path {
     app.session.active().unwrap().doc.paths.iter().find(|p| p.name == "Path 1").unwrap().path.clone()
 }
 
@@ -119,7 +119,7 @@ fn with_no_path_targeted_escape_still_leaves_full_screen_and_deselects_pixels() 
 #[test]
 fn escape_while_renaming_path_1_cancels_the_rename() {
     let mut h = Harness::builder().with_size(vec2(1440.0, 900.0)).with_step_dt(1.0 / 60.0).with_max_steps(64).build_eframe(|cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+        MagicpicApp::setup_context(&cc.egui_ctx, Default::default());
         let mut app = app();
         // Layers | Channels | Paths: the Paths tab.
         app.ui.dock_tabs.layers = 2;

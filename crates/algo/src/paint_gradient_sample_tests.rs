@@ -4,8 +4,8 @@
 //! The ramp is the reference application's measured Classic black → white Linear curve (Smooth,
 //! every tenth of the way), so every shape is checked against the same colour curve.
 
-use photocraft_color::PixelFormat;
-use photocraft_raster::Surface;
+use magicpic_color::PixelFormat;
+use magicpic_raster::Surface;
 
 use super::{BlendMode, GradientShape, Rect, paint_gradient};
 

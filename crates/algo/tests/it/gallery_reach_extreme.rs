@@ -1,10 +1,10 @@
 //! A project file stores a Filter Gallery effect's values as plain numbers, bypassing the clamp that
 //! `GalleryEffect::set` applies, so the reach arithmetic must survive any `f32` in them.
 
-use photocraft_algo::{FilterParams, GalleryEffect, GalleryFilter, GalleryParamKind, Halo, apply};
-use photocraft_color::PixelFormat;
-use photocraft_geom::Rect;
-use photocraft_raster::Surface;
+use magicpic_algo::{FilterParams, GalleryEffect, GalleryFilter, GalleryParamKind, Halo, apply};
+use magicpic_color::PixelFormat;
+use magicpic_geom::Rect;
+use magicpic_raster::Surface;
 
 const EXTREME: [f32; 6] = [f32::NAN, f32::INFINITY, f32::NEG_INFINITY, f32::MAX, f32::MIN, 3.0e9];
 

@@ -4,13 +4,13 @@
 use egui::{Event, Modifiers, PointerButton, Pos2, RawInput, Rect, vec2};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::state::{DocWindow, Tool, View};
 
 use super::tabs::document_window_canvas;
 
-fn app_with_a_layer() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app_with_a_layer() -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.background_jobs = false;
     app.run("file.new", json!({"width": 200, "height": 150})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
@@ -28,7 +28,7 @@ fn app_with_a_layer() -> PhotocraftApp {
     app
 }
 
-fn history(app: &PhotocraftApp) -> Vec<String> {
+fn history(app: &MagicpicApp) -> Vec<String> {
     app.session.active().unwrap().history.entries().to_vec()
 }
 
@@ -42,7 +42,7 @@ struct DocumentWindow {
 }
 
 impl DocumentWindow {
-    fn new(app: &PhotocraftApp) -> Self {
+    fn new(app: &MagicpicApp) -> Self {
         let window = DocWindow { id: 7, document: 0, view: app.ui.views[0].clone(), open: true, position: None, floating: false, focused: true };
         let mut view = window.view.clone();
         let size = app.session.active().unwrap().doc.size;
@@ -53,7 +53,7 @@ impl DocumentWindow {
         Self { ctx: egui::Context::default(), screen: Rect::from_min_size(Pos2::ZERO, vec2(800.0, 600.0)), window, view }
     }
 
-    fn frame(&mut self, app: &mut PhotocraftApp, events: Vec<Event>) {
+    fn frame(&mut self, app: &mut MagicpicApp, events: Vec<Event>) {
         let input = RawInput { screen_rect: Some(self.screen), events, ..Default::default() };
         let mut out = self.ctx.run_ui(input, |ui| {
             self.view = document_window_canvas(app, ui, &self.window, self.view.clone(), true).0;
@@ -67,7 +67,7 @@ fn button(pos: Pos2, pressed: bool, modifiers: Modifiers) -> Event {
 }
 
 /// Drags across the middle of a document window's canvas.
-fn drag_in_document_window(app: &mut PhotocraftApp) {
+fn drag_in_document_window(app: &mut MagicpicApp) {
     let mut w = DocumentWindow::new(app);
     let start = w.screen.center();
     w.frame(app, vec![]);
@@ -107,8 +107,8 @@ fn a_document_window_canvas_takes_no_tool_drag_under_a_dialog() {
 }
 
 /// Text being typed in a paragraph box over the document's centre, with the Type tool.
-fn app_typing(dialog: bool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app_typing(dialog: bool) -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.background_jobs = false;
     app.run("file.new", json!({"width": 200, "height": 150})).unwrap();
     app.run("type.create", json!({"text": "Hello", "size": 24, "x": 20, "y": 40, "box": [20, 20, 160, 110]})).unwrap();
@@ -126,7 +126,7 @@ fn app_typing(dialog: bool) -> PhotocraftApp {
 
 /// A ⌘-press on the text: the type transform reads it from the raw events, which a modal layer
 /// doesn't block. Whether a transform started.
-fn command_press_on_the_text(app: &mut PhotocraftApp) -> bool {
+fn command_press_on_the_text(app: &mut MagicpicApp) -> bool {
     let command = Modifiers { command: true, ctrl: true, ..Modifiers::NONE };
     let mut w = DocumentWindow::new(app);
     let at = w.screen.center();

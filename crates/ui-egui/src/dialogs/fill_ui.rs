@@ -8,7 +8,7 @@
 
 use serde_json::{Map, Value, json};
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::theme::Tokens;
 
 pub const COMMAND: &str = "edit.fill";
@@ -41,7 +41,7 @@ fn hex(c: [f32; 4]) -> String {
 }
 
 /// A remembered value, if it is one the dialog can show (a corrupt preference is ignored).
-fn valid(app: &PhotocraftApp, key: &str, v: &Value) -> bool {
+fn valid(app: &MagicpicApp, key: &str, v: &Value) -> bool {
     match key {
         "contents" => v.as_str().is_some_and(|c| CONTENTS.iter().any(|(k, _)| *k == c)),
         "mode" | "opacity" | "preserveTransparency" => crate::dialog_blend_ui::valid(key, v),
@@ -53,7 +53,7 @@ fn valid(app: &PhotocraftApp, key: &str, v: &Value) -> bool {
 }
 
 /// Photoshop's Fill defaults (no last-used prefs). Used by open and Alt+Reset.
-pub fn default_fields(app: &PhotocraftApp) -> Map<String, Value> {
+pub fn default_fields(app: &MagicpicApp) -> Map<String, Value> {
     let mut f = Map::new();
     f.insert(MARK.into(), json!(true));
     f.insert("__command".into(), json!(COMMAND));
@@ -71,7 +71,7 @@ pub fn default_fields(app: &PhotocraftApp) -> Map<String, Value> {
 }
 
 /// The dialog's fields: Photoshop's defaults, overridden by the last choices.
-pub fn fields(app: &PhotocraftApp) -> Map<String, Value> {
+pub fn fields(app: &MagicpicApp) -> Map<String, Value> {
     let mut f = default_fields(app);
     if let Some(Value::Object(saved)) = app.session.prefs().dialogs.get(COMMAND) {
         for k in KEYS {
@@ -84,7 +84,7 @@ pub fn fields(app: &PhotocraftApp) -> Map<String, Value> {
 }
 
 /// Alt+Cancel (Reset): Photoshop Fill defaults, not last-used prefs. Dialog stays open.
-pub fn reset(app: &PhotocraftApp, fields: &mut Map<String, Value>) {
+pub fn reset(app: &MagicpicApp, fields: &mut Map<String, Value>) {
     if !owns(fields) {
         return;
     }
@@ -97,7 +97,7 @@ pub fn reset(app: &PhotocraftApp, fields: &mut Map<String, Value>) {
 }
 
 /// Open Fill with the current editing target, so live UI changes cannot redirect confirmation.
-pub fn open(app: &mut PhotocraftApp) -> u64 {
+pub fn open(app: &mut MagicpicApp) -> u64 {
     let mut f = fields(app);
     let target = app.with_mask_target(COMMAND, json!({}));
     let target = target.get("target").cloned().unwrap_or_else(|| crate::canvas::paint_target(app));
@@ -139,7 +139,7 @@ pub fn params(f: &Map<String, Value>) -> Value {
 }
 
 /// OK: remember the choices, then fill.
-pub fn confirm(app: &mut PhotocraftApp, f: &Map<String, Value>) -> Result<Value, String> {
+pub fn confirm(app: &mut MagicpicApp, f: &Map<String, Value>) -> Result<Value, String> {
     let st = app.session.active().ok_or(tl!("The document is closed"))?;
     if f.get("__document").and_then(Value::as_u64) != Some(st.doc.id.0) || f.get("__layer").is_some_and(|layer| layer != &json!(st.active_layer)) {
         return Err(tl!("The document or active layer changed. Open Fill again.").into());
@@ -165,7 +165,7 @@ fn parse_hex(h: &str) -> [u8; 3] {
 }
 
 /// The dialog body.
-pub fn body(app: &PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
+pub fn body(app: &MagicpicApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
     ui.spacing_mut().item_spacing.y = 6.0;
     let labels: Vec<&str> = LABELS.iter().chain(&crate::dialog_blend_ui::LABELS).copied().map(crate::i18n::t).collect();
     let label_w = crate::widgets::label_column_width(ui, &labels, LABEL_MIN_W, LABEL_MAX_W);

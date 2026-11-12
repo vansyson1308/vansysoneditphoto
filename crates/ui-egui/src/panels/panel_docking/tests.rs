@@ -2,28 +2,28 @@ use super::*;
 use egui::{Event, Modifiers, PointerButton, Pos2, pos2, vec2};
 use egui_kittest::{Harness, kittest::Queryable};
 
-fn app() -> PhotocraftApp {
-    PhotocraftApp::new(photocraft_engine::Session::new(), Default::default())
+fn app() -> MagicpicApp {
+    MagicpicApp::new(magicpic_engine::Session::new(), Default::default())
 }
 
-fn lay(app: &PhotocraftApp) -> &Layout<String> {
+fn lay(app: &MagicpicApp) -> &Layout<String> {
     &app.ui.docking.as_ref().expect("a customized workspace").layout
 }
 
-fn hidden(app: &PhotocraftApp, panel: &str) -> bool {
+fn hidden(app: &MagicpicApp, panel: &str) -> bool {
     app.ui.docking.as_ref().is_some_and(|workspace| workspace.hidden.iter().any(|(id, _)| id == panel))
 }
 
-fn hit_rect(h: &Harness<'static, PhotocraftApp>, hit: craft_ui::docking::Hit<String>) -> egui::Rect {
+fn hit_rect(h: &Harness<'static, MagicpicApp>, hit: craft_ui::docking::Hit<String>) -> egui::Rect {
     let hits = craft_ui::docking::DockArea::<String>::hit_rects(&h.ctx, area_id());
     hits.iter().find(|(drawn, _)| *drawn == hit).map(|(_, rect)| *rect).unwrap_or_else(|| panic!("{hit:?} is not drawn"))
 }
 
-fn tab_rect(h: &Harness<'static, PhotocraftApp>, panel: &str) -> egui::Rect {
+fn tab_rect(h: &Harness<'static, MagicpicApp>, panel: &str) -> egui::Rect {
     hit_rect(h, craft_ui::docking::Hit::Tab(panel.to_owned()))
 }
 
-fn floating_rect(h: &Harness<'static, PhotocraftApp>, panel: &str) -> egui::Rect {
+fn floating_rect(h: &Harness<'static, MagicpicApp>, panel: &str) -> egui::Rect {
     let window = lay(h.state()).floating.iter().find(|window| window.contains(&panel.to_owned())).unwrap();
     let layer = craft_ui::docking::DockArea::<String>::floating_layer(area_id(), window).unwrap();
     h.ctx.memory(|memory| memory.area_rect(layer.id)).unwrap()
@@ -112,12 +112,12 @@ fn invalid_panel_requests_are_atomic_and_do_not_enter_a_custom_workspace() {
     }
 }
 
-fn harness(app: PhotocraftApp, size: egui::Vec2) -> Harness<'static, PhotocraftApp> {
+fn harness(app: MagicpicApp, size: egui::Vec2) -> Harness<'static, MagicpicApp> {
     let mut ready = false;
     let mut harness = Harness::builder().with_size(size).with_step_dt(1.0 / 60.0).build_ui_state(
-        move |ui, app: &mut PhotocraftApp| {
+        move |ui, app: &mut MagicpicApp| {
             if !ready {
-                PhotocraftApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
+                MagicpicApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
                 ready = true;
                 return;
             }
@@ -130,7 +130,7 @@ fn harness(app: PhotocraftApp, size: egui::Vec2) -> Harness<'static, PhotocraftA
     harness
 }
 
-fn drag(h: &mut Harness<'static, PhotocraftApp>, from: Pos2, to: Pos2) {
+fn drag(h: &mut Harness<'static, MagicpicApp>, from: Pos2, to: Pos2) {
     h.event(Event::PointerMoved(from));
     h.run_steps(1);
     h.event(Event::PointerButton { pos: from, button: PointerButton::Primary, pressed: true, modifiers: Modifiers::NONE });
@@ -144,7 +144,7 @@ fn drag(h: &mut Harness<'static, PhotocraftApp>, from: Pos2, to: Pos2) {
 }
 
 /// The canvas's rect: from the area's start to the dock column's inner edge.
-fn canvas_rect(h: &Harness<'static, PhotocraftApp>) -> egui::Rect {
+fn canvas_rect(h: &Harness<'static, MagicpicApp>) -> egui::Rect {
     let hits = craft_ui::docking::DockArea::<String>::hit_rects(&h.ctx, area_id());
     let divider = hits
         .iter()
@@ -183,7 +183,7 @@ fn a_fresh_launch_draws_the_native_groups_beside_the_protected_canvas() {
     h.state_mut().run("window.panel.move", json!({"panel":"layers","anchor":CANVAS,"zone":"center"})).unwrap_err();
     assert!(h.state().ui.docking.is_none(), "a refused command leaves the default");
 
-    let mut studio = crate::PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut studio = crate::MagicpicApp::new(magicpic_engine::Session::new(), Default::default());
     studio.ui.theme = crate::theme::ThemeKind::Studio;
     let layout = legacy(&studio);
     let window = layout.floating.first().expect("Studio floats Properties");
@@ -298,7 +298,7 @@ fn shared_layout_keeps_panel_identity_across_themes_and_respects_workspace_lock(
 /// Explicit offscreen evidence; this creates no native windows.
 #[test]
 fn capture_custom_panel_docking_visual_fixtures() {
-    let _gpu = photocraft_testkit::gpu_lock();
+    let _gpu = magicpic_testkit::gpu_lock();
     let Some(directory) = std::env::var_os("CRAFT_UI_DOCKING_FIXTURES").map(std::path::PathBuf::from) else { return };
     std::fs::create_dir_all(&directory).unwrap();
     for theme in crate::theme::ThemeKind::ALL {
@@ -310,9 +310,9 @@ fn capture_custom_panel_docking_visual_fixtures() {
                 app.run("window.panel.float", json!({"panel":"properties","x":30,"y":90,"width":300,"height":440})).unwrap();
                 let mut ready = false;
                 let mut harness = Harness::builder().with_size(vec2(width, 800.0)).with_pixels_per_point(scale).wgpu().build_ui_state(
-                    move |ui, app: &mut PhotocraftApp| {
+                    move |ui, app: &mut MagicpicApp| {
                         if !ready {
-                            PhotocraftApp::setup_context(ui.ctx(), theme);
+                            MagicpicApp::setup_context(ui.ctx(), theme);
                             app.ui.theme = theme;
                             ready = true;
                             return;
@@ -327,7 +327,7 @@ fn capture_custom_panel_docking_visual_fixtures() {
                 harness.input_mut().max_texture_side = Some(8192);
                 harness.run_steps(5);
                 assert!(valid(lay(harness.state())));
-                harness.render().unwrap().save(directory.join(format!("photocraft-shared-docking-{}-{width}-{scale}x.png", theme.id()))).unwrap();
+                harness.render().unwrap().save(directory.join(format!("magicpic-shared-docking-{}-{width}-{scale}x.png", theme.id()))).unwrap();
             }
         }
     }
@@ -335,15 +335,15 @@ fn capture_custom_panel_docking_visual_fixtures() {
 
 #[test]
 fn floating_group_titles_are_opaque_in_studio_themes() {
-    let _gpu = photocraft_testkit::gpu_lock();
+    let _gpu = magicpic_testkit::gpu_lock();
     // Studio's tab strip is transparent over the dock's card; a floating group must not show the canvas (#4509).
     let mut app = app();
     app.run("window.panel.float", json!({"panel":"swatches","x":40,"y":60,"width":300,"height":300})).unwrap();
     let mut ready = false;
     let mut h = Harness::builder().with_size(vec2(1280.0, 800.0)).wgpu().build_ui_state(
-        move |ui, app: &mut PhotocraftApp| {
+        move |ui, app: &mut MagicpicApp| {
             if !ready {
-                PhotocraftApp::setup_context(ui.ctx(), crate::theme::ThemeKind::Studio);
+                MagicpicApp::setup_context(ui.ctx(), crate::theme::ThemeKind::Studio);
                 app.ui.theme = crate::theme::ThemeKind::Studio;
                 ready = true;
                 return;
@@ -453,7 +453,7 @@ fn splitting_a_short_column_keeps_the_layers_footer_visible_and_usable() {
 
 #[test]
 fn populated_canvas_keeps_a_real_opacity_edit_after_floating_and_redocking() {
-    let _gpu = photocraft_testkit::gpu_lock();
+    let _gpu = magicpic_testkit::gpu_lock();
     let mut app = app();
     app.ui.theme = crate::theme::ThemeKind::Studio;
     app.run("file.new", json!({"width":480,"height":360})).unwrap();
@@ -468,9 +468,9 @@ fn populated_canvas_keeps_a_real_opacity_edit_after_floating_and_redocking() {
     let builder = if directory.is_some() { builder.wgpu() } else { builder };
     let mut ready = false;
     let mut h = builder.build_ui_state(
-        move |ui, app: &mut PhotocraftApp| {
+        move |ui, app: &mut MagicpicApp| {
             if !ready {
-                PhotocraftApp::setup_context(ui.ctx(), crate::theme::ThemeKind::Studio);
+                MagicpicApp::setup_context(ui.ctx(), crate::theme::ThemeKind::Studio);
                 ready = true;
                 return;
             }
@@ -512,7 +512,7 @@ fn populated_canvas_keeps_a_real_opacity_edit_after_floating_and_redocking() {
     assert!((opacity - 0.5).abs() < 0.03, "actual opacity {opacity}");
     if let Some(directory) = &directory {
         std::fs::create_dir_all(directory).unwrap();
-        h.render().unwrap().save(directory.join("photocraft-populated-opacity-floating.png")).unwrap();
+        h.render().unwrap().save(directory.join("magicpic-populated-opacity-floating.png")).unwrap();
     }
     let from = tab_rect(&h, "properties").center();
     let to = tab_rect(&h, "layers").center();
@@ -520,7 +520,7 @@ fn populated_canvas_keeps_a_real_opacity_edit_after_floating_and_redocking() {
     assert!(lay(h.state()).floating.iter().all(|group| !group.contains(&"properties".to_string())));
     assert_eq!(h.state().session.active().unwrap().doc.layer(layer).unwrap().opacity, opacity);
     if let Some(directory) = &directory {
-        h.render().unwrap().save(directory.join("photocraft-populated-opacity-redocked.png")).unwrap();
+        h.render().unwrap().save(directory.join("magicpic-populated-opacity-redocked.png")).unwrap();
     }
 }
 
@@ -550,7 +550,7 @@ fn changing_workspace_during_a_drag_cancels_the_stale_gesture() {
     assert_eq!(h.state().ui.docking, destination);
 }
 
-fn control_set(app: &mut PhotocraftApp, ctx: &egui::Context, params: Value) -> Value {
+fn control_set(app: &mut MagicpicApp, ctx: &egui::Context, params: Value) -> Value {
     let (request, _) = crate::control::ControlRequest::new("ui.set", params);
     match crate::control::handle(app, ctx, &request) {
         crate::control::Outcome::Done(value) => value,
@@ -716,9 +716,9 @@ fn customized_panel_menus_and_rail_remain_reachable_after_float_and_restore() {
     // Panel-specific menu body is shared by both its context and group menu seams.
     let mut ready = false;
     let mut menu = Harness::builder().build_ui_state(
-        move |ui, app: &mut PhotocraftApp| {
+        move |ui, app: &mut MagicpicApp| {
             if !ready {
-                PhotocraftApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
+                MagicpicApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
                 ready = true;
             }
             panel_menu(app, ui, "swatches");
@@ -753,9 +753,9 @@ fn floated_color_panel_menu_picks_the_mode() {
 fn actions_panel_menu_includes_load_and_save_actions() {
     let mut ready = false;
     let mut menu = Harness::builder().build_ui_state(
-        move |ui, app: &mut PhotocraftApp| {
+        move |ui, app: &mut MagicpicApp| {
             if !ready {
-                PhotocraftApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
+                MagicpicApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
                 ready = true;
             }
             panel_menu(app, ui, "actions");
@@ -777,9 +777,9 @@ fn channels_panel_menu_opens_new_spot_and_adds_a_channel() {
     app.run("file.new", json!({"width": 32, "height": 24})).unwrap();
     let mut ready = false;
     let mut menu = Harness::builder().with_size(vec2(260.0, 420.0)).build_ui_state(
-        move |ui, app: &mut PhotocraftApp| {
+        move |ui, app: &mut MagicpicApp| {
             if !ready {
-                PhotocraftApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
+                MagicpicApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
                 ready = true;
             }
             panel_menu(app, ui, "channels");
@@ -787,7 +787,7 @@ fn channels_panel_menu_opens_new_spot_and_adds_a_channel() {
         app,
     );
     menu.run_steps(2);
-    let disabled = |menu: &Harness<'static, PhotocraftApp>, label: &str| menu.get_by_label(label).accesskit_node().is_disabled();
+    let disabled = |menu: &Harness<'static, MagicpicApp>, label: &str| menu.get_by_label(label).accesskit_node().is_disabled();
     // The composite is targeted: nothing to duplicate, delete or give options to.
     for label in ["Duplicate Channel", "Delete Channel", "Merge Spot Channel", "Channel Options…"] {
         assert!(disabled(&menu, label), "{label} waits for a targeted channel");
@@ -915,7 +915,7 @@ fn main_workspace_file_loads_as_the_default_and_saves_as_a_workspace() {
     let written = crate::dock::snapshot(&app);
     assert!(written.get("dockingHidden").is_none());
     assert_eq!(written["docking"]["version"], 2);
-    let mut reloaded = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut reloaded = MagicpicApp::new(magicpic_engine::Session::new(), Default::default());
     crate::dock::apply(&mut reloaded, &written);
     let again = reloaded.ui.docking.as_ref().expect("the workspace loads as saved");
     let now = app.ui.docking.as_ref().unwrap();
@@ -1016,9 +1016,9 @@ fn dock_only_frames_never_leak_into_the_standard_layout() {
     let dock_only = std::rc::Rc::new(std::cell::Cell::new(false));
     let mode = dock_only.clone();
     let mut h = Harness::builder().with_size(vec2(1280.0, 800.0)).with_step_dt(1.0 / 60.0).build_ui_state(
-        move |ui, app: &mut PhotocraftApp| {
+        move |ui, app: &mut MagicpicApp| {
             if !ready {
-                PhotocraftApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
+                MagicpicApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
                 ready = true;
                 return;
             }
@@ -1026,7 +1026,7 @@ fn dock_only_frames_never_leak_into_the_standard_layout() {
         },
         app(),
     );
-    let canvas_drawn = |h: &Harness<'static, PhotocraftApp>| last_bodies(&h.ctx).iter().any(|(id, _)| id == CANVAS);
+    let canvas_drawn = |h: &Harness<'static, MagicpicApp>| last_bodies(&h.ctx).iter().any(|(id, _)| id == CANVAS);
     h.run_steps(2);
     for _ in 0..3 {
         dock_only.set(true);
@@ -1061,9 +1061,9 @@ fn the_toolbar_side_toggle_works_in_every_interface_theme() {
 
     let mut ready = false;
     let mut h = Harness::builder().with_size(vec2(1280.0, 800.0)).with_step_dt(1.0 / 60.0).build_ui_state(
-        move |ui, app: &mut PhotocraftApp| {
+        move |ui, app: &mut MagicpicApp| {
             if !ready {
-                PhotocraftApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
+                MagicpicApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
                 ready = true;
                 return;
             }
@@ -1110,9 +1110,9 @@ fn moving_the_toolbar_persists_without_the_dock() {
     app.session.prefs.edit(|p| p.workspace.remember_workspace_changes = true);
     let mut ready = false;
     let mut h = Harness::builder().with_size(vec2(1280.0, 800.0)).with_step_dt(1.0 / 60.0).build_ui_state(
-        move |ui, app: &mut PhotocraftApp| {
+        move |ui, app: &mut MagicpicApp| {
             if !ready {
-                PhotocraftApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
+                MagicpicApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
                 ready = true;
                 return;
             }
@@ -1129,12 +1129,12 @@ fn moving_the_toolbar_persists_without_the_dock() {
 }
 
 /// A dock-edge harness: draw only the dock column, as the dock-edge frame layout does.
-fn dock_panel_harness(app: PhotocraftApp, size: egui::Vec2, theme: crate::theme::ThemeKind) -> Harness<'static, PhotocraftApp> {
+fn dock_panel_harness(app: MagicpicApp, size: egui::Vec2, theme: crate::theme::ThemeKind) -> Harness<'static, MagicpicApp> {
     let mut ready = false;
     let mut harness = Harness::builder().with_size(size).with_step_dt(1.0 / 60.0).build_ui_state(
-        move |ui, app: &mut PhotocraftApp| {
+        move |ui, app: &mut MagicpicApp| {
             if !ready {
-                PhotocraftApp::setup_context(ui.ctx(), theme);
+                MagicpicApp::setup_context(ui.ctx(), theme);
                 ready = true;
                 return;
             }
@@ -1147,7 +1147,7 @@ fn dock_panel_harness(app: PhotocraftApp, size: egui::Vec2, theme: crate::theme:
 }
 
 /// [`dock_panel_harness`] in the Pro Medium theme.
-fn dock_edge_harness(app: PhotocraftApp, size: egui::Vec2) -> Harness<'static, PhotocraftApp> {
+fn dock_edge_harness(app: MagicpicApp, size: egui::Vec2) -> Harness<'static, MagicpicApp> {
     dock_panel_harness(app, size, crate::theme::ThemeKind::ProMedium)
 }
 
@@ -1217,9 +1217,9 @@ fn disabling_the_ui_cancels_a_dock_edge_drag() {
     let flag = disabled.clone();
     let mut ready = false;
     let mut h = Harness::builder().with_size(vec2(1280.0, 800.0)).with_step_dt(1.0 / 60.0).build_ui_state(
-        move |ui, app: &mut PhotocraftApp| {
+        move |ui, app: &mut MagicpicApp| {
             if !ready {
-                PhotocraftApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
+                MagicpicApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
                 ready = true;
                 return;
             }
@@ -1295,7 +1295,7 @@ fn ui_set_dock_width_scales_every_column() {
     // is shared equally between the two columns.
     let share = (520.0 - end_columns(&app)[0].width - 220.0) / 2.0;
     let split = [end_columns(&app)[0].width + share, 220.0 + share];
-    let total = |app: &PhotocraftApp| -> f32 {
+    let total = |app: &MagicpicApp| -> f32 {
         let root = app.ui.docking.as_ref().expect("a customized workspace").layout.root.as_ref().expect("root");
         let dock = match root {
             Node::Split { second, .. } => second.as_ref(),
@@ -1425,9 +1425,9 @@ fn an_empty_dock_keeps_the_parent_layout_for_toolbar_and_canvas() {
     app.ui.panels.rail = false;
     let mut ready = false;
     let mut h = Harness::builder().with_size(vec2(1280.0, 800.0)).with_step_dt(1.0 / 60.0).build_ui_state(
-        move |ui, app: &mut PhotocraftApp| {
+        move |ui, app: &mut MagicpicApp| {
             if !ready {
-                PhotocraftApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
+                MagicpicApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
                 ready = true;
                 return;
             }
@@ -1765,18 +1765,18 @@ fn constrained_width_does_not_panic_while_resizing() {
 }
 
 /// The rendered dock-edge resize handle's interaction rectangle.
-fn outer_handle(h: &Harness<'static, PhotocraftApp>) -> egui::Rect {
+fn outer_handle(h: &Harness<'static, MagicpicApp>) -> egui::Rect {
     h.ctx.read_response(egui::Id::unique("dock-edge-handle")).expect("the rendered resize handle").rect
 }
 
 /// The rectangle the dock-edge panel actually allocated on the last frame.
-fn allocated_dock(h: &Harness<'static, PhotocraftApp>) -> egui::Rect {
+fn allocated_dock(h: &Harness<'static, MagicpicApp>) -> egui::Rect {
     h.ctx.data(|data| data.get_temp::<egui::Rect>(egui::Id::unique("photo-dock-panel-rect")).expect("the allocated dock rectangle"))
 }
 
 /// Presses on the dock-edge handle, asserts the drag started that frame and returns the press
 /// position.
-fn begin_outer_resize(h: &mut Harness<'static, PhotocraftApp>) -> Pos2 {
+fn begin_outer_resize(h: &mut Harness<'static, MagicpicApp>) -> Pos2 {
     let start = outer_handle(h).center();
     h.event(Event::PointerMoved(start));
     h.run_steps(1);
@@ -1788,7 +1788,7 @@ fn begin_outer_resize(h: &mut Harness<'static, PhotocraftApp>) -> Pos2 {
 
 /// Releases the pointer at `pos` with no preceding move, so the release alone carries the final
 /// position.
-fn release_outer_resize(h: &mut Harness<'static, PhotocraftApp>, pos: Pos2) {
+fn release_outer_resize(h: &mut Harness<'static, MagicpicApp>, pos: Pos2) {
     // No preceding PointerMoved: the release event alone supplies the final position.
     h.event(Event::PointerButton { pos, button: PointerButton::Primary, pressed: false, modifiers: Modifiers::NONE });
     h.run_steps(1);
@@ -1796,7 +1796,7 @@ fn release_outer_resize(h: &mut Harness<'static, PhotocraftApp>, pos: Pos2) {
 
 /// An app whose saved workspace has one end-dock column per width, each holding one panel; iconic
 /// columns get distinct expanded widths so tests can check they are preserved.
-fn app_with_columns(widths: &[f32], iconic: bool) -> PhotocraftApp {
+fn app_with_columns(widths: &[f32], iconic: bool) -> MagicpicApp {
     assert!(widths.len() <= PANELS.len());
     let columns = widths
         .iter()
@@ -1820,7 +1820,7 @@ fn app_with_columns(widths: &[f32], iconic: bool) -> PhotocraftApp {
 }
 
 /// The end dock's columns in the customized workspace.
-fn end_columns(app: &PhotocraftApp) -> &[Column<String>] {
+fn end_columns(app: &MagicpicApp) -> &[Column<String>] {
     let Some(Node::Dock { columns, .. }) = lay(app).root.as_ref().and_then(end_dock_node) else { panic!("the end dock is missing") };
     columns
 }
@@ -1949,16 +1949,16 @@ fn release_only_position_updates_model_and_actual_geometry_on_that_frame() {
 
 /// A dock-edge harness `width` points wide with the Pro single-column toolbox on the right, the
 /// rail and a stored 520-point dock column, after the frames that draw it.
-fn narrow_dock_harness(width: f32) -> Harness<'static, PhotocraftApp> {
+fn narrow_dock_harness(width: f32) -> Harness<'static, MagicpicApp> {
     let mut app = app_with_columns(&[400.0], false);
     app.ui.panels.rail = true;
     app.ui.panels.toolbar_double = false;
     app.ui.panels.toolbar_side = crate::state::ToolbarSide::Right;
     let mut ready = false;
     let mut h = Harness::builder().with_size(vec2(width, 600.0)).with_step_dt(1.0 / 60.0).build_ui_state(
-        move |ui, app: &mut PhotocraftApp| {
+        move |ui, app: &mut MagicpicApp| {
             if !ready {
-                PhotocraftApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
+                MagicpicApp::setup_context(ui.ctx(), crate::theme::ThemeKind::ProMedium);
                 ready = true;
                 return;
             }
@@ -1979,7 +1979,7 @@ fn narrow_dock_harness(width: f32) -> Harness<'static, PhotocraftApp> {
 }
 
 /// The canvas rectangle [`narrow_dock_harness`] drew on its last frame.
-fn narrow_canvas(h: &Harness<'static, PhotocraftApp>) -> egui::Rect {
+fn narrow_canvas(h: &Harness<'static, MagicpicApp>) -> egui::Rect {
     h.ctx.data(|data| data.get_temp::<egui::Rect>(egui::Id::unique("narrow-canvas-rect")).expect("the canvas rect"))
 }
 
@@ -2003,7 +2003,7 @@ fn dock_hit_panel(hit: &craft_ui::docking::Hit<String>) -> Option<&String> {
 
 /// Asserts that every control of the end dock's panels keeps its clipped `interact_rect`, what is
 /// drawn and clickable, inside `dock`, and returns how many have a full `rect` past it.
-fn dock_controls_clipped(h: &Harness<'static, PhotocraftApp>, dock: egui::Rect) -> usize {
+fn dock_controls_clipped(h: &Harness<'static, MagicpicApp>, dock: egui::Rect) -> usize {
     use craft_ui::docking::DockArea;
     let panels: Vec<&String> = end_columns(h.state()).iter().flat_map(|c| c.groups.iter().flat_map(|g| g.panels.iter())).collect();
     let area = area_id();
@@ -2161,9 +2161,9 @@ fn constrained_composed_layout_reserves_the_canvas_with_or_without_a_rail() {
                 app.ui.panels.toolbar_side = if crate::direction::is_rtl() { crate::state::ToolbarSide::Left } else { crate::state::ToolbarSide::Right };
                 let mut ready = false;
                 let mut h = Harness::builder().with_size(vec2(400.0, 600.0)).with_step_dt(1.0 / 60.0).build_ui_state(
-                    move |ui, app: &mut PhotocraftApp| {
+                    move |ui, app: &mut MagicpicApp| {
                         if !ready {
-                            PhotocraftApp::setup_context(ui.ctx(), theme);
+                            MagicpicApp::setup_context(ui.ctx(), theme);
                             ready = true;
                             return;
                         }
@@ -2176,7 +2176,7 @@ fn constrained_composed_layout_reserves_the_canvas_with_or_without_a_rail() {
                     app,
                 );
                 h.run_steps(4);
-                let assert_geometry = |h: &Harness<'static, PhotocraftApp>| {
+                let assert_geometry = |h: &Harness<'static, MagicpicApp>| {
                     let canvas = h.ctx.data(|data| data.get_temp::<egui::Rect>(egui::Id::unique("constrained-canvas-rect")).unwrap());
                     assert!(canvas.width() >= 199.5, "rail={rail}, dir={dir:?}: canvas {canvas:?}, dock {:?}", allocated_dock(h));
                     assert!((dock_width(h.state()) - 510.0).abs() < 0.5, "the constrained display does not corrupt model minima");

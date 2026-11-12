@@ -6,33 +6,33 @@ use egui::accesskit::Role;
 use egui::vec2;
 use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
-use photocraft_color::BlendMode;
+use magicpic_color::BlendMode;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::state::Tool;
 
 const NAMES: [&str; 7] = ["Normal", "Darken", "Lighten", "Hue", "Saturation", "Color", "Luminosity"];
 
-fn app(tool: Tool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app(tool: Tool) -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 80, "height": 80})).unwrap();
     app.ui.tool = tool;
     app
 }
 
-fn bar(tool: Tool) -> Harness<'static, PhotocraftApp> {
+fn bar(tool: Tool) -> Harness<'static, MagicpicApp> {
     let mut h = Harness::builder()
         .with_size(vec2(1600.0, 400.0))
         .with_step_dt(1.0 / 60.0)
-        .with_context_setup(|ctx| PhotocraftApp::setup_context(ctx, crate::theme::ThemeKind::ProMedium))
+        .with_context_setup(|ctx| MagicpicApp::setup_context(ctx, crate::theme::ThemeKind::ProMedium))
         .build_ui_state(|ui, app| crate::panels::options_bar(app, ui), app(tool));
     h.run_steps(4);
     h
 }
 
 /// The bar's Mode dropdown, if it has one.
-fn mode<'a>(h: &'a Harness<'static, PhotocraftApp>) -> Option<egui_kittest::Node<'a>> {
+fn mode<'a>(h: &'a Harness<'static, MagicpicApp>) -> Option<egui_kittest::Node<'a>> {
     h.query_all_by_role(Role::ComboBox).find(|n| n.accesskit_node().label().as_deref() == Some("Mode:"))
 }
 

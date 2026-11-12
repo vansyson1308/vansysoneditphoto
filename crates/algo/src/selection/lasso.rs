@@ -6,9 +6,9 @@
 use std::collections::BTreeSet;
 use std::sync::Arc;
 
-use photocraft_color::PixelFormat;
-use photocraft_geom::{Rect, TILE_SIZE, TileCoord};
-use photocraft_raster::{Surface, Tile};
+use magicpic_color::PixelFormat;
+use magicpic_geom::{Rect, TILE_SIZE, TileCoord};
+use magicpic_raster::{Surface, Tile};
 
 use crate::photo_util::par_map;
 

@@ -1,5 +1,5 @@
 //! #7520: the options bar's Select and Mask… button is greyed out while nothing is selected.
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::state::Tool;
 use egui::vec2;
 use egui_kittest::{
@@ -8,8 +8,8 @@ use egui_kittest::{
 };
 use serde_json::json;
 
-fn harness(tool: Tool, select: bool) -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn harness(tool: Tool, select: bool) -> Harness<'static, MagicpicApp> {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 64, "height": 64})).unwrap();
     app.sync_views();
     if select {
@@ -17,14 +17,14 @@ fn harness(tool: Tool, select: bool) -> Harness<'static, PhotocraftApp> {
     }
     app.ui.tool = tool;
     let mut h = Harness::builder().with_size(vec2(1400.0, 60.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut MagicpicApp| {
             if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 crate::panels::options_bar(app, ui);
             }
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Pro);
+    MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::Pro);
     h.run_steps(4);
     h
 }

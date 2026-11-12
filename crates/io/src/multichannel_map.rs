@@ -7,13 +7,13 @@
 //! alpha channels of every other mode (max = selected). Channel names come from resources 1006 /
 //! 1045 and ink colours from DisplayInfo (1077), exactly as for spot channels in the other modes.
 
-use photocraft_color::{Color, ColorMode, PixelFormat, SampleType};
-use photocraft_doc::{AlphaChannel, Document};
-use photocraft_geom::Rect;
-use photocraft_psd::file::{GlobalLayerMask, LayerInfoPlacement};
-use photocraft_psd::resources::{ImageResource, ResolutionInfo, ids, version_info_resource};
-use photocraft_psd::{ColorMode as PsdMode, Compression, Header, ImageData, PsdFile, TaggedBlock};
-use photocraft_raster::Surface;
+use magicpic_color::{Color, ColorMode, PixelFormat, SampleType};
+use magicpic_doc::{AlphaChannel, Document};
+use magicpic_geom::Rect;
+use magicpic_psd::file::{GlobalLayerMask, LayerInfoPlacement};
+use magicpic_psd::resources::{ImageResource, ResolutionInfo, ids, version_info_resource};
+use magicpic_psd::{ColorMode as PsdMode, Compression, Header, ImageData, PsdFile, TaggedBlock};
+use magicpic_raster::Surface;
 
 use crate::pixels::{encode_be, psd_depth};
 
@@ -69,8 +69,8 @@ pub(crate) fn import(file: &PsdFile, all: &[u8], doc: &mut Document, names: &[St
         let p = all.get(start..start.checked_add(plane).ok_or_else(invalid)?).ok_or_else(invalid)?;
         // DisplayInfo is known before conversion: alpha channels need no inversion or
         // second full-plane readback. One tile row is the only conversion buffer.
-        for y in (0..hh).step_by(photocraft_geom::TILE_SIZE as usize) {
-            let bottom = (y + photocraft_geom::TILE_SIZE as usize).min(hh);
+        for y in (0..hh).step_by(magicpic_geom::TILE_SIZE as usize) {
+            let bottom = (y + magicpic_geom::TILE_SIZE as usize).min(hh);
             let samples = w.checked_mul(bottom - y).ok_or_else(invalid)?;
             let len = samples.checked_mul(depth.bytes()).ok_or_else(invalid)?;
             let mut bytes = Vec::new();
@@ -100,7 +100,7 @@ pub(crate) fn document_to_psd(
     doc: &Document,
     force_psb: bool,
     size_limit: Option<u64>,
-    patterns: Option<&[photocraft_doc::PsdGlobalBlock]>,
+    patterns: Option<&[magicpic_doc::PsdGlobalBlock]>,
 ) -> (PsdFile, Vec<String>) {
     let mut warnings = Vec::new();
     // Photoshop's Multichannel mode is 8 or 16 bits per channel.
@@ -157,7 +157,7 @@ pub(crate) fn document_to_psd(
     }
     // Alpha identifiers: one u32 per channel, only while they still match the channels.
     let keep = |id: u16, data: &[u8]| id != ALPHA_IDENTIFIERS || data.len() == channels.len().saturating_mul(4);
-    let color_mode_data = photocraft_psd::hdr::color_mode_data_for_depth(header.depth);
+    let color_mode_data = magicpic_psd::hdr::color_mode_data_for_depth(header.depth);
     let file = layerless_file(doc, header, image_data, color_mode_data, resources, keep, size_limit, &mut warnings, patterns);
     (file, warnings)
 }
@@ -177,16 +177,16 @@ pub(crate) fn layerless_file(
     keep: impl Fn(u16, &[u8]) -> bool,
     size_limit: Option<u64>,
     warnings: &mut Vec<String>,
-    patterns: Option<&[photocraft_doc::PsdGlobalBlock]>,
+    patterns: Option<&[magicpic_doc::PsdGlobalBlock]>,
 ) -> PsdFile {
     resources.extend(crate::psd_export::path_resources(doc, warnings));
     // The XMP and EXIF resolution follow the ResolutionInfo resource, so no copy contradicts it.
     let ppi = Some((doc.resolution_dpi, doc.resolution_dpi)).filter(|d| d.0 > 0.0);
     if let Some(x) = &doc.metadata.xmp {
-        resources.push(ImageResource::new(ids::XMP, photocraft_codecs::export_xmp(x, ppi).as_bytes().to_vec()));
+        resources.push(ImageResource::new(ids::XMP, magicpic_codecs::export_xmp(x, ppi).as_bytes().to_vec()));
     }
     if let Some(e) = &doc.metadata.exif {
-        resources.push(ImageResource::new(ids::EXIF, photocraft_codecs::export_exif(e, ppi).into_owned()));
+        resources.push(ImageResource::new(ids::EXIF, magicpic_codecs::export_exif(e, ppi).into_owned()));
     }
     // Every other imported resource (print settings, IPTC, the layer-id seed, ...), except the
     // ones that only describe layers and any already written above.
@@ -240,8 +240,8 @@ mod import_allocation_tests {
 
     #[test]
     fn missing_planes_remain_recoverable_without_reading_past_input() {
-        let file = photocraft_psd::testgen::merged_only(photocraft_psd::Version::Psd, PsdMode::Multichannel, 8, Compression::Raw, 3, 2);
-        let mut doc = Document::new("Partial", photocraft_geom::Size::new(3, 2), ColorMode::Multichannel, SampleType::U8);
+        let file = magicpic_psd::testgen::merged_only(magicpic_psd::Version::Psd, PsdMode::Multichannel, 8, Compression::Raw, 3, 2);
+        let mut doc = Document::new("Partial", magicpic_geom::Size::new(3, 2), ColorMode::Multichannel, SampleType::U8);
         let mut warnings = Vec::new();
         import(&file, &[0; 6], &mut doc, &[], &mut warnings).unwrap();
         assert_eq!(doc.channels.len(), 1);

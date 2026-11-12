@@ -2,7 +2,7 @@
 //! selection) adds no history state; a fill inside the selection adds one.
 
 use super::*;
-use photocraft_geom::Rect;
+use magicpic_geom::Rect;
 
 /// A white 80x60 document whose Background has a black wall at x = 30, so the regions left and
 /// right of it are separate; with a 20x20 selection in the top-left corner.
@@ -93,7 +93,7 @@ fn a_click_outside_the_selection_adds_no_state_even_when_its_region_reaches_it()
 fn a_click_on_a_partly_selected_pixel_still_fills() {
     let mut s = walled();
     s.edit("feathered", |doc, _| {
-        let mut m = photocraft_raster::Surface::new(photocraft_color::PixelFormat::GRAY8);
+        let mut m = magicpic_raster::Surface::new(magicpic_color::PixelFormat::GRAY8);
         m.fill_rect(Rect::new(0, 0, 20, 20), &[0.5]);
         doc.selection = Some(m);
         Ok(())

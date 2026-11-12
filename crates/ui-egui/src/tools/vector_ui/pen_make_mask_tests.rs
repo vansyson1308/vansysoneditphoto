@@ -5,32 +5,32 @@
 use egui::vec2;
 use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
-use photocraft_doc::Path;
+use magicpic_doc::Path;
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::state::Tool;
 use crate::vector_ui::{pen_down, pen_up};
 
-fn harness() -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn harness() -> Harness<'static, MagicpicApp> {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 200})).unwrap();
     app.ui.tool = Tool::Pen;
     let mut h = Harness::builder().with_size(vec2(1400.0, 400.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut MagicpicApp| {
             if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 ui.horizontal(|ui| super::options_bar(app, ui, Tool::Pen));
             }
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
+    MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
     h.run_steps(4);
     h
 }
 
 /// Clicks a closed square with the Pen and returns the Work Path it made.
-fn square(h: &mut Harness<'static, PhotocraftApp>) -> Path {
+fn square(h: &mut Harness<'static, MagicpicApp>) -> Path {
     let app = h.state_mut();
     for (x, y) in [(20.0, 20.0), (120.0, 20.0), (120.0, 120.0), (20.0, 120.0)] {
         pen_down(app, x, y, false);
@@ -42,11 +42,11 @@ fn square(h: &mut Harness<'static, PhotocraftApp>) -> Path {
     h.state().session.active().unwrap().doc.work_path.clone().expect("a work path")
 }
 
-fn steps(app: &PhotocraftApp) -> usize {
+fn steps(app: &MagicpicApp) -> usize {
     app.session.active().unwrap().history.past_len()
 }
 
-fn disabled(h: &Harness<'static, PhotocraftApp>, label: &str) -> bool {
+fn disabled(h: &Harness<'static, MagicpicApp>, label: &str) -> bool {
     h.get_by_label(label).accesskit_node().is_disabled()
 }
 

@@ -7,9 +7,9 @@
 use crate::common;
 
 use common::Features;
-use photocraft_color::{ColorMode, SampleType};
-use photocraft_io::*;
-use photocraft_psd::PsdFile;
+use magicpic_color::{ColorMode, SampleType};
+use magicpic_io::*;
+use magicpic_psd::PsdFile;
 
 fn be(b: &[u8], at: usize, long: bool) -> usize {
     if long { u64::from_be_bytes(b[at..at + 8].try_into().unwrap()) as usize } else { u32::from_be_bytes(b[at..at + 4].try_into().unwrap()) as usize }

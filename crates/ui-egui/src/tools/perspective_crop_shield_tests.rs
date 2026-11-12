@@ -67,7 +67,7 @@ fn a_degenerate_quad_has_no_shield() {
 }
 
 /// The shield polygons `draw_overlay` paints.
-fn painted(app: &PhotocraftApp) -> usize {
+fn painted(app: &MagicpicApp) -> usize {
     let ctx = egui::Context::default();
     let xf = ViewXform { rect: Rect::from_min_size(Pos2::ZERO, vec2(200.0, 150.0)), zoom: 1.0, center: [100.0, 75.0], flip: false, rotation: 0.0, aspect: 1.0 };
     let mut o = ctx.run_ui(Default::default(), |ui| draw_overlay(app, ui.painter(), &xf));
@@ -75,8 +75,8 @@ fn painted(app: &PhotocraftApp) -> usize {
     o.shapes.iter().filter(|c| matches!(&c.shape, egui::Shape::Path(p) if p.fill == SHIELD)).count()
 }
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 150})).unwrap();
     app.ui.tool = Tool::PerspectiveCrop;
     app
@@ -97,7 +97,7 @@ fn the_shield_shows_with_a_quad_follows_a_drag_and_goes_away() {
 }
 
 /// The shield polygons `draw_overlay` paints, in screen px (the same as document px here).
-fn shield_polygons(app: &PhotocraftApp) -> Vec<Vec<[f64; 2]>> {
+fn shield_polygons(app: &MagicpicApp) -> Vec<Vec<[f64; 2]>> {
     let ctx = egui::Context::default();
     let xf = ViewXform { rect: Rect::from_min_size(Pos2::ZERO, vec2(200.0, 150.0)), zoom: 1.0, center: [100.0, 75.0], flip: false, rotation: 0.0, aspect: 1.0 };
     let mut o = ctx.run_ui(Default::default(), |ui| draw_overlay(app, ui.painter(), &xf));
@@ -111,16 +111,16 @@ fn shield_polygons(app: &PhotocraftApp) -> Vec<Vec<[f64; 2]>> {
         .collect()
 }
 
-fn dimmed(app: &PhotocraftApp, p: [f64; 2]) -> bool {
+fn dimmed(app: &MagicpicApp, p: [f64; 2]) -> bool {
     shield_polygons(app).iter().any(|poly| contains(poly, p))
 }
 
 #[test]
 fn the_shield_follows_a_corner_drag_and_a_move_drag() {
     let mut app = app();
-    let ev = |app: &mut PhotocraftApp, e| assert!(pointer(app, e, egui::Modifiers::NONE));
+    let ev = |app: &mut MagicpicApp, e| assert!(pointer(app, e, egui::Modifiers::NONE));
     app.ui.perspective_crop = Some([[20.0, 20.0], [180.0, 20.0], [180.0, 130.0], [20.0, 130.0]]);
-    let covered = |app: &PhotocraftApp| shield_polygons(app).iter().map(|p| area(p)).sum::<f64>();
+    let covered = |app: &MagicpicApp| shield_polygons(app).iter().map(|p| area(p)).sum::<f64>();
     assert!((covered(&app) - (area(&CANVAS) - 160.0 * 110.0)).abs() < 0.5, "{}", covered(&app));
 
     // The bottom right corner dragged to (150, 100), the button still held.

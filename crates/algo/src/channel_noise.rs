@@ -1,9 +1,9 @@
 //! Native deterministic channel-wise additive or signal-relative noise.
 pub use crate::coverage::Error;
 use crate::{Ctx, Distribution, image::Image};
-use photocraft_color::{PixelFormat, SampleType};
-use photocraft_geom::Rect;
-use photocraft_raster::{Interrupt, Surface};
+use magicpic_color::{PixelFormat, SampleType};
+use magicpic_geom::Rect;
+use magicpic_raster::{Interrupt, Surface};
 use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Params {
@@ -186,7 +186,7 @@ pub(crate) fn run_image(src: &Image, out: Rect, ctx: &Ctx, p: &Params) -> Vec<f3
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_color::ColorMode;
+    use magicpic_color::ColorMode;
     #[test]
     /// Admit a small noise edit on a large owner while retaining output-size and invalid-domain checks.
     fn small_noise_area_in_large_domain_keeps_work_bounds() {

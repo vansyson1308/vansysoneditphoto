@@ -4,12 +4,12 @@
 
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::opacity_keys::press;
 use crate::state::Tool;
 
-fn app(tool: Tool) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app(tool: Tool) -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
     app.ui.tool = tool;
@@ -17,7 +17,7 @@ fn app(tool: Tool) -> PhotocraftApp {
 }
 
 /// The brush settings' (opacity, flow) in percent.
-fn brush(app: &PhotocraftApp) -> (f32, f32) {
+fn brush(app: &MagicpicApp) -> (f32, f32) {
     let b = &app.session.tools.brush;
     ((b.opacity * 100.0).round(), (b.flow * 100.0).round())
 }

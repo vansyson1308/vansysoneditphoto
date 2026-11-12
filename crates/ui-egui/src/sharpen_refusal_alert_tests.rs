@@ -87,7 +87,7 @@ fn the_brush_and_the_dodge_tool_keep_todays_behaviour() {
     app.run("layer.setProps", json!({"layer": id, "visible": false})).unwrap();
     stroke(&mut app);
     assert!(alerts(&app).is_empty());
-    assert_eq!(app.ui.status, photocraft_engine::hidden_target::HIDDEN);
+    assert_eq!(app.ui.status, magicpic_engine::hidden_target::HIDDEN);
     let mut app = self::app(Tool::Dodge);
     app.run("layer.lockLayers", json!({"all": true})).unwrap();
     assert_eq!(alert(&app, Tool::Dodge, false), None);

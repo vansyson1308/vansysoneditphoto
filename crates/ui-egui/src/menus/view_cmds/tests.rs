@@ -1,8 +1,8 @@
 use super::*;
 use crate::menus::{invoke as menu, is_live, menu_items};
 
-fn app_with(n: usize) -> (PhotocraftApp, egui::Context) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app_with(n: usize) -> (MagicpicApp, egui::Context) {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     for i in 0..n {
         app.run("file.new", json!({"width": 100 + i as u32 * 10, "height": 80})).unwrap();
     }
@@ -10,7 +10,7 @@ fn app_with(n: usize) -> (PhotocraftApp, egui::Context) {
     (app, egui::Context::default())
 }
 
-fn checked(app: &PhotocraftApp, id: &str) -> Option<bool> {
+fn checked(app: &MagicpicApp, id: &str) -> Option<bool> {
     menu_items(app).into_iter().find(|i| i.id == id).and_then(|i| i.checked)
 }
 
@@ -253,7 +253,7 @@ fn arrange_layouts_floating_windows_and_matching() {
 /// below the zoom at which its shorter side is 2 px, even when the source view is lower.
 #[test]
 fn match_zoom_clamps_to_each_documents_zoom_range() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 10, "height": 10})).unwrap();
     app.run("file.new", json!({"width": 2000, "height": 2000})).unwrap();
     app.sync_views();
@@ -483,7 +483,7 @@ fn batch_menu_runs_the_selected_sets_action_among_same_named_ones() {
     app.run("file.saveACopy", json!({"path": input})).unwrap();
     let mut list = Vec::new();
     for (set, step) in [("A", "image.adjustments.invert"), ("B", "image.imageRotation.90cw")] {
-        let mut action = photocraft_engine::actions_cmds::Action::new("Retouch", vec![(step.into(), json!({}))]);
+        let mut action = magicpic_engine::actions_cmds::Action::new("Retouch", vec![(step.into(), json!({}))]);
         action.set = Some(set.into());
         list.push(action);
     }
@@ -498,7 +498,7 @@ fn batch_menu_runs_the_selected_sets_action_among_same_named_ones() {
     fields.insert("output".into(), json!(output));
     crate::dialogs::confirm(&mut app, id).unwrap();
     let saved = std::fs::read_dir(&output).unwrap().next().unwrap().unwrap().path();
-    let image = photocraft_io::import("out.png", &std::fs::read(saved).unwrap()).unwrap().document;
+    let image = magicpic_io::import("out.png", &std::fs::read(saved).unwrap()).unwrap().document;
     assert_eq!((image.size.width, image.size.height), (1, 2), "set B's action (a rotation) ran");
 }
 
@@ -513,19 +513,19 @@ fn batch_menu_runs_the_action_chosen_in_the_form() {
     app.run("file.new", json!({"width": 2, "height": 1})).unwrap();
     app.run("file.saveACopy", json!({"path": input})).unwrap();
     app.session.actions.list = vec![
-        photocraft_engine::actions_cmds::Action::new("Invert", vec![("image.adjustments.invert".into(), json!({}))]),
-        photocraft_engine::actions_cmds::Action::new("RotateRGB", vec![("image.imageRotation.90cw".into(), json!({}))]),
+        magicpic_engine::actions_cmds::Action::new("Invert", vec![("image.adjustments.invert".into(), json!({}))]),
+        magicpic_engine::actions_cmds::Action::new("RotateRGB", vec![("image.imageRotation.90cw".into(), json!({}))]),
     ];
     app.ui.actions.selected = Some(0);
     let mut h = Harness::builder().with_size(egui::vec2(1000.0, 800.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut MagicpicApp| {
             if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("semibold".into()))) {
                 crate::dialogs::show(app, ui.ctx());
             }
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, Default::default());
+    MagicpicApp::setup_context(&h.ctx, Default::default());
     let ctx = h.ctx.clone();
     let id = menu(h.state_mut(), &ctx, "file.automate.batch", json!({})).unwrap()["dialog"].as_u64().unwrap();
     let fields = &mut h.state_mut().ui.dialog_mut(id).unwrap().fields;
@@ -540,7 +540,7 @@ fn batch_menu_runs_the_action_chosen_in_the_form() {
     assert_eq!(h.state_mut().ui.dialog_mut(id).unwrap().fields["action"], "RotateRGB");
     let result = crate::dialogs::confirm(h.state_mut(), id).unwrap();
     assert_eq!(result["errors"], json!([]));
-    let image = photocraft_io::import("source.png", &std::fs::read(result["files"][0].as_str().unwrap()).unwrap()).unwrap().document;
+    let image = magicpic_io::import("source.png", &std::fs::read(result["files"][0].as_str().unwrap()).unwrap()).unwrap().document;
     assert_eq!((image.size.width, image.size.height), (1, 2));
 
     let cancelled = dir.path().join("cancelled");
@@ -615,7 +615,7 @@ fn apply_image_dialog_offers_source_layer_scale_and_offset() {
     app.run("edit.fill", json!({"color": "#406080"})).unwrap();
     app.sync_views();
     let background = app.session.active().unwrap().doc.walk()[0].2.name.clone();
-    let open = |app: &mut PhotocraftApp| menu(app, &ctx, "image.applyImage", json!({})).unwrap()["dialog"].as_u64().unwrap();
+    let open = |app: &mut MagicpicApp| menu(app, &ctx, "image.applyImage", json!({})).unwrap()["dialog"].as_u64().unwrap();
     let d = open(&mut app);
     let fields = &app.ui.dialog_mut(d).unwrap().fields;
     assert_eq!(fields["sourceLayer"], "merged");
@@ -715,12 +715,12 @@ fn lookup_export_dialog_uses_the_current_adjustment_selection() {
 #[test]
 fn batch_dialogs_include_all_subfolders() {
     let (mut app, ctx) = app_with(1);
-    let dir = std::env::temp_dir().join(format!("photocraft-ui-batch-subfolders-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("magicpic-ui-batch-subfolders-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(dir.join("in/sub")).unwrap();
     let input = dir.join("in").to_string_lossy().into_owned();
     app.run("file.saveACopy", json!({"path": dir.join("in/sub/a.png").to_string_lossy()})).unwrap();
-    app.session.actions.list.push(photocraft_engine::actions_cmds::Action::new("Invert", vec![("image.adjustments.invert".into(), json!({}))]));
+    app.session.actions.list.push(magicpic_engine::actions_cmds::Action::new("Invert", vec![("image.adjustments.invert".into(), json!({}))]));
     for (id, out) in [("file.automate.batch", "batch"), ("file.scripts.imageProcessor", "processed")] {
         let d = menu(&mut app, &ctx, id, json!({})).unwrap()["dialog"].as_u64().unwrap();
         let fields = &mut app.ui.dialog_mut(d).unwrap().fields;
@@ -752,7 +752,7 @@ fn batch_dialogs_include_all_subfolders() {
 #[test]
 fn batch_runs_an_action_recorded_with_the_type_tool() {
     let (mut app, ctx) = app_with(1);
-    let dir = std::env::temp_dir().join(format!("photocraft-ui-batch-type-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("magicpic-ui-batch-type-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(dir.join("in")).unwrap();
     for name in ["a.png", "b.png"] {
@@ -778,12 +778,12 @@ fn batch_runs_an_action_recorded_with_the_type_tool() {
     for name in ["a.png", "b.png"] {
         assert!(dir.join("out").join(name).is_file(), "{name} saved: {r}");
         // CodeRabbit on #10730: the action ran on each file: the typed text is in its pixels.
-        let pixels = |folder: &str| photocraft_codecs::decode(&std::fs::read(dir.join(folder).join(name)).unwrap()).unwrap().data().to_vec();
+        let pixels = |folder: &str| magicpic_codecs::decode(&std::fs::read(dir.join(folder).join(name)).unwrap()).unwrap().data().to_vec();
         assert_ne!(pixels("out"), pixels("in"), "{name}: the text was laid on it");
     }
     // CodeRabbit on #10730: all of it, as typed by hand: the document the action was recorded
     // on (the same image, with the text typed into it) has the pixels Batch wrote.
-    let decoded = |path: std::path::PathBuf| photocraft_codecs::decode(&std::fs::read(path).unwrap()).unwrap().data().to_vec();
+    let decoded = |path: std::path::PathBuf| magicpic_codecs::decode(&std::fs::read(path).unwrap()).unwrap().data().to_vec();
     for name in ["a.png", "b.png"] {
         assert_eq!(decoded(dir.join("out").join(name)), decoded(dir.join("ref.png")), "{name}: Batch laid the whole text, as it was typed by hand");
     }
@@ -795,7 +795,7 @@ fn batch_runs_an_action_recorded_with_the_type_tool() {
 #[test]
 fn a_batch_that_fails_on_its_files_says_which_and_why() {
     let (mut app, ctx) = app_with(1);
-    let dir = std::env::temp_dir().join(format!("photocraft-ui-batch-fails-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("magicpic-ui-batch-fails-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(dir.join("in")).unwrap();
     for name in ["a.png", "b.png"] {
@@ -805,7 +805,7 @@ fn a_batch_that_fails_on_its_files_says_which_and_why() {
     app.session
         .actions
         .list
-        .push(photocraft_engine::actions_cmds::Action::new("Stale", vec![("layer.setProps".into(), json!({"layer": 424_242, "opacity": 50}))]));
+        .push(magicpic_engine::actions_cmds::Action::new("Stale", vec![("layer.setProps".into(), json!({"layer": 424_242, "opacity": 50}))]));
     let d = menu(&mut app, &ctx, "file.automate.batch", json!({})).unwrap()["dialog"].as_u64().unwrap();
     let fields = &mut app.ui.dialog_mut(d).unwrap().fields;
     fields.insert("input".into(), json!(dir.join("in").to_string_lossy()));
@@ -953,7 +953,7 @@ fn video_menu_commands_open_pickers_and_dialogs() {
 }
 
 /// One frame of the shortcut handler with a plain Esc press.
-fn press_esc(app: &mut PhotocraftApp, ctx: &egui::Context) {
+fn press_esc(app: &mut MagicpicApp, ctx: &egui::Context) {
     let key = egui::Key::Escape;
     let input = egui::RawInput {
         focused: true,
@@ -1140,7 +1140,7 @@ fn arranged_documents_keep_their_tiles() {
     }
     app.ui.view.arrange = "twoUpVertical".into();
     // As `documents` draws them: the shown run is kept from frame to frame.
-    let docs = |app: &mut PhotocraftApp, active: usize| {
+    let docs = |app: &mut MagicpicApp, active: usize| {
         app.session.set_active(active);
         let shown: Vec<usize> = crate::canvas::arranged_cells(app, rect).unwrap().iter().map(|(d, _)| *d).collect();
         app.arrange_start = shown[0];
@@ -1165,7 +1165,7 @@ fn dragging_the_border_between_arranged_documents_resizes_them() {
     // The right-hand document is active; the grab below is inside the left one's edge.
     app.session.set_active(1);
     let mut h = Harness::builder().with_size(egui::vec2(1000.0, 600.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut MagicpicApp| {
             if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
             }
@@ -1173,7 +1173,7 @@ fn dragging_the_border_between_arranged_documents_resizes_them() {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     let area = h.state().last_canvas_rect;
     let n = h.state().session.documents().len();
@@ -1181,7 +1181,7 @@ fn dragging_the_border_between_arranged_documents_resizes_them() {
     // On the grip, 2 pt inside the left document (its cell ends 1 pt short of the border).
     let from = border.center() - egui::vec2(2.0, 0.0);
     let to = from - egui::vec2(200.0, 0.0);
-    let ev = |h: &mut Harness<'_, PhotocraftApp>, e: egui::Event| h.input_mut().events.push(e);
+    let ev = |h: &mut Harness<'_, MagicpicApp>, e: egui::Event| h.input_mut().events.push(e);
     let button = |pos, pressed| egui::Event::PointerButton { pos, button: egui::PointerButton::Primary, pressed, modifiers: egui::Modifiers::NONE };
     ev(&mut h, egui::Event::PointerMoved(from));
     h.run();
@@ -1206,7 +1206,7 @@ fn every_arranged_tile_has_rulers() {
     app.ui.view.arrange = "tileAllVertically".into();
     app.ui.extras.rulers = true;
     let mut h = Harness::builder().with_size(egui::vec2(1000.0, 600.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut MagicpicApp| {
             if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
             }
@@ -1214,7 +1214,7 @@ fn every_arranged_tile_has_rulers() {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     let right = h.state().last_canvas_rect.center().x;
     // Ruler labels are 9 pt text: some lie in each half of the document area.
@@ -1238,7 +1238,7 @@ fn a_press_on_a_dialog_over_an_arranged_tile_keeps_the_active_document() {
     let (mut app, _) = app_with(2);
     app.ui.view.arrange = "tileAllVertically".into();
     let mut h = Harness::builder().with_size(egui::vec2(1000.0, 600.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut MagicpicApp| {
             if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
             }
@@ -1257,14 +1257,14 @@ fn a_press_on_a_dialog_over_an_arranged_tile_keeps_the_active_document() {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     let active = h.state().session.active_index().unwrap();
     let rect = h.state().last_canvas_rect;
     let other = crate::canvas::arranged_cells(h.state(), rect).unwrap().into_iter().find(|(d, _)| *d != active).unwrap();
     let dialog = h.ctx.memory(|m| m.area_rect(egui::Id::unique("arrange-test-dialog"))).unwrap();
     assert!(other.1.intersects(dialog), "the dialog covers part of the other tile: {:?} and {dialog:?}", other.1);
-    let press = |h: &mut Harness<'_, PhotocraftApp>, p: egui::Pos2| {
+    let press = |h: &mut Harness<'_, MagicpicApp>, p: egui::Pos2| {
         h.event(egui::Event::PointerMoved(p));
         h.run_steps(1);
         h.event(egui::Event::PointerButton { pos: p, button: egui::PointerButton::Primary, pressed: true, modifiers: egui::Modifiers::NONE });
@@ -1385,7 +1385,7 @@ fn grabbing_the_border_inside_the_active_document_drags_it_without_painting() {
     // The right-hand document is active, and the grab below is inside *its* edge.
     app.session.set_active(1);
     let mut h = Harness::builder().with_size(egui::vec2(1000.0, 600.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut MagicpicApp| {
             if !ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
             }
@@ -1393,17 +1393,17 @@ fn grabbing_the_border_inside_the_active_document_drags_it_without_painting() {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
+    MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::ALL[0]);
     h.run_steps(4);
     let area = h.state().last_canvas_rect;
     let n = h.state().session.documents().len();
     let border = borders("twoUpVertical", area, n, &[])[0].line;
-    let steps = |h: &Harness<'_, PhotocraftApp>| h.state().session.active().map_or(0, |d| d.history.entries().len());
+    let steps = |h: &Harness<'_, MagicpicApp>| h.state().session.active().map_or(0, |d| d.history.entries().len());
     let before = steps(&h);
     // 2 pt into the right-hand (active) document, where its canvas would otherwise take the press.
     let from = border.center() + egui::vec2(2.0, 0.0);
     let to = from + egui::vec2(150.0, 0.0);
-    let ev = |h: &mut Harness<'_, PhotocraftApp>, e: egui::Event| h.input_mut().events.push(e);
+    let ev = |h: &mut Harness<'_, MagicpicApp>, e: egui::Event| h.input_mut().events.push(e);
     let button = |pos, pressed| egui::Event::PointerButton { pos, button: egui::PointerButton::Primary, pressed, modifiers: egui::Modifiers::NONE };
     ev(&mut h, egui::Event::PointerMoved(from));
     h.run();

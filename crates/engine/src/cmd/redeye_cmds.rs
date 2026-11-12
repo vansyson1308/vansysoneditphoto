@@ -1,13 +1,13 @@
 //! Red Eye tool: click a pupil to neutralize the flash reflection.
 //!
-//! Toolbar-only (`paint.redEye`, empty menu path). The kernel in `photocraft-algo::redeye`
+//! Toolbar-only (`paint.redEye`, empty menu path). The kernel in `magicpic-algo::redeye`
 //! runs on a window around each click plus the mask-filter halo.
 
-use photocraft_algo::redeye::{self, MAX_POINTS, MAX_WINDOW};
-use photocraft_color::ColorMode;
-use photocraft_doc::{Document, LayerId};
-use photocraft_geom::Rect;
-use photocraft_raster::{Surface, from_rgba_into};
+use magicpic_algo::redeye::{self, MAX_POINTS, MAX_WINDOW};
+use magicpic_color::ColorMode;
+use magicpic_doc::{Document, LayerId};
+use magicpic_geom::Rect;
+use magicpic_raster::{Surface, from_rgba_into};
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;
@@ -296,7 +296,7 @@ pub fn specs() -> Vec<CommandSpec> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use photocraft_color::ColorMode;
+    use magicpic_color::ColorMode;
     use serde_json::json;
 
     const DEPTHS: [u64; 3] = [8, 16, 32];
@@ -320,7 +320,7 @@ mod tests {
             let mut data = Vec::new();
             for y in b.y0..b.y1 {
                 for x in b.x0..b.x1 {
-                    data.extend(photocraft_raster::from_rgba(&fmt, f(x, y)));
+                    data.extend(magicpic_raster::from_rgba(&fmt, f(x, y)));
                 }
             }
             surf.write_region(b, &data);
@@ -440,7 +440,7 @@ mod tests {
             for y in b.y0..b.y1 {
                 for x in b.x0..b.x1 {
                     if (x - 32).abs() <= 10 && (y - 32).abs() <= 10 {
-                        data.extend(photocraft_raster::from_rgba(&fmt, disc(x, y)));
+                        data.extend(magicpic_raster::from_rgba(&fmt, disc(x, y)));
                     } else {
                         let mut px = vec![0.6f32, 0.5, 0.5, 0.7];
                         px.resize(n, 1.0);

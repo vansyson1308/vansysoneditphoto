@@ -7,9 +7,9 @@
 
 use serde_json::{Map, Value, json};
 
-use photocraft_engine::prefs::Unit;
+use magicpic_engine::prefs::Unit;
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::state::{DialogKind, Tool};
 
 const MARK: &str = "__createShape";
@@ -53,7 +53,7 @@ pub fn is_click(start: [f64; 2], points: &[[f64; 3]], zoom: f32) -> bool {
 
 /// Open the creation dialog of `tool` for a click at `at` (document px). `None` for a tool without
 /// one (Line, Custom Shape).
-pub fn open(app: &mut PhotocraftApp, tool: Tool, at: [f64; 2]) -> Option<u64> {
+pub fn open(app: &mut MagicpicApp, tool: Tool, at: [f64; 2]) -> Option<u64> {
     let (kind, label) = kind_of(tool)?;
     if !(at[0].is_finite() && at[1].is_finite()) {
         return None;
@@ -135,7 +135,7 @@ pub fn geometry(f: &Map<String, Value>) -> Result<Value, String> {
 }
 
 /// OK: create the shape and remember the values for the next click.
-pub fn confirm(app: &mut PhotocraftApp, f: &Map<String, Value>) -> Result<Value, String> {
+pub fn confirm(app: &mut MagicpicApp, f: &Map<String, Value>) -> Result<Value, String> {
     let result = geometry(f).and_then(|g| crate::vector_ui::create_shape(app, g));
     match &result {
         Ok(_) => {
@@ -160,7 +160,7 @@ const LABELS: [&str; 5] = ["Width:", "Height:", "Radius:", "Sides:", "Star Ratio
 
 /// The dialog's rows (Width and Height, then Radius, or Sides and Star Ratio for a polygon),
 /// their labels in one column measured over [`LABELS`] so a longer translation never overruns.
-pub fn body(app: &PhotocraftApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
+pub fn body(app: &MagicpicApp, ui: &mut egui::Ui, f: &mut Map<String, Value>) {
     ui.spacing_mut().item_spacing.y = 6.0;
     let kind = f.get(MARK).and_then(Value::as_str).unwrap_or("").to_string();
     let label_w = crate::widgets::label_column_width(ui, &LABELS.map(crate::i18n::t), LABEL_MIN_W, LABEL_MAX_W);

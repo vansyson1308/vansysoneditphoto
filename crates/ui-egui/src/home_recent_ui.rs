@@ -10,7 +10,7 @@ use std::path::Path;
 use egui::{Color32, ColorImage, Rect, Response, Sense, Stroke, TextureHandle, TextureOptions, Ui, Vec2, pos2, vec2};
 
 use crate::theme::Tokens;
-use crate::{PhotocraftApp, icons};
+use crate::{MagicpicApp, icons};
 
 /// Cache key identifying the origin state of a loaded thumbnail.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -180,18 +180,18 @@ fn read_psd_thumbnail_bounded(path: &Path, file_len: u64) -> Option<ColorImage> 
     if res_len > 0 && res_len <= 32 * 1024 * 1024 && (res_len as u64) <= file_len {
         let mut res_bytes = vec![0u8; res_len as usize];
         if file.read_exact(&mut res_bytes).is_ok()
-            && let Ok((resources, _)) = photocraft_psd::tiff::resources_from_bytes(&res_bytes)
+            && let Ok((resources, _)) = magicpic_psd::tiff::resources_from_bytes(&res_bytes)
         {
-            let decode_opts = photocraft_codecs::DecodeOptions {
-                limits: photocraft_codecs::Limits { max_width: 4096, max_height: 4096, max_pixels: 4096 * 4096, max_alloc: 4096 * 4096 * 4 },
+            let decode_opts = magicpic_codecs::DecodeOptions {
+                limits: magicpic_codecs::Limits { max_width: 4096, max_height: 4096, max_pixels: 4096 * 4096, max_alloc: 4096 * 4096 * 4 },
                 ..Default::default()
             };
             for r in &resources {
-                if (r.id == photocraft_psd::resources::ids::THUMBNAIL || r.id == photocraft_psd::resources::ids::THUMBNAIL_PS4)
+                if (r.id == magicpic_psd::resources::ids::THUMBNAIL || r.id == magicpic_psd::resources::ids::THUMBNAIL_PS4)
                     && let Some(jfif) = r.data.get(28..)
-                    && let Ok(img) = photocraft_codecs::decode_with(jfif, &decode_opts)
+                    && let Ok(img) = magicpic_codecs::decode_with(jfif, &decode_opts)
                 {
-                    let rgba = img.convert(photocraft_codecs::ChannelLayout::Rgba, photocraft_codecs::SampleType::U8);
+                    let rgba = img.convert(magicpic_codecs::ChannelLayout::Rgba, magicpic_codecs::SampleType::U8);
                     if rgba.data().len() == rgba.width() as usize * rgba.height() as usize * 4 {
                         return downsample_rgba(rgba.width(), rgba.height(), rgba.data(), 256);
                     }
@@ -227,8 +227,8 @@ fn read_psd_thumbnail_bounded(path: &Path, file_len: u64) -> Option<ColorImage> 
 
     // Fourth, within budget and safe dimensions: read file and decode merged composite
     let bytes = std::fs::read(path).ok()?;
-    if let Ok(file) = photocraft_psd::PsdFile::from_bytes(&bytes)
-        && let Ok(comp) = photocraft_io::merged_composite(&file)
+    if let Ok(file) = magicpic_psd::PsdFile::from_bytes(&bytes)
+        && let Ok(comp) = magicpic_io::merged_composite(&file)
     {
         let w = file.header.width;
         let h = file.header.height;
@@ -265,8 +265,8 @@ fn load_thumbnail_image_bounded(path: &str, file_len: u64) -> Option<ColorImage>
     }
 
     // Guard against decompression bombs: bound decoder allocation and dimensions up front
-    let decode_opts = photocraft_codecs::DecodeOptions {
-        limits: photocraft_codecs::Limits { max_width: 4096, max_height: 4096, max_pixels: 4096 * 4096, max_alloc: 4096 * 4096 * 4 },
+    let decode_opts = magicpic_codecs::DecodeOptions {
+        limits: magicpic_codecs::Limits { max_width: 4096, max_height: 4096, max_pixels: 4096 * 4096, max_alloc: 4096 * 4096 * 4 },
         ..Default::default()
     };
 
@@ -277,18 +277,18 @@ fn load_thumbnail_image_bounded(path: &str, file_len: u64) -> Option<ColorImage>
             if let Ok(thumb_meta) = std::fs::metadata(&thumb_path)
                 && thumb_meta.len() <= MAX_THUMBNAIL_FILE_SIZE
                 && let Ok(bytes) = std::fs::read(&thumb_path)
-                && let Ok(img) = photocraft_codecs::decode_with(&bytes, &decode_opts)
+                && let Ok(img) = magicpic_codecs::decode_with(&bytes, &decode_opts)
             {
-                let rgba = img.convert(photocraft_codecs::ChannelLayout::Rgba, photocraft_codecs::SampleType::U8);
+                let rgba = img.convert(magicpic_codecs::ChannelLayout::Rgba, magicpic_codecs::SampleType::U8);
                 if rgba.data().len() == rgba.width() as usize * rgba.height() as usize * 4 {
                     return downsample_rgba(rgba.width(), rgba.height(), rgba.data(), 256);
                 }
             }
         } else if let Ok(bytes) = std::fs::read(std_path)
-            && let Ok(Some(png_bytes)) = photocraft_format::read_thumbnail(&bytes)
-            && let Ok(img) = photocraft_codecs::decode_with(&png_bytes, &decode_opts)
+            && let Ok(Some(png_bytes)) = magicpic_format::read_thumbnail(&bytes)
+            && let Ok(img) = magicpic_codecs::decode_with(&png_bytes, &decode_opts)
         {
-            let rgba = img.convert(photocraft_codecs::ChannelLayout::Rgba, photocraft_codecs::SampleType::U8);
+            let rgba = img.convert(magicpic_codecs::ChannelLayout::Rgba, magicpic_codecs::SampleType::U8);
             if rgba.data().len() == rgba.width() as usize * rgba.height() as usize * 4 {
                 return downsample_rgba(rgba.width(), rgba.height(), rgba.data(), 256);
             }
@@ -298,12 +298,12 @@ fn load_thumbnail_image_bounded(path: &str, file_len: u64) -> Option<ColorImage>
 
     // 3. Flat raster formats (PNG, JPG, WebP, TIFF, GIF, BMP, etc.)
     if let Ok(bytes) = std::fs::read(std_path)
-        && let Ok(img) = photocraft_codecs::decode_with(&bytes, &decode_opts)
+        && let Ok(img) = magicpic_codecs::decode_with(&bytes, &decode_opts)
     {
         let (w, h) = img.dimensions();
         // Guard against decompression bombs: don't expand > 4096 images to gigabytes of RGBA
         if w > 0 && h > 0 && w <= 4096 && h <= 4096 {
-            let rgba = img.convert(photocraft_codecs::ChannelLayout::Rgba, photocraft_codecs::SampleType::U8);
+            let rgba = img.convert(magicpic_codecs::ChannelLayout::Rgba, magicpic_codecs::SampleType::U8);
             return downsample_rgba(w, h, rgba.data(), 256);
         }
     }
@@ -313,7 +313,7 @@ fn load_thumbnail_image_bounded(path: &str, file_len: u64) -> Option<ColorImage>
 
 /// Drain completed asynchronous thumbnail results and update the texture cache on the UI thread.
 #[cfg(not(target_arch = "wasm32"))]
-fn drain_pending_thumbnails(app: &PhotocraftApp, ctx: &egui::Context, opts: TextureOptions) {
+fn drain_pending_thumbnails(app: &MagicpicApp, ctx: &egui::Context, opts: TextureOptions) {
     let pending: Vec<(String, u64, CacheKey, Option<ColorImage>)> = {
         let mut cache = app.thumbnail_cache.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
         if cache.pending.is_empty() {
@@ -351,7 +351,7 @@ fn drain_pending_thumbnails(app: &PhotocraftApp, ctx: &egui::Context, opts: Text
 /// the live document composite and re-rendered whenever its revision changes.
 /// If `path` is closed, the thumbnail is decoded from disk in the background (or inline
 /// in non-background test environments), with bounded range reads and input budgets.
-pub(crate) fn get_or_load_thumbnail(app: &PhotocraftApp, ctx: &egui::Context, path: &str) -> Option<TextureHandle> {
+pub(crate) fn get_or_load_thumbnail(app: &MagicpicApp, ctx: &egui::Context, path: &str) -> Option<TextureHandle> {
     let opts = TextureOptions {
         magnification: egui::TextureFilter::Linear,
         minification: egui::TextureFilter::Linear,
@@ -387,7 +387,7 @@ pub(crate) fn get_or_load_thumbnail(app: &PhotocraftApp, ctx: &egui::Context, pa
             }
         }
 
-        let rgba = photocraft_compose::thumbnail(&st.doc, 256);
+        let rgba = magicpic_compose::thumbnail(&st.doc, 256);
         let color_image = ColorImage::from_rgba_unmultiplied([rgba.width as usize, rgba.height as usize], &rgba.pixels);
 
         let tex = if let Some(existing) = cache.entries.get_mut(path).and_then(|e| e.texture.as_mut()) {
@@ -768,7 +768,7 @@ pub(crate) fn render_list_row(
 /// Judge a click that opens the recent file `path` as File › Open Recent's item for it, as the
 /// menu does: synthetic input from a client confined to its automation roots can't plant a recent
 /// file outside them and click its Home card open. A user's own click is always allowed.
-fn open_recent_gate(app: &PhotocraftApp, path: &str) -> Result<(), String> {
+fn open_recent_gate(app: &MagicpicApp, path: &str) -> Result<(), String> {
     let Some(authorize) = app.services.automation_command.as_ref() else { return Ok(()) };
     if !app.automation_input {
         return Ok(());
@@ -779,7 +779,7 @@ fn open_recent_gate(app: &PhotocraftApp, path: &str) -> Result<(), String> {
 }
 
 /// The main entry point to render the Home Recent Files visual grid or list.
-pub(crate) fn show_home_recent(app: &mut PhotocraftApp, ui: &mut Ui, recent: &[String], avail_width: f32) {
+pub(crate) fn show_home_recent(app: &mut MagicpicApp, ui: &mut Ui, recent: &[String], avail_width: f32) {
     #[cfg(not(target_arch = "wasm32"))]
     {
         let opts = TextureOptions {
@@ -920,12 +920,12 @@ mod tests {
 
     #[test]
     fn recent_grid_and_list_toggle_switches_view_mode() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
-        app.push_recent("/tmp/photocraft-recent-grid/a.png");
-        app.push_recent("/tmp/photocraft-recent-grid/b.psd");
+        let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
+        app.push_recent("/tmp/magicpic-recent-grid/a.png");
+        app.push_recent("/tmp/magicpic-recent-grid/b.psd");
 
         let mut h = egui_kittest::Harness::builder().with_size(vec2(900.0, 760.0)).build_ui_state(
-            |ui, (app, ready): &mut (PhotocraftApp, bool)| {
+            |ui, (app, ready): &mut (MagicpicApp, bool)| {
                 if *ready {
                     let recent: Vec<String> = app.ui.recent_files.clone();
                     show_home_recent(app, ui, &recent, 600.0);
@@ -933,7 +933,7 @@ mod tests {
             },
             (app, false),
         );
-        PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
+        MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
         h.state_mut().1 = true;
         h.run_steps(2);
 
@@ -955,11 +955,11 @@ mod tests {
 
     #[test]
     fn recent_grid_card_shows_filename_and_folder() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
-        app.push_recent("/tmp/photocraft-work/document.psd");
+        let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
+        app.push_recent("/tmp/magicpic-work/document.psd");
 
         let mut h = egui_kittest::Harness::builder().with_size(vec2(900.0, 760.0)).build_ui_state(
-            |ui, (app, ready): &mut (PhotocraftApp, bool)| {
+            |ui, (app, ready): &mut (MagicpicApp, bool)| {
                 if *ready {
                     let recent: Vec<String> = app.ui.recent_files.clone();
                     show_home_recent(app, ui, &recent, 600.0);
@@ -967,7 +967,7 @@ mod tests {
             },
             (app, false),
         );
-        PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
+        MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
         h.state_mut().1 = true;
         h.run_steps(2);
 
@@ -977,11 +977,11 @@ mod tests {
     #[test]
     fn recent_header_view_switch_buttons_align_to_right_edge() {
         let content_w = 640.0;
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
-        app.push_recent("/tmp/photocraft-work/document.psd");
+        let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
+        app.push_recent("/tmp/magicpic-work/document.psd");
 
         let mut h = egui_kittest::Harness::builder().with_size(vec2(900.0, 760.0)).build_ui_state(
-            |ui, (app, ready): &mut (PhotocraftApp, bool)| {
+            |ui, (app, ready): &mut (MagicpicApp, bool)| {
                 if *ready {
                     let recent: Vec<String> = app.ui.recent_files.clone();
                     show_home_recent(app, ui, &recent, content_w);
@@ -989,7 +989,7 @@ mod tests {
             },
             (app, false),
         );
-        PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
+        MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
         h.state_mut().1 = true;
         h.run_steps(2);
 
@@ -1010,7 +1010,7 @@ mod tests {
                 clicked = true;
             }
         });
-        PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
+        MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
         h.run_steps(2);
         assert!(h.query_by_label("Open…").is_some());
         let _ = clicked;
@@ -1018,9 +1018,9 @@ mod tests {
 
     #[test]
     fn recent_thumbnail_cleared_on_remove_and_clear_recent() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
-        let path1 = "/tmp/photocraft-test/thumb1.psd";
-        let path2 = "/tmp/photocraft-test/thumb2.psd";
+        let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
+        let path1 = "/tmp/magicpic-test/thumb1.psd";
+        let path2 = "/tmp/magicpic-test/thumb2.psd";
 
         app.push_recent(path1);
         app.push_recent(path2);
@@ -1064,10 +1064,10 @@ mod tests {
 
     #[test]
     fn recent_thumbnail_updates_when_open_document_revision_changes() {
-        use photocraft_doc::{ColorMode, Document, SampleType, Size};
+        use magicpic_doc::{ColorMode, Document, SampleType, Size};
 
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
-        let path = "/tmp/photocraft-test/open_doc.psd";
+        let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
+        let path = "/tmp/magicpic-test/open_doc.psd";
         app.push_recent(path);
 
         let doc = Document::new("open_doc.psd", Size::new(64, 64), ColorMode::Rgb, SampleType::U8);
@@ -1109,10 +1109,10 @@ mod tests {
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn open_document_thumbnail_regeneration_is_rate_limited() {
-        use photocraft_doc::{ColorMode, Document, SampleType, Size};
+        use magicpic_doc::{ColorMode, Document, SampleType, Size};
 
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
-        let path = "/tmp/photocraft-test/open_doc_throttle.psd";
+        let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
+        let path = "/tmp/magicpic-test/open_doc_throttle.psd";
         app.push_recent(path);
         let doc = Document::new("open_doc_throttle.psd", Size::new(64, 64), ColorMode::Rgb, SampleType::U8);
         app.session.open_document(doc, Some(path.to_string()));
@@ -1143,26 +1143,21 @@ mod tests {
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn recent_thumbnail_regenerates_when_disk_file_changes() {
-        let temp_dir = std::env::temp_dir().join(format!("photocraft_thumb_test_{}", std::process::id()));
+        let temp_dir = std::env::temp_dir().join(format!("magicpic_thumb_test_{}", std::process::id()));
         let _ = std::fs::create_dir_all(&temp_dir);
         let file_path = temp_dir.join("test_file.png");
         let path_str = file_path.to_string_lossy().into_owned();
 
         // Write an initial 4x4 red PNG
         let red_png = {
-            let img = photocraft_codecs::Image::from_raw(
-                4,
-                4,
-                photocraft_codecs::ChannelLayout::Rgba,
-                photocraft_codecs::SampleType::U8,
-                [255, 0, 0, 255].repeat(16),
-            )
-            .unwrap();
-            photocraft_codecs::encode(&img, photocraft_codecs::Format::Png, &photocraft_codecs::EncodeOptions::default()).unwrap()
+            let img =
+                magicpic_codecs::Image::from_raw(4, 4, magicpic_codecs::ChannelLayout::Rgba, magicpic_codecs::SampleType::U8, [255, 0, 0, 255].repeat(16))
+                    .unwrap();
+            magicpic_codecs::encode(&img, magicpic_codecs::Format::Png, &magicpic_codecs::EncodeOptions::default()).unwrap()
         };
         std::fs::write(&file_path, &red_png).unwrap();
 
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
         app.push_recent(&path_str);
 
         let ctx = egui::Context::default();
@@ -1184,8 +1179,8 @@ mod tests {
             for i in 0..(32 * 32) {
                 px.extend_from_slice(&[(i % 256) as u8, ((i * 7) % 256) as u8, ((i * 13) % 256) as u8, 255]);
             }
-            let img = photocraft_codecs::Image::from_raw(32, 32, photocraft_codecs::ChannelLayout::Rgba, photocraft_codecs::SampleType::U8, px).unwrap();
-            photocraft_codecs::encode(&img, photocraft_codecs::Format::Png, &photocraft_codecs::EncodeOptions::default()).unwrap()
+            let img = magicpic_codecs::Image::from_raw(32, 32, magicpic_codecs::ChannelLayout::Rgba, magicpic_codecs::SampleType::U8, px).unwrap();
+            magicpic_codecs::encode(&img, magicpic_codecs::Format::Png, &magicpic_codecs::EncodeOptions::default()).unwrap()
         };
         std::fs::write(&file_path, &blue_png).unwrap();
 
@@ -1212,18 +1207,17 @@ mod tests {
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn recent_thumbnail_recheck_interval_avoids_per_frame_disk_io() {
-        let temp_dir = std::env::temp_dir().join(format!("photocraft_fast_thumb_test_{}", std::process::id()));
+        let temp_dir = std::env::temp_dir().join(format!("magicpic_fast_thumb_test_{}", std::process::id()));
         let _ = std::fs::create_dir_all(&temp_dir);
         let file_path = temp_dir.join("test_file.png");
         let path_str = file_path.to_string_lossy().into_owned();
 
         let img =
-            photocraft_codecs::Image::from_raw(4, 4, photocraft_codecs::ChannelLayout::Rgba, photocraft_codecs::SampleType::U8, [0, 255, 0, 255].repeat(16))
-                .unwrap();
-        let png = photocraft_codecs::encode(&img, photocraft_codecs::Format::Png, &photocraft_codecs::EncodeOptions::default()).unwrap();
+            magicpic_codecs::Image::from_raw(4, 4, magicpic_codecs::ChannelLayout::Rgba, magicpic_codecs::SampleType::U8, [0, 255, 0, 255].repeat(16)).unwrap();
+        let png = magicpic_codecs::encode(&img, magicpic_codecs::Format::Png, &magicpic_codecs::EncodeOptions::default()).unwrap();
         std::fs::write(&file_path, &png).unwrap();
 
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
         app.push_recent(&path_str);
 
         let ctx = egui::Context::default();
@@ -1244,23 +1238,23 @@ mod tests {
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn recent_thumbnail_skips_composite_for_oversized_psd_without_preview() {
-        let temp_dir = std::env::temp_dir().join(format!("photocraft_psd_bound_test_{}", std::process::id()));
+        let temp_dir = std::env::temp_dir().join(format!("magicpic_psd_bound_test_{}", std::process::id()));
         let _ = std::fs::create_dir_all(&temp_dir);
         let file_path = temp_dir.join("oversized.psd");
         let path_str = file_path.to_string_lossy().into_owned();
 
         // Create an oversized PSD (3000 x 3000) with no thumbnail resource
-        let header = photocraft_psd::Header::new(photocraft_psd::Version::Psd, 3000, 3000, 3, 8, photocraft_psd::ColorMode::Rgb);
-        let file = photocraft_psd::PsdFile {
+        let header = magicpic_psd::Header::new(magicpic_psd::Version::Psd, 3000, 3000, 3, 8, magicpic_psd::ColorMode::Rgb);
+        let file = magicpic_psd::PsdFile {
             header,
             color_mode_data: Vec::new(),
             resources: Vec::new(),
             layer_info: None,
-            layer_info_placement: photocraft_psd::LayerInfoPlacement::Section,
+            layer_info_placement: magicpic_psd::LayerInfoPlacement::Section,
             global_layer_mask: None,
             global_blocks: Vec::new(),
             layer_mask_trailing: Vec::new(),
-            image_data: photocraft_psd::ImageData { compression: photocraft_psd::Compression::Raw, data: Vec::new(), stored: None },
+            image_data: magicpic_psd::ImageData { compression: magicpic_psd::Compression::Raw, data: Vec::new(), stored: None },
             write_as_psb: false,
         };
         let mut bytes = file.to_bytes().unwrap();
@@ -1279,23 +1273,23 @@ mod tests {
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn recent_thumbnail_skips_composite_for_high_channel_psd_without_preview() {
-        let temp_dir = std::env::temp_dir().join(format!("photocraft_psd_channels_test_{}", std::process::id()));
+        let temp_dir = std::env::temp_dir().join(format!("magicpic_psd_channels_test_{}", std::process::id()));
         let _ = std::fs::create_dir_all(&temp_dir);
         let file_path = temp_dir.join("high_channels.psd");
         let path_str = file_path.to_string_lossy().into_owned();
 
         // 2000 x 2000 with 56 channels: decoded uncompressed size = 2000 * 2000 * 56 = 224 MB (> 64 MB cap)
-        let header = photocraft_psd::Header::new(photocraft_psd::Version::Psd, 2000, 2000, 56, 8, photocraft_psd::ColorMode::Rgb);
-        let file = photocraft_psd::PsdFile {
+        let header = magicpic_psd::Header::new(magicpic_psd::Version::Psd, 2000, 2000, 56, 8, magicpic_psd::ColorMode::Rgb);
+        let file = magicpic_psd::PsdFile {
             header,
             color_mode_data: Vec::new(),
             resources: Vec::new(),
             layer_info: None,
-            layer_info_placement: photocraft_psd::LayerInfoPlacement::Section,
+            layer_info_placement: magicpic_psd::LayerInfoPlacement::Section,
             global_layer_mask: None,
             global_blocks: Vec::new(),
             layer_mask_trailing: Vec::new(),
-            image_data: photocraft_psd::ImageData { compression: photocraft_psd::Compression::Raw, data: Vec::new(), stored: None },
+            image_data: magicpic_psd::ImageData { compression: magicpic_psd::Compression::Raw, data: Vec::new(), stored: None },
             write_as_psb: false,
         };
         let bytes = file.to_bytes().unwrap();
@@ -1310,38 +1304,33 @@ mod tests {
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn recent_thumbnail_extracts_embedded_preview_from_large_psd_without_reading_payload() {
-        let temp_dir = std::env::temp_dir().join(format!("photocraft_psd_large_preview_test_{}", std::process::id()));
+        let temp_dir = std::env::temp_dir().join(format!("magicpic_psd_large_preview_test_{}", std::process::id()));
         let _ = std::fs::create_dir_all(&temp_dir);
         let file_path = temp_dir.join("large_payload.psd");
         let path_str = file_path.to_string_lossy().into_owned();
 
-        let img = photocraft_codecs::Image::from_raw(
-            512,
-            512,
-            photocraft_codecs::ChannelLayout::Rgb,
-            photocraft_codecs::SampleType::U8,
-            [255, 0, 0].repeat(512 * 512),
-        )
-        .unwrap();
-        let jfif = photocraft_codecs::encode(&img, photocraft_codecs::Format::Jpeg, &photocraft_codecs::EncodeOptions::default()).unwrap();
+        let img =
+            magicpic_codecs::Image::from_raw(512, 512, magicpic_codecs::ChannelLayout::Rgb, magicpic_codecs::SampleType::U8, [255, 0, 0].repeat(512 * 512))
+                .unwrap();
+        let jfif = magicpic_codecs::encode(&img, magicpic_codecs::Format::Jpeg, &magicpic_codecs::EncodeOptions::default()).unwrap();
         let mut res_data = vec![0u8; 28];
         res_data[0..4].copy_from_slice(&1u32.to_be_bytes()); // format: 1 (kJpegRGB)
         res_data[4..8].copy_from_slice(&512u32.to_be_bytes()); // width: 512
         res_data[8..12].copy_from_slice(&512u32.to_be_bytes()); // height: 512
         res_data.extend_from_slice(&jfif);
-        let resource = photocraft_psd::resources::ImageResource::new(photocraft_psd::resources::ids::THUMBNAIL, res_data);
+        let resource = magicpic_psd::resources::ImageResource::new(magicpic_psd::resources::ids::THUMBNAIL, res_data);
 
-        let header = photocraft_psd::Header::new(photocraft_psd::Version::Psd, 400, 400, 3, 8, photocraft_psd::ColorMode::Rgb);
-        let file = photocraft_psd::PsdFile {
+        let header = magicpic_psd::Header::new(magicpic_psd::Version::Psd, 400, 400, 3, 8, magicpic_psd::ColorMode::Rgb);
+        let file = magicpic_psd::PsdFile {
             header,
             color_mode_data: Vec::new(),
             resources: vec![resource],
             layer_info: None,
-            layer_info_placement: photocraft_psd::LayerInfoPlacement::Section,
+            layer_info_placement: magicpic_psd::LayerInfoPlacement::Section,
             global_layer_mask: None,
             global_blocks: Vec::new(),
             layer_mask_trailing: Vec::new(),
-            image_data: photocraft_psd::ImageData { compression: photocraft_psd::Compression::Raw, data: Vec::new(), stored: None },
+            image_data: magicpic_psd::ImageData { compression: magicpic_psd::Compression::Raw, data: Vec::new(), stored: None },
             write_as_psb: false,
         };
         let mut bytes = file.to_bytes().unwrap();
@@ -1362,18 +1351,17 @@ mod tests {
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn recent_thumbnail_loads_in_background_when_background_jobs_enabled() {
-        let temp_dir = std::env::temp_dir().join(format!("photocraft_async_thumb_test_{}", std::process::id()));
+        let temp_dir = std::env::temp_dir().join(format!("magicpic_async_thumb_test_{}", std::process::id()));
         let _ = std::fs::create_dir_all(&temp_dir);
         let file_path = temp_dir.join("bg_test.png");
         let path_str = file_path.to_string_lossy().into_owned();
 
         let img =
-            photocraft_codecs::Image::from_raw(8, 8, photocraft_codecs::ChannelLayout::Rgba, photocraft_codecs::SampleType::U8, [0, 0, 255, 255].repeat(64))
-                .unwrap();
-        let png = photocraft_codecs::encode(&img, photocraft_codecs::Format::Png, &photocraft_codecs::EncodeOptions::default()).unwrap();
+            magicpic_codecs::Image::from_raw(8, 8, magicpic_codecs::ChannelLayout::Rgba, magicpic_codecs::SampleType::U8, [0, 0, 255, 255].repeat(64)).unwrap();
+        let png = magicpic_codecs::encode(&img, magicpic_codecs::Format::Png, &magicpic_codecs::EncodeOptions::default()).unwrap();
         std::fs::write(&file_path, &png).unwrap();
 
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
         app.background_jobs = true;
 
         let ctx = egui::Context::default();
@@ -1404,18 +1392,17 @@ mod tests {
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn recent_thumbnail_discards_background_result_if_invalidated_while_loading() {
-        let temp_dir = std::env::temp_dir().join(format!("photocraft_inval_test_{}", std::process::id()));
+        let temp_dir = std::env::temp_dir().join(format!("magicpic_inval_test_{}", std::process::id()));
         let _ = std::fs::create_dir_all(&temp_dir);
         let file_path = temp_dir.join("inval_test.png");
         let path_str = file_path.to_string_lossy().into_owned();
 
         let img =
-            photocraft_codecs::Image::from_raw(8, 8, photocraft_codecs::ChannelLayout::Rgba, photocraft_codecs::SampleType::U8, [255, 0, 0, 255].repeat(64))
-                .unwrap();
-        let png = photocraft_codecs::encode(&img, photocraft_codecs::Format::Png, &photocraft_codecs::EncodeOptions::default()).unwrap();
+            magicpic_codecs::Image::from_raw(8, 8, magicpic_codecs::ChannelLayout::Rgba, magicpic_codecs::SampleType::U8, [255, 0, 0, 255].repeat(64)).unwrap();
+        let png = magicpic_codecs::encode(&img, magicpic_codecs::Format::Png, &magicpic_codecs::EncodeOptions::default()).unwrap();
         std::fs::write(&file_path, &png).unwrap();
 
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
         app.background_jobs = true;
 
         let ctx = egui::Context::default();
@@ -1440,15 +1427,11 @@ mod tests {
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn recent_thumbnail_does_not_overwrite_active_document_in_drain() {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
         let doc_path = "C:/fake/path/active_project.psd".to_string();
 
-        let doc = photocraft_doc::Document::new(
-            "active_project",
-            photocraft_geom::Size::new(100, 100),
-            photocraft_color::ColorMode::Rgb,
-            photocraft_color::SampleType::U8,
-        );
+        let doc =
+            magicpic_doc::Document::new("active_project", magicpic_geom::Size::new(100, 100), magicpic_color::ColorMode::Rgb, magicpic_color::SampleType::U8);
         let (doc_id, _) = app.session.open_document(doc, Some(doc_path.clone()));
         let st = app.session.active().unwrap();
         let revision = st.revision;
@@ -1482,7 +1465,7 @@ mod tests {
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn recent_thumbnail_superseded_generation_is_discarded() {
-        let app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
         let test_path = "C:/fake/path/image.png".to_string();
         let ctx = egui::Context::default();
         let opts = egui::TextureOptions::default();
@@ -1508,15 +1491,15 @@ mod tests {
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn recent_thumbnail_skips_flat_image_larger_than_4k_dimensions() {
-        let temp_dir = std::env::temp_dir().join(format!("photocraft_huge_img_test_{}", std::process::id()));
+        let temp_dir = std::env::temp_dir().join(format!("magicpic_huge_img_test_{}", std::process::id()));
         let _ = std::fs::create_dir_all(&temp_dir);
         let file_path = temp_dir.join("huge_img.png");
         let path_str = file_path.to_string_lossy().into_owned();
 
         // Write a PNG with 4097x1 dimensions (exceeds 4096 cap on longest side)
-        let img = photocraft_codecs::Image::from_raw(4097, 1, photocraft_codecs::ChannelLayout::Rgba, photocraft_codecs::SampleType::U8, vec![0u8; 4097 * 4])
-            .unwrap();
-        let png = photocraft_codecs::encode(&img, photocraft_codecs::Format::Png, &photocraft_codecs::EncodeOptions::default()).unwrap();
+        let img =
+            magicpic_codecs::Image::from_raw(4097, 1, magicpic_codecs::ChannelLayout::Rgba, magicpic_codecs::SampleType::U8, vec![0u8; 4097 * 4]).unwrap();
+        let png = magicpic_codecs::encode(&img, magicpic_codecs::Format::Png, &magicpic_codecs::EncodeOptions::default()).unwrap();
         std::fs::write(&file_path, &png).unwrap();
 
         let thumb = load_thumbnail_image_bounded(&path_str, png.len() as u64);
@@ -1528,7 +1511,7 @@ mod tests {
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn recent_thumbnail_skips_oversized_thumb_in_pcraft_dir() {
-        let temp_dir = std::env::temp_dir().join(format!("photocraft_oversized_pcraft_test_{}.pcraft", std::process::id()));
+        let temp_dir = std::env::temp_dir().join(format!("magicpic_oversized_pcraft_test_{}.pcraft", std::process::id()));
         let _ = std::fs::create_dir_all(&temp_dir);
         let thumb_path = temp_dir.join("thumb.png");
         let path_str = temp_dir.to_string_lossy().into_owned();

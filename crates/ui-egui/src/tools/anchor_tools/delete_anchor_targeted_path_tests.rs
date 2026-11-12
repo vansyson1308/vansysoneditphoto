@@ -4,14 +4,14 @@
 use egui::Modifiers;
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::canvas::{ToolEvent, tool_event};
 use crate::direct_select::PathRef;
 use crate::state::Tool;
 
 /// 800 x 600, white Background, pixel layer "Red" active, and a shape layer from (450,100) to
 /// (650,250) below it in the stack's activity (Red stays the active layer).
-pub(crate) fn setup(tool: Tool) -> (PhotocraftApp, u64) {
+pub(crate) fn setup(tool: Tool) -> (MagicpicApp, u64) {
     let (mut app, shape) = setup_asking(tool);
     // These tests predate the live-shape question (#12768) and keep testing targeting and locks.
     crate::dialogs::dont_show_again::remember(&mut app, crate::dialogs::live_shape_prompt::PREF);
@@ -19,8 +19,8 @@ pub(crate) fn setup(tool: Tool) -> (PhotocraftApp, u64) {
 }
 
 /// [`setup`] with the live-shape question still on.
-pub(super) fn setup_asking(tool: Tool) -> (PhotocraftApp, u64) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+pub(super) fn setup_asking(tool: Tool) -> (MagicpicApp, u64) {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 800, "height": 600})).unwrap();
     app.sync_views();
     app.ui.tool = tool;
@@ -31,31 +31,31 @@ pub(super) fn setup_asking(tool: Tool) -> (PhotocraftApp, u64) {
     (app, shape)
 }
 
-pub(crate) fn shape_path(app: &mut PhotocraftApp, id: u64) -> Value {
+pub(crate) fn shape_path(app: &mut MagicpicApp, id: u64) -> Value {
     app.run("shape.info", json!({"layer": id})).unwrap()["path"].clone()
 }
 
-pub(crate) fn steps(app: &PhotocraftApp) -> usize {
+pub(crate) fn steps(app: &MagicpicApp) -> usize {
     app.session.active().unwrap().history.entries().len()
 }
 
-pub(super) fn click(app: &mut PhotocraftApp, at: [f64; 2]) {
+pub(super) fn click(app: &mut MagicpicApp, at: [f64; 2]) {
     tool_event(app, ToolEvent::Down { x: at[0], y: at[1], pressure: 1.0 }, Modifiers::NONE);
     tool_event(app, ToolEvent::Up { x: at[0], y: at[1] }, Modifiers::NONE);
 }
 
-pub(crate) fn select_saved_path(app: &mut PhotocraftApp) {
+pub(crate) fn select_saved_path(app: &mut MagicpicApp) {
     let path = json!({"subpaths": [{"closed": true, "knots": [[50, 450], [150, 450], [150, 550], [50, 550]]}]});
     app.run("path.set", json!({"name": "Path 1", "path": path})).unwrap();
     app.ui.selected_path = Some("Path 1".into());
 }
 
-pub(crate) fn select_layer(app: &mut PhotocraftApp, id: u64) {
+pub(crate) fn select_layer(app: &mut MagicpicApp, id: u64) {
     app.run("layer.select", json!({"layer": id})).unwrap();
 }
 
 /// Moves `shape` into a new group and makes Red the active layer again; returns the group's id.
-pub(crate) fn group_shape(app: &mut PhotocraftApp, shape: u64) -> u64 {
+pub(crate) fn group_shape(app: &mut MagicpicApp, shape: u64) -> u64 {
     let red = app.session.active().unwrap().active_layer.unwrap();
     let group = app.run("layer.groupLayers", json!({"layer": shape})).unwrap()["layer"].as_u64().unwrap();
     select_layer(app, red.0);

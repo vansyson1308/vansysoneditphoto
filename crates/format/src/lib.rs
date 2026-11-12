@@ -1,4 +1,4 @@
-//! # photocraft-format
+//! # magicpic-format
 //!
 //! The native, lossless `.pcraft` document bundle (architecture §9).
 //!
@@ -22,7 +22,7 @@
 //! processes) saving one bundle take turns instead of removing each other's objects.
 //!
 //! This crate sits at L3 next to the compositor, so it does not render.
-//! Callers pass previews in [`SaveOptions`]; `photocraft-io` does that.
+//! Callers pass previews in [`SaveOptions`]; `magicpic-io` does that.
 #![forbid(unsafe_code)]
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
@@ -40,8 +40,8 @@ pub mod zip;
 
 use std::path::Path;
 
-use photocraft_doc::Document;
-use photocraft_raster::Rgba8Image;
+use magicpic_doc::Document;
+use magicpic_raster::Rgba8Image;
 
 pub use atomic::{atomic_write, atomic_write_progress, atomic_write_stream, atomic_write_stream_progress};
 #[cfg(not(target_arch = "wasm32"))]
@@ -179,11 +179,11 @@ impl Default for LoadOptions {
             limits.max_blob_bytes = limits.max_blob_bytes.min(BROWSER_MAX_BLOB_BYTES);
             limits.max_total_bytes = limits.max_total_bytes.min(BROWSER_MAX_TOTAL_BYTES);
         }
-        let ram = photocraft_raster::memory::system::current().available_ram;
+        let ram = magicpic_raster::memory::system::current().available_ram;
         LoadOptions {
             max_manifest_bytes: limits.max_manifest_bytes,
             max_blob_bytes: limits.max_blob_bytes,
-            max_total_bytes: total_budget(limits.max_total_bytes, ram, photocraft_raster::spill::scratch_capacity()),
+            max_total_bytes: total_budget(limits.max_total_bytes, ram, magicpic_raster::spill::scratch_capacity()),
             preserve_ids: true,
             max_canvas_side: MAX_CANVAS_SIDE,
             max_canvas_pixels: MAX_CANVAS_PIXELS,

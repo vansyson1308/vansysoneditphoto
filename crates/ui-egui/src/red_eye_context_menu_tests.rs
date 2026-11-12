@@ -7,15 +7,15 @@
 use egui::Modifiers;
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::canvas_tool_menu::count_tests::{call, listed, right_click};
 use crate::canvas_tool_menu::{entry_enabled, rows};
 use crate::state::Tool;
 
 /// A 64 × 48 RGB document with its one Background layer red, after a cleared selection (so
 /// Reselect has one to restore). The Red Eye tool is the tool.
-fn app() -> (PhotocraftApp, egui::Context) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app() -> (MagicpicApp, egui::Context) {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 64, "height": 48, "background": "white"})).unwrap();
     app.run("edit.fill", json!({"contents": "color", "color": "#d01818"})).unwrap();
     app.run("select.rect", json!({"x": 4, "y": 4, "width": 10, "height": 10})).unwrap();
@@ -26,7 +26,7 @@ fn app() -> (PhotocraftApp, egui::Context) {
 }
 
 /// The open menu's rows as `ui.inspect` lists them: (label, enabled), "―" for separators.
-fn entries(app: &mut PhotocraftApp, ctx: &egui::Context) -> Vec<(String, bool)> {
+fn entries(app: &mut MagicpicApp, ctx: &egui::Context) -> Vec<(String, bool)> {
     let inspected = call(app, ctx, "ui.inspect", json!({}));
     let entries = inspected.pointer("/result/canvasToolMenu/entries").and_then(Value::as_array).cloned().unwrap_or_default();
     entries.iter().map(|e| (e["label"].as_str().unwrap_or("―").to_string(), e["enabled"] != false)).collect()
@@ -38,7 +38,7 @@ fn expected(want: &[&str], grey: &[&str]) -> Vec<(String, bool)> {
 }
 
 /// The document's revision, history depth and journal length.
-fn state(app: &PhotocraftApp) -> (u64, usize, usize) {
+fn state(app: &MagicpicApp) -> (u64, usize, usize) {
     let st = app.session.active().unwrap();
     (st.revision, st.history.past_len(), app.session.journal.len())
 }
@@ -93,7 +93,7 @@ const IN_SELECTION: [&str; 23] = [
     "Fade…",
 ];
 
-fn select(app: &mut PhotocraftApp) {
+fn select(app: &mut MagicpicApp) {
     app.run("select.rect", json!({"x": 10, "y": 10, "width": 20, "height": 20})).unwrap();
 }
 
@@ -172,7 +172,7 @@ fn a_mouse_right_click_on_the_canvas_opens_the_layer_menu() {
 
 #[test]
 fn the_cases_not_measured_keep_opening_nothing() {
-    type Setup = fn(&mut PhotocraftApp);
+    type Setup = fn(&mut MagicpicApp);
     let cases: [(&str, Setup); 5] = [
         ("outside the selection", |app| app.run("select.rect", json!({"x": 40, "y": 30, "width": 10, "height": 10})).map(drop).unwrap()),
         ("a second layer", |app| app.run("layer.new.layer", json!({"name": "Ink"})).map(drop).unwrap()),

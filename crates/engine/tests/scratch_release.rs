@@ -1,8 +1,8 @@
 //! One integration-test process keeps the process-wide scratch pool isolated from parallel unit
 //! tests (#10479).
-use photocraft_engine::Session;
-use photocraft_engine::jobs::Started;
-use photocraft_raster::scratch;
+use magicpic_engine::Session;
+use magicpic_engine::jobs::Started;
+use magicpic_raster::scratch;
 use serde_json::json;
 use std::sync::{Mutex, PoisonError};
 

@@ -1,5 +1,5 @@
 [package]
-name = "photocraft-affinity-fuzz"
+name = "magicpic-affinity-fuzz"
 version = "0.0.0"
 publish = false
 edition = "2024"
@@ -11,12 +11,12 @@ cargo-fuzz = true
 [workspace]
 
 [features]
-io = ["dep:photocraft-io"]
+io = ["dep:magicpic-io"]
 
 [dependencies]
 libfuzzer-sys = "0.4"
-photocraft-affinity = { path = "..", features = ["synth"] }
-photocraft-io = { path = "../../io", optional = true }
+magicpic-affinity = { path = "..", features = ["synth"] }
+magicpic-io = { path = "../../io", optional = true }
 
 [[bin]]
 name = "preview"

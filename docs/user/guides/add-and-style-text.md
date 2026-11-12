@@ -1,6 +1,6 @@
 ---
 title: Add and style text
-description: Add point or paragraph text with the Horizontal Type Tool in PhotoCraft, then give it a drop shadow or glow.
+description: Add point or paragraph text with the Horizontal Type Tool in MagicPic, then give it a drop shadow or glow.
 order: 40
 verified: 0.8.2
 ---
@@ -18,7 +18,7 @@ To switch between the two kinds later, use **Type › Convert to Paragraph Text*
 
 ## Edit the text later
 
-Pick the **Horizontal Type Tool** and click the text on the canvas. Text from a PSD that was made in Photoshop stays editable too. If PSD text jumps when you start editing it, update to 0.8.2; see [Text moves when I start editing a PSD text layer](../troubleshooting/text-moves-when-editing.md).
+Pick the **Horizontal Type Tool** and click the text on the canvas. Text from a PSD that was made in Photoshop stays editable too.
 
 To start new text on top of an existing text layer instead of editing it, hold `Shift` while you click.
 

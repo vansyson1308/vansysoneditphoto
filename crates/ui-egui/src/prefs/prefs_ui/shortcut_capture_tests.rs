@@ -7,9 +7,9 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
 use serde_json::{Value, json};
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 
-fn key(h: &mut Harness<'_, PhotocraftApp>, key: Key, pressed: bool, modifiers: Modifiers) {
+fn key(h: &mut Harness<'_, MagicpicApp>, key: Key, pressed: bool, modifiers: Modifiers) {
     h.event(Event::Key { key, physical_key: None, pressed, repeat: false, modifiers });
 }
 
@@ -24,16 +24,16 @@ fn input_state(events: Vec<Event>, modifiers: Modifiers) -> egui::InputState {
 }
 
 /// The Keyboard Shortcuts dialog with `command` selected, filtered to it.
-fn dialog(ppp: f32, command: &str, filter: &str) -> (Harness<'static, PhotocraftApp>, u64) {
+fn dialog(ppp: f32, command: &str, filter: &str) -> (Harness<'static, MagicpicApp>, u64) {
     dialog_with_renderer(ppp, command, filter, false)
 }
 
-fn dialog_with_renderer(ppp: f32, command: &str, filter: &str, gpu: bool) -> (Harness<'static, PhotocraftApp>, u64) {
+fn dialog_with_renderer(ppp: f32, command: &str, filter: &str, gpu: bool) -> (Harness<'static, MagicpicApp>, u64) {
     let builder = Harness::builder().with_size(egui::vec2(1100.0, 760.0)).with_pixels_per_point(ppp).with_max_steps(64);
     let builder = if gpu { builder.wgpu() } else { builder };
     let mut h = builder.build_eframe(|cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default())
+        MagicpicApp::setup_context(&cc.egui_ctx, Default::default());
+        MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default())
     });
     let ctx = h.ctx.clone();
     let id = crate::menus::invoke(h.state_mut(), &ctx, "edit.keyboardShortcuts", json!({})).unwrap()["dialog"].as_u64().unwrap();
@@ -44,7 +44,7 @@ fn dialog_with_renderer(ppp: f32, command: &str, filter: &str, gpu: bool) -> (Ha
     (h, id)
 }
 
-fn field(h: &Harness<'_, PhotocraftApp>, id: u64, name: &str) -> Value {
+fn field(h: &Harness<'_, MagicpicApp>, id: u64, name: &str) -> Value {
     h.state().ui.dialogs.iter().find(|d| d.id == id).unwrap().fields.get(name).cloned().unwrap_or(Value::Null)
 }
 
@@ -78,9 +78,9 @@ fn toolbar_shortcut_can_be_captured_and_restored_on_restart() {
     assert_eq!(h.state().ui.tool, crate::state::Tool::Pencil);
 
     let saved = h.state().session.prefs_to_json();
-    let mut session = photocraft_engine::Session::new();
+    let mut session = magicpic_engine::Session::new();
     session.load_prefs_json(&saved).unwrap();
-    let mut restarted = PhotocraftApp::new(session, crate::Services::default());
+    let mut restarted = MagicpicApp::new(session, crate::Services::default());
     let ctx = egui::Context::default();
     ctx.begin_pass(egui::RawInput {
         events: vec![Event::Key { key: Key::F6, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::NONE }],
@@ -94,9 +94,9 @@ fn toolbar_shortcut_can_be_captured_and_restored_on_restart() {
 #[test]
 fn toolbar_shortcut_overrides_remove_old_keys_and_skip_removed_group_members() {
     use crate::state::Tool;
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
-    let press = |app: &mut PhotocraftApp, key, modifiers| {
+    let press = |app: &mut MagicpicApp, key, modifiers| {
         ctx.begin_pass(egui::RawInput {
             // A tap: press and release, so the next press isn't a held key's repeat.
             events: vec![
@@ -153,7 +153,7 @@ fn toolbar_shortcuts_participate_in_conflict_resolution() {
 
 /// Click the selected command's shortcut button, then press `modifier` and `k` like a keyboard:
 /// the modifier key goes down first (its own key event), then the key with the modifier held.
-fn capture(h: &mut Harness<'_, PhotocraftApp>, button: &str, modifier: Key, held: Modifiers, k: Key) {
+fn capture(h: &mut Harness<'_, MagicpicApp>, button: &str, modifier: Key, held: Modifiers, k: Key) {
     h.get_by_label(button).click();
     h.run_steps(2);
     key(h, modifier, true, held);
@@ -165,7 +165,7 @@ fn capture(h: &mut Harness<'_, PhotocraftApp>, button: &str, modifier: Key, held
     h.run_steps(2);
 }
 
-fn captured_ctrl_k(ppp: f32, gpu: bool) -> Harness<'static, PhotocraftApp> {
+fn captured_ctrl_k(ppp: f32, gpu: bool) -> Harness<'static, MagicpicApp> {
     let (mut h, id) = dialog_with_renderer(ppp, "edit.search", "search…", gpu);
     // Search's default is ⌘F (Photoshop); ⌘K is Preferences, so this also reports a conflict.
     let current = crate::shortcuts::pretty("Cmd+F");
@@ -246,11 +246,11 @@ fn ctrl_k_is_recorded_as_ctrl_k_not_the_control_key() {
 /// Opt-in visual check, following the Camera Raw localization snapshot convention.
 #[test]
 fn captured_shortcut_gpu_snapshots() {
-    let Some(directory) = std::env::var_os("PHOTOCRAFT_SHORTCUT_SNAPSHOTS") else {
-        eprintln!("set PHOTOCRAFT_SHORTCUT_SNAPSHOTS to capture the shortcut dialog at 1x and 2x");
+    let Some(directory) = std::env::var_os("MAGICPIC_SHORTCUT_SNAPSHOTS") else {
+        eprintln!("set MAGICPIC_SHORTCUT_SNAPSHOTS to capture the shortcut dialog at 1x and 2x");
         return;
     };
-    let _gpu = photocraft_testkit::gpu_lock();
+    let _gpu = magicpic_testkit::gpu_lock();
     let directory = std::path::PathBuf::from(directory);
     std::fs::create_dir_all(&directory).unwrap();
     for (scale, ppp) in [(1, 1.0), (2, 2.0)] {
@@ -339,7 +339,7 @@ fn a_function_key_moved_off_a_panel_toggle_runs_its_new_command() {
 fn a_user_shortcut_wins_over_a_default_it_was_not_moved_from() {
     // A key assigned by hand (here through the prefs file, so no row was cleared) still reaches
     // the command it was given to rather than the built-in owner.
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("edit.keyboardShortcuts", json!({"set": {"select.modify.feather": "F7"}, "allowUnknown": true, "removeConflicts": false})).unwrap();
     let f7 = crate::shortcuts::parse("F7").unwrap();
     let bound: Vec<String> = crate::shortcut_dispatch::bindings(&app).into_iter().filter(|(_, sc)| *sc == f7).map(|(id, _)| id).collect();
@@ -347,7 +347,7 @@ fn a_user_shortcut_wins_over_a_default_it_was_not_moved_from() {
 }
 
 /// Capture `k` with `m` for the selected command.
-fn capture_key(h: &mut Harness<'_, PhotocraftApp>, id: u64, k: Key, m: Modifiers) {
+fn capture_key(h: &mut Harness<'_, MagicpicApp>, id: u64, k: Key, m: Modifiers) {
     h.state_mut().ui.dialog_mut(id).unwrap().fields.insert("capture".into(), json!(true));
     h.run_steps(2);
     key(h, k, true, m);
@@ -356,7 +356,7 @@ fn capture_key(h: &mut Harness<'_, PhotocraftApp>, id: u64, k: Key, m: Modifiers
     h.run_steps(2);
 }
 
-fn click(h: &mut Harness<'_, PhotocraftApp>, label: &str) {
+fn click(h: &mut Harness<'_, MagicpicApp>, label: &str) {
     h.get_by_role_and_label(egui::accesskit::Role::Button, label).click();
     h.run_steps(3);
 }
@@ -463,7 +463,7 @@ fn accept_takes_the_key_from_every_command_holding_it() {
 }
 
 /// The Keyboard Shortcuts dialog over a document with one undoable step (a selection).
-fn dialog_over_document(command: &str, filter: &str) -> (Harness<'static, PhotocraftApp>, u64) {
+fn dialog_over_document(command: &str, filter: &str) -> (Harness<'static, MagicpicApp>, u64) {
     let (mut h, id) = dialog(1.0, command, filter);
     let app = h.state_mut();
     app.run("file.new", json!({"width": 64, "height": 48})).unwrap();
@@ -474,7 +474,7 @@ fn dialog_over_document(command: &str, filter: &str) -> (Harness<'static, Photoc
 }
 
 /// The document's revision and the view's zoom: what Undo, Redo and the view keys would change.
-fn document_state(h: &Harness<'_, PhotocraftApp>) -> (u64, f32) {
+fn document_state(h: &Harness<'_, MagicpicApp>) -> (u64, f32) {
     let app = h.state();
     (app.session.active().map(|d| d.revision).unwrap_or_default(), app.ui.views.first().map(|v| v.zoom).unwrap_or_default())
 }
@@ -572,7 +572,7 @@ fn the_mac_menu_bar_hands_its_keys_to_a_waiting_shortcut_field() {
 /// A capture flag of the wrong type or on another dialog doesn't count as a waiting field.
 #[test]
 fn only_a_real_capture_flag_owns_the_keyboard() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     assert!(!crate::prefs_ui::capturing_shortcut(&app), "no dialog");
     let ctx = egui::Context::default();
     let id = crate::menus::invoke(&mut app, &ctx, "edit.keyboardShortcuts", json!({})).unwrap()["dialog"].as_u64().unwrap();

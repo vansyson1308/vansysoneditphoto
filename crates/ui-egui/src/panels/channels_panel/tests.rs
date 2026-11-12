@@ -11,7 +11,7 @@ fn modifier_operations() {
 
 #[test]
 fn rename_field_interrupts_the_ime_only_when_it_takes_focus() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
     app.run("channel.new", json!({})).unwrap();
     let ctx = egui::Context::default();
@@ -33,7 +33,7 @@ fn rename_field_interrupts_the_ime_only_when_it_takes_focus() {
 
 #[test]
 fn channel_thumbs_honours_show_channels_in_color() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 16, "height": 16})).unwrap();
     let ctx = egui::Context::default();
     let thumbs_gray = app.channel_thumbs(&ctx);
@@ -48,11 +48,11 @@ fn channel_thumbs_honours_show_channels_in_color() {
 /// textures rather than new ones (#4518).
 #[test]
 fn channel_thumbs_skip_selection_steps_and_reuse_textures() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 64, "height": 48})).unwrap();
     let ctx = egui::Context::default();
     // Texture uploads one pass makes (new textures and updates both count).
-    let pass = |app: &mut PhotocraftApp| {
+    let pass = |app: &mut MagicpicApp| {
         ctx.begin_pass(Default::default());
         let ids = app.channel_thumbs(&ctx);
         let mut delta = ctx.end_pass().textures_delta;
@@ -76,7 +76,7 @@ fn channel_thumbs_skip_selection_steps_and_reuse_textures() {
 /// inks: full cyan and no black, not the RGB thumbnail separated again (#8359).
 #[test]
 fn cmyk_channel_thumbs_upload_the_document_inks() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 120, "height": 60, "mode": "cmyk"})).unwrap();
     app.run("tools.setColors", json!({"foregroundCmyk": [1.0, 1.0, 1.0, 0.0]})).unwrap();
     app.run("edit.fillForeground", json!({})).unwrap();
@@ -98,16 +98,16 @@ fn cmyk_channel_thumbs_upload_the_document_inks() {
 
 /// The Channels tab (the Layers card's second tab) of a 64×48 white document with a layer
 /// mask on "Masked" and one alpha channel.
-fn channels_harness() -> (egui_kittest::Harness<'static, PhotocraftApp>, u64) {
-    let mut s = photocraft_engine::Session::new();
+fn channels_harness() -> (egui_kittest::Harness<'static, MagicpicApp>, u64) {
+    let mut s = magicpic_engine::Session::new();
     s.execute("file.new", json!({"width": 64, "height": 48})).unwrap();
     let masked = s.execute("layer.new.layer", json!({"name": "Masked"})).unwrap()["layer"].as_u64().unwrap();
     s.execute("layer.layerMask.revealAll", json!({"layer": masked})).unwrap();
     s.execute("channel.new", json!({})).unwrap();
     // 60 fps steps, so two clicks a frame apart count as a double-click.
     let mut h = egui_kittest::Harness::builder().with_size(vec2(1440.0, 1000.0)).with_step_dt(1.0 / 60.0).with_max_steps(64).build_eframe(move |cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
-        PhotocraftApp::new(s, crate::Services::default())
+        MagicpicApp::setup_context(&cc.egui_ctx, Default::default());
+        MagicpicApp::new(s, crate::Services::default())
     });
     let ctx = h.ctx.clone();
     let (req, _rx) = crate::control::ControlRequest::new(
@@ -120,7 +120,7 @@ fn channels_harness() -> (egui_kittest::Harness<'static, PhotocraftApp>, u64) {
 }
 
 /// The centre of the row or button labelled `label` (not its tooltip, which a hover leaves open).
-fn at(h: &egui_kittest::Harness<'_, PhotocraftApp>, label: &str) -> egui::Pos2 {
+fn at(h: &egui_kittest::Harness<'_, MagicpicApp>, label: &str) -> egui::Pos2 {
     use egui::accesskit::Role;
     use egui_kittest::kittest::{NodeT, Queryable};
     h.query_all_by_label(label)
@@ -131,7 +131,7 @@ fn at(h: &egui_kittest::Harness<'_, PhotocraftApp>, label: &str) -> egui::Pos2 {
 }
 
 /// A real press, drag and release.
-fn drag(h: &mut egui_kittest::Harness<'_, PhotocraftApp>, from: egui::Pos2, to: egui::Pos2) {
+fn drag(h: &mut egui_kittest::Harness<'_, MagicpicApp>, from: egui::Pos2, to: egui::Pos2) {
     use egui::{Modifiers, PointerButton};
     h.hover_at(from);
     h.run_steps(1);
@@ -146,12 +146,12 @@ fn drag(h: &mut egui_kittest::Harness<'_, PhotocraftApp>, from: egui::Pos2, to: 
 }
 
 /// Drags the row or button labelled `from` onto the one labelled `to`.
-fn drag_to(h: &mut egui_kittest::Harness<'_, PhotocraftApp>, from: &str, to: &str) {
+fn drag_to(h: &mut egui_kittest::Harness<'_, MagicpicApp>, from: &str, to: &str) {
     let (from, to) = (at(h, from), at(h, to));
     drag(h, from, to);
 }
 
-fn alphas(h: &egui_kittest::Harness<'_, PhotocraftApp>) -> Vec<String> {
+fn alphas(h: &egui_kittest::Harness<'_, MagicpicApp>) -> Vec<String> {
     h.state().session.active().unwrap().doc.channels.iter().map(|c| c.name.clone()).collect()
 }
 
@@ -168,7 +168,7 @@ fn channel_selection_sets_visibility_and_eye_overrides_do_not_retarget() {
             h.state_mut().run(&format!("image.mode.{mode}"), json!({})).unwrap();
             h.run_steps(2);
         }
-        let click = |h: &mut egui_kittest::Harness<'_, PhotocraftApp>, label: &str, modifiers| {
+        let click = |h: &mut egui_kittest::Harness<'_, MagicpicApp>, label: &str, modifiers| {
             let pos = at(h, label);
             h.event(Event::ModifiersChanged(modifiers));
             h.hover_at(pos);
@@ -180,13 +180,12 @@ fn channel_selection_sets_visibility_and_eye_overrides_do_not_retarget() {
             h.event(Event::ModifiersChanged(Modifiers::NONE));
             h.run_steps(3);
         };
-        let visible = |h: &egui_kittest::Harness<'_, PhotocraftApp>| {
+        let visible = |h: &egui_kittest::Harness<'_, MagicpicApp>| {
             let st = h.state().session.active().unwrap();
             (0..st.doc.pixel_format().mode.color_channels()).filter(|k| st.channel_view.color_visible(*k)).collect::<Vec<_>>()
         };
-        let colors = |h: &egui_kittest::Harness<'_, PhotocraftApp>| {
-            photocraft_engine::color_channels::selected(&h.state().session).unwrap().indices().collect::<Vec<_>>()
-        };
+        let colors =
+            |h: &egui_kittest::Harness<'_, MagicpicApp>| magicpic_engine::color_channels::selected(&h.state().session).unwrap().indices().collect::<Vec<_>>();
 
         click(&mut h, first, Modifiers::NONE);
         assert_eq!(visible(&h), vec![selected[0]], "{mode}: clicking one row shows it alone");
@@ -275,7 +274,7 @@ fn rows_dropped_on_the_footer_duplicate_delete_and_load() {
     // Colour channels stay: Photoshop would turn the image into Multichannel.
     drag_to(&mut h, "Green", "Delete current channel");
     assert_eq!(alphas(&h), ["Alpha 1", "Red copy", "Masked Mask copy"]);
-    assert_eq!(h.state().session.active().unwrap().doc.mode, photocraft_doc::ColorMode::Rgb);
+    assert_eq!(h.state().session.active().unwrap().doc.mode, magicpic_doc::ColorMode::Rgb);
 
     assert!(h.state().session.active().unwrap().doc.selection.is_none());
     drag_to(&mut h, "Red copy", "Load channel as selection");
@@ -295,7 +294,7 @@ fn footer_loads_the_selected_layer_mask_and_preserves_color_alpha_targets() {
     h.state_mut().ui.mask_target = true;
     h.run_steps(2);
 
-    let click_load = |h: &mut egui_kittest::Harness<'_, PhotocraftApp>| {
+    let click_load = |h: &mut egui_kittest::Harness<'_, MagicpicApp>| {
         use egui::{Modifiers, PointerButton};
         let p = at(h, "Load channel as selection");
         h.hover_at(p);
@@ -305,8 +304,7 @@ fn footer_loads_the_selected_layer_mask_and_preserves_color_alpha_targets() {
         h.event(egui::Event::PointerButton { pos: p, button: PointerButton::Primary, pressed: false, modifiers: Modifiers::NONE });
         h.run_steps(2);
     };
-    let sample =
-        |h: &egui_kittest::Harness<'_, PhotocraftApp>, x, y| h.state().session.active().unwrap().doc.selection.as_ref().unwrap().sample_channel(x, y, 0);
+    let sample = |h: &egui_kittest::Harness<'_, MagicpicApp>, x, y| h.state().session.active().unwrap().doc.selection.as_ref().unwrap().sample_channel(x, y, 0);
 
     assert_eq!(h.state().session.active().unwrap().channel_view.target, ChannelTarget::Composite);
     click_load(&mut h);
@@ -400,28 +398,28 @@ fn the_layer_mask_row_on_the_trash_asks_first() {
     drag_to(&mut h, "Masked Mask", "Delete current channel");
     assert!(h.state().ui.dialogs.iter().any(|d| crate::mask_trash_prompt::owns(&d.fields)), "the prompt is open");
     let st = h.state().session.active().unwrap();
-    assert!(st.doc.layer(photocraft_doc::LayerId(masked)).unwrap().mask.is_some(), "nothing deleted yet");
+    assert!(st.doc.layer(magicpic_doc::LayerId(masked)).unwrap().mask.is_some(), "nothing deleted yet");
 }
 
 /// A colour channel click recorded into an action saves as Photoshop's component select and
 /// targets the same channel as the index did.
 #[test]
 fn recorded_colour_clicks_save_as_component_selects() {
-    use photocraft_doc::ColorMode;
+    use magicpic_doc::ColorMode;
     for (mode, color_mode, count) in [("rgb", ColorMode::Rgb, 3), ("cmyk", ColorMode::Cmyk, 4), ("lab", ColorMode::Lab, 3)] {
         for k in 0..count {
-            let mut s = photocraft_engine::Session::new();
+            let mut s = magicpic_engine::Session::new();
             s.execute("file.new", json!({"width": 2, "height": 1, "mode": mode})).unwrap();
             let by_index = s.execute("channel.target", json!({"channel": Row::Color(k).reference(), "extend": false})).unwrap();
             s.execute("channel.target", json!({"channel": "composite"})).unwrap();
             let params = json!({"channel": Row::Color(k).target_reference(color_mode), "extend": false});
             assert_eq!(s.execute("channel.target", params.clone()).unwrap(), by_index, "{mode}/{k}");
-            s.actions.list.push(photocraft_engine::actions_cmds::Action::new("Click", vec![("channel.target".into(), params)]));
+            s.actions.list.push(magicpic_engine::actions_cmds::Action::new("Click", vec![("channel.target".into(), params)]));
             let saved = s.execute("actions.save", json!({"action": "Click"})).unwrap_or_else(|e| panic!("{mode}/{k}: {e}"));
             assert_eq!(saved["skipped"], json!([]));
             let loaded = s.execute("actions.load", json!({"data": saved["data"]})).unwrap();
             assert_eq!(loaded["unsupported"], json!([]), "{mode}/{k}");
-            let name = photocraft_engine::channel_cmds::color_names(color_mode)[k].to_ascii_lowercase();
+            let name = magicpic_engine::channel_cmds::color_names(color_mode)[k].to_ascii_lowercase();
             assert_eq!(s.actions.list.last().unwrap().steps, vec![("channel.target".to_string(), json!({"channel": {"color": name}}))]);
         }
     }
@@ -470,11 +468,11 @@ fn recording_a_colour_row_click_saves_as_photoshop_select() {
 #[test]
 fn panel_menu_items_act_on_the_targeted_channel() {
     use egui_kittest::kittest::{NodeT, Queryable};
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 32, "height": 24})).unwrap();
     app.run("channel.newSpot", json!({"name": "Ink", "fromSelection": false})).unwrap();
     app.run("channel.target", json!({"channel": 0})).unwrap();
-    let mut h = egui_kittest::Harness::builder().with_size(vec2(260.0, 420.0)).build_ui_state(|ui, app: &mut PhotocraftApp| panel_menu(app, ui), app);
+    let mut h = egui_kittest::Harness::builder().with_size(vec2(260.0, 420.0)).build_ui_state(|ui, app: &mut MagicpicApp| panel_menu(app, ui), app);
     h.run_steps(2);
     for label in ["Duplicate Channel", "Delete Channel", "Merge Spot Channel", "Channel Options…"] {
         assert!(!h.get_by_label(label).accesskit_node().is_disabled(), "{label} acts on the targeted spot channel");
@@ -497,28 +495,28 @@ fn panel_menu_items_act_on_the_targeted_channel() {
     assert!(!h.state().ui.status_error, "{}", h.state().ui.status);
 }
 
-fn alpha_names(app: &PhotocraftApp) -> Vec<String> {
+fn alpha_names(app: &MagicpicApp) -> Vec<String> {
     app.session.active().unwrap().doc.channels.iter().map(|c| c.name.clone()).collect()
 }
 
-fn menu_app(mode: &str) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn menu_app(mode: &str) -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 32, "height": 24, "mode": mode})).unwrap();
     app
 }
 
-fn menu_harness(app: PhotocraftApp) -> egui_kittest::Harness<'static, PhotocraftApp> {
-    let mut h = egui_kittest::Harness::builder().with_size(vec2(260.0, 420.0)).build_ui_state(|ui, app: &mut PhotocraftApp| panel_menu(app, ui), app);
+fn menu_harness(app: MagicpicApp) -> egui_kittest::Harness<'static, MagicpicApp> {
+    let mut h = egui_kittest::Harness::builder().with_size(vec2(260.0, 420.0)).build_ui_state(|ui, app: &mut MagicpicApp| panel_menu(app, ui), app);
     h.run_steps(2);
     h
 }
 
-fn menu_disabled(h: &egui_kittest::Harness<'static, PhotocraftApp>, label: &str) -> bool {
+fn menu_disabled(h: &egui_kittest::Harness<'static, MagicpicApp>, label: &str) -> bool {
     use egui_kittest::kittest::{NodeT, Queryable};
     h.get_by_label(label).accesskit_node().is_disabled()
 }
 
-fn menu_click(h: &mut egui_kittest::Harness<'static, PhotocraftApp>, label: &str) {
+fn menu_click(h: &mut egui_kittest::Harness<'static, MagicpicApp>, label: &str) {
     use egui_kittest::kittest::Queryable;
     h.get_by_label(label).click();
     h.run_steps(2);
@@ -587,7 +585,7 @@ fn panel_menu_greys_items_without_one_channel_or_a_document() {
     app.run("channel.target", json!({"channel": {"color": 1}, "extend": true})).unwrap();
     assert_eq!(app.session.active().unwrap().channel_view.selected_colors.len(), 2);
     assert!(menu_disabled(&menu_harness(app), "Duplicate Channel"), "two colour channels are targeted");
-    let h = menu_harness(PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default()));
+    let h = menu_harness(MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default()));
     for label in [
         "New Channel…",
         "Duplicate Channel",
@@ -612,9 +610,9 @@ fn panel_menu_merges_the_targeted_spot_channel() {
     app.run("channel.newSpot", json!({"name": "Ink", "color": "#0000ff", "solidity": 100})).unwrap();
     app.run("select.deselect", json!({})).unwrap();
     app.run("channel.target", json!({"channel": 1})).unwrap();
-    let pixel = |app: &PhotocraftApp, x: usize, y: usize| {
+    let pixel = |app: &MagicpicApp, x: usize, y: usize| {
         let doc = &app.session.active().unwrap().doc;
-        let comp = photocraft_compose::render(doc, doc.bounds());
+        let comp = magicpic_compose::render(doc, doc.bounds());
         let p = comp.px[y * doc.size.width as usize + x];
         [p[0], p[1], p[2]].map(|v| (v * 255.0).round() as u8)
     };
@@ -644,7 +642,7 @@ fn panel_menu_merge_channels_opens_its_dialog() {
     crate::dialogs::confirm(h.state_mut(), id).unwrap();
     let docs = h.state().session.documents();
     assert_eq!(docs.len(), 1, "the sources close");
-    assert_eq!(docs[0].doc.mode, photocraft_doc::ColorMode::Lab, "in the mode picked");
+    assert_eq!(docs[0].doc.mode, magicpic_doc::ColorMode::Lab, "in the mode picked");
 
     let ctx = egui::Context::default();
     let mut app = menu_app("grayscale");

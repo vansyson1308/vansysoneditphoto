@@ -1,13 +1,16 @@
 # User docs: rules for agents and contributors
 
-Everything in this folder (except this file, CLAUDE.md and README.md) is published at
-https://getartcraft.com/docs/photocraft. The file path is the URL:
-`troubleshooting/taskbar-turns-black.md` → `/docs/photocraft/troubleshooting/taskbar-turns-black`.
-Renaming a file breaks links, so add the old path to `redirect_from` when you rename.
+Everything in this folder (except this file, CLAUDE.md and README.md) is the MagicPic user
+guide. It is read on the project page (the app's **User guide** link opens this folder); it is
+not published on a website. Other pages and the app link here by file path, so renaming a file
+breaks links: add the old path to `redirect_from` when you rename.
+
+These pages came with the fork from PhotoCraft. Version numbers below 0.23 in them, and links to
+`storytold/photocraft` issues, refer to that project's history.
 
 ## Who reads this
 
-Artists using PhotoCraft, Discord mods answering them, and AI assistants looking things up for
+Artists using MagicPic, people answering them, and AI assistants looking things up for
 either. Write for an artist, not a developer.
 
 ## Page rules
@@ -16,12 +19,12 @@ either. Write for an artist, not a developer.
 - Plain words, short sentences, numbered steps for anything the reader does.
 - Start the body at `##`. The page title comes from frontmatter.
 - Link to other pages instead of repeating them. Use relative links to the `.md` file:
-  `[Install PhotoCraft](../getting-started/install.md)`.
+  `[Install MagicPic](../getting-started/install.md)`.
 - No marketing copy, no "simply", no claims you have not checked in the code or a release.
-- Call the product "PhotoCraft", as the app, its downloads and getartcraft.com do.
+- Call the product "MagicPic", as the app does.
 - Name UI labels exactly as the app shows them, in **bold**. Menu paths read `File › Open…`.
 - Troubleshooting pages: `## Symptoms`, `## Fix`, `## Why this happens` (optional),
-  `## Still stuck?` (link the issue tracker or Discord).
+  `## Still stuck?` (link the issue tracker).
 
 ## Frontmatter
 
@@ -29,13 +32,13 @@ either. Write for an artist, not a developer.
     title: Export an image as PNG or JPEG
     description: One sentence for search results, link previews and AI summaries.
     order: 10                 # optional, sorts within the folder (lower first)
-    verified: 0.7.0           # optional, app version you last checked this page against
-    redirect_from: [old/path] # optional, old URLs (relative to /docs/photocraft)
+    verified: 0.23.0          # optional, app version you last checked this page against
+    redirect_from: [old/path] # optional, old paths (relative to this folder)
     ---
 
 Only `key: value` and `key: [a, b]` lines work. Quote values that start with a quote or contain ` #`.
 
-Set `verified` to the latest release (the newest release tag) after checking the page against that tag with `git show <tag>:<path>`. Pages describe the latest release users download, not unreleased code on main.
+Set `verified` to the version you checked the page against (`[workspace.package] version` in the root `Cargo.toml`). There are no MagicPic releases yet, so pages describe `main`.
 
 ## Folders
 
@@ -50,9 +53,8 @@ drafts and are not published.
 
 ## Check before you push
 
-    node <path to your artcraft-services checkout>/frontend/apps/artcraft-website-next/scripts/docs/core.mjs docs/user
-
-The checker lives in storytold/artcraft-services. A CI check will be added once it is on that repo's main branch.
+Open the page on the project site or in a Markdown preview and follow every link. The checker
+the upstream project used lives in a repository of theirs and is not part of MagicPic.
 
 ## Support PRs
 

@@ -5,21 +5,21 @@
 #[path = "../../io/tests/support/recovery_psd.rs"]
 mod recovery_psd;
 
-use crate::{PhotocraftApp, Services, control};
-use photocraft_engine::Session;
+use crate::{MagicpicApp, Services, control};
+use magicpic_engine::Session;
 use serde_json::{Value, json};
 use std::{cell::RefCell, rc::Rc};
 
 /// Creates a minimal UI application with in-memory import/export services for PSD tests.
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(
+fn app() -> MagicpicApp {
+    let mut app = MagicpicApp::new(
         Session::new(),
         Services {
             import: Some(Box::new(|name, bytes, opts| {
-                photocraft_io::import_with_options(name, bytes, opts).map(|r| (r.document, r.warnings)).map_err(|e| e.to_string())
+                magicpic_io::import_with_options(name, bytes, opts).map(|r| (r.document, r.warnings)).map_err(|e| e.to_string())
             })),
             export: Some(Box::new(|doc, path, _| {
-                photocraft_io::export(doc, path, &Default::default()).map(|r| (r.bytes, r.warnings)).map_err(|e| e.to_string())
+                magicpic_io::export(doc, path, &Default::default()).map(|r| (r.bytes, r.warnings)).map_err(|e| e.to_string())
             })),
             write: Some(Box::new(|_, _| Ok(()))),
             automation_write: Some(Box::new(|_, _| Ok(()))),
@@ -31,7 +31,7 @@ fn app() -> PhotocraftApp {
 }
 
 /// Runs an agent-facing control command synchronously and returns its JSON result.
-fn call(app: &mut PhotocraftApp, method: &str, params: Value) -> Value {
+fn call(app: &mut MagicpicApp, method: &str, params: Value) -> Value {
     let (req, _rx) = control::ControlRequest::new(method, params);
     match control::handle(app, &egui::Context::default(), &req) {
         control::Outcome::Done(v) => v,
@@ -40,7 +40,7 @@ fn call(app: &mut PhotocraftApp, method: &str, params: Value) -> Value {
 }
 
 /// Inspects the active damage prompt and returns its agent-visible dialog ID.
-fn damage_dialog(app: &mut PhotocraftApp) -> u64 {
+fn damage_dialog(app: &mut MagicpicApp) -> u64 {
     let inspected = call(app, "ui.inspect", json!({}));
     assert_eq!(inspected["ok"], true);
     let dialogs = inspected["result"]["dialogs"].as_array().unwrap();
@@ -105,7 +105,7 @@ fn accepted_psd_keeps_its_source_path_and_uses_the_normal_save_writer() {
         crate::menus::invoke(&mut app, &egui::Context::default(), "file.save", json!({})).unwrap();
         assert_eq!(app.session.active().unwrap().path.as_deref(), Some(path));
         assert!(!app.session.active().unwrap().is_dirty());
-        assert!(photocraft_io::import(path, &stored.borrow()).is_ok());
+        assert!(magicpic_io::import(path, &stored.borrow()).is_ok());
     }
     assert_ne!(*stored.borrow(), original, "ordinary Save can replace the source after consent");
     assert!(app.save_automation(Some("automated-copy.psd".into())).is_ok());
@@ -161,10 +161,10 @@ fn cancelling_one_damaged_open_does_not_open_the_next_damaged_file_without_conse
 fn damage_confirmation_precedes_the_profile_question() {
     let mut app = app();
     app.run("edit.colorSettings", json!({"askOnMismatch": true, "policyRgb": "preserve"})).unwrap();
-    let (mut file, _) = photocraft_psd::PsdFile::from_bytes_and_merged(&recovery_psd::make_psd(true), |_| false).unwrap();
-    file.resources.push(photocraft_psd::ImageResource::new(
-        photocraft_psd::resources::ids::ICC_PROFILE,
-        photocraft_cms::Builtin::from_id("adobe-rgb-compat").unwrap().profile().to_bytes().to_vec(),
+    let (mut file, _) = magicpic_psd::PsdFile::from_bytes_and_merged(&recovery_psd::make_psd(true), |_| false).unwrap();
+    file.resources.push(magicpic_psd::ImageResource::new(
+        magicpic_psd::resources::ids::ICC_PROFILE,
+        magicpic_cms::Builtin::from_id("adobe-rgb-compat").unwrap().profile().to_bytes().to_vec(),
     ));
     app.open_bytes("profile.psd", &file.to_bytes().unwrap()).unwrap();
     let id = damage_dialog(&mut app);
@@ -205,11 +205,11 @@ fn memory_confirmation_dialog_and_cancel_lifecycle() {
 
     let preflight_id = app
         .session
-        .store_pending_preflight(photocraft_engine::jobs::PendingPsdPreflight {
+        .store_pending_preflight(magicpic_engine::jobs::PendingPsdPreflight {
             id: 0,
             name: "high_mem.psd".into(),
-            source: photocraft_engine::jobs::OpenSource::Bytes(std::sync::Arc::new(vec![0; 16])),
-            fingerprint: photocraft_engine::jobs::SourceFingerprint::of(&photocraft_engine::jobs::OpenSource::Bytes(std::sync::Arc::new(vec![0; 16]))).unwrap(),
+            source: magicpic_engine::jobs::OpenSource::Bytes(std::sync::Arc::new(vec![0; 16])),
+            fingerprint: magicpic_engine::jobs::SourceFingerprint::of(&magicpic_engine::jobs::OpenSource::Bytes(std::sync::Arc::new(vec![0; 16]))).unwrap(),
             required: 7 * gb,
             soft_limit: 4 * gb,
             hard_limit: 8 * gb,
@@ -246,9 +246,9 @@ fn memory_confirmation_resume_inline_success() {
     app.background_jobs = false;
     let psd = recovery_psd::make_psd(false);
     // Known 5 GiB: S = 2.5 GiB, H = 3.75 GiB. The 3 GiB charge lands in (S, H] on this thread.
-    let snap = photocraft_io::memory::MemorySnapshot { available_ram: Some(5 * gb), swap_free: None, commit_headroom: None };
-    photocraft_io::psd_budget::with_test_estimate_charge(3 * gb, || {
-        photocraft_io::memory::with_mock_memory(snap, || {
+    let snap = magicpic_io::memory::MemorySnapshot { available_ram: Some(5 * gb), swap_free: None, commit_headroom: None };
+    magicpic_io::psd_budget::with_test_estimate_charge(3 * gb, || {
+        magicpic_io::memory::with_mock_memory(snap, || {
             // The real inline import raises the preflight: no fabricated prompt or preflight.
             app.open_bytes_from("inline_resume.psd", &psd, Some("/test/inline_resume.psd")).unwrap();
             assert!(app.session.documents().is_empty(), "the file waits for approval");
@@ -290,9 +290,9 @@ fn memory_confirmation_resume_background_success() {
     let mut app = app();
     app.background_jobs = true;
     let psd = recovery_psd::make_psd(false);
-    let snap = photocraft_io::memory::MemorySnapshot { available_ram: Some(5 * gb), swap_free: None, commit_headroom: None };
-    photocraft_io::psd_budget::with_test_estimate_charge(3 * gb, || {
-        photocraft_io::memory::with_mock_memory(snap, || {
+    let snap = magicpic_io::memory::MemorySnapshot { available_ram: Some(5 * gb), swap_free: None, commit_headroom: None };
+    magicpic_io::psd_budget::with_test_estimate_charge(3 * gb, || {
+        magicpic_io::memory::with_mock_memory(snap, || {
             app.open_bytes_from("bg_resume.psd", &psd, Some("/test/bg_resume.psd")).unwrap();
             assert_eq!(app.jobs.opens.len(), 1, "a background open tab appears at once");
             let jobs: Vec<_> = app.session.jobs().iter().map(|j| j.id).collect();
@@ -340,12 +340,12 @@ fn memory_confirmation_refuses_when_source_changed_inline() {
     let path = temp.path().join("changed.psd");
     std::fs::write(&path, b"initial file contents").unwrap();
 
-    let src = photocraft_engine::jobs::OpenSource::Path(path.to_string_lossy().to_string());
-    let fp = photocraft_engine::jobs::SourceFingerprint::of(&src).unwrap();
+    let src = magicpic_engine::jobs::OpenSource::Path(path.to_string_lossy().to_string());
+    let fp = magicpic_engine::jobs::SourceFingerprint::of(&src).unwrap();
 
     let preflight_id = app
         .session
-        .store_pending_preflight(photocraft_engine::jobs::PendingPsdPreflight {
+        .store_pending_preflight(magicpic_engine::jobs::PendingPsdPreflight {
             id: 0,
             name: "changed.psd".into(),
             source: src,
@@ -392,12 +392,12 @@ fn memory_confirmation_refuses_when_source_changed_async() {
     let path = temp.path().join("changed_async.psd");
     std::fs::write(&path, b"initial file contents").unwrap();
 
-    let src = photocraft_engine::jobs::OpenSource::Path(path.to_string_lossy().to_string());
-    let fp = photocraft_engine::jobs::SourceFingerprint::of(&src).unwrap();
+    let src = magicpic_engine::jobs::OpenSource::Path(path.to_string_lossy().to_string());
+    let fp = magicpic_engine::jobs::SourceFingerprint::of(&src).unwrap();
 
     let preflight_id = app
         .session
-        .store_pending_preflight(photocraft_engine::jobs::PendingPsdPreflight {
+        .store_pending_preflight(magicpic_engine::jobs::PendingPsdPreflight {
             id: 0,
             name: "changed_async.psd".into(),
             source: src,
@@ -453,11 +453,11 @@ fn memory_decline_advances_queue_and_cleans_batch() {
 
     let preflight_id = app
         .session
-        .store_pending_preflight(photocraft_engine::jobs::PendingPsdPreflight {
+        .store_pending_preflight(magicpic_engine::jobs::PendingPsdPreflight {
             id: 0,
             name: "declined.psd".into(),
-            source: photocraft_engine::jobs::OpenSource::Bytes(std::sync::Arc::new(vec![0; 16])),
-            fingerprint: photocraft_engine::jobs::SourceFingerprint::of(&photocraft_engine::jobs::OpenSource::Bytes(std::sync::Arc::new(vec![0; 16]))).unwrap(),
+            source: magicpic_engine::jobs::OpenSource::Bytes(std::sync::Arc::new(vec![0; 16])),
+            fingerprint: magicpic_engine::jobs::SourceFingerprint::of(&magicpic_engine::jobs::OpenSource::Bytes(std::sync::Arc::new(vec![0; 16]))).unwrap(),
             required: 1000,
             soft_limit: 500,
             hard_limit: 2000,
@@ -487,11 +487,11 @@ fn batch_single_file_cancel_preserves_other_held_memory_orders() {
 
     let p0 = app
         .session
-        .store_pending_preflight(photocraft_engine::jobs::PendingPsdPreflight {
+        .store_pending_preflight(magicpic_engine::jobs::PendingPsdPreflight {
             id: 0,
             name: "first.psd".into(),
-            source: photocraft_engine::jobs::OpenSource::Bytes(std::sync::Arc::new(vec![0; 4])),
-            fingerprint: photocraft_engine::jobs::SourceFingerprint::of(&photocraft_engine::jobs::OpenSource::Bytes(std::sync::Arc::new(vec![0; 4]))).unwrap(),
+            source: magicpic_engine::jobs::OpenSource::Bytes(std::sync::Arc::new(vec![0; 4])),
+            fingerprint: magicpic_engine::jobs::SourceFingerprint::of(&magicpic_engine::jobs::OpenSource::Bytes(std::sync::Arc::new(vec![0; 4]))).unwrap(),
             required: 1000,
             soft_limit: 500,
             hard_limit: 2000,
@@ -502,11 +502,11 @@ fn batch_single_file_cancel_preserves_other_held_memory_orders() {
 
     let p1 = app
         .session
-        .store_pending_preflight(photocraft_engine::jobs::PendingPsdPreflight {
+        .store_pending_preflight(magicpic_engine::jobs::PendingPsdPreflight {
             id: 0,
             name: "second.psd".into(),
-            source: photocraft_engine::jobs::OpenSource::Bytes(std::sync::Arc::new(vec![0; 4])),
-            fingerprint: photocraft_engine::jobs::SourceFingerprint::of(&photocraft_engine::jobs::OpenSource::Bytes(std::sync::Arc::new(vec![0; 4]))).unwrap(),
+            source: magicpic_engine::jobs::OpenSource::Bytes(std::sync::Arc::new(vec![0; 4])),
+            fingerprint: magicpic_engine::jobs::SourceFingerprint::of(&magicpic_engine::jobs::OpenSource::Bytes(std::sync::Arc::new(vec![0; 4]))).unwrap(),
             required: 1000,
             soft_limit: 500,
             hard_limit: 2000,
@@ -540,11 +540,11 @@ fn profile_cancel_cancels_whole_queue_including_memory_prompts() {
 
     let preflight_id = app
         .session
-        .store_pending_preflight(photocraft_engine::jobs::PendingPsdPreflight {
+        .store_pending_preflight(magicpic_engine::jobs::PendingPsdPreflight {
             id: 0,
             name: "high_mem.psd".into(),
-            source: photocraft_engine::jobs::OpenSource::Bytes(std::sync::Arc::new(vec![0; 16])),
-            fingerprint: photocraft_engine::jobs::SourceFingerprint::of(&photocraft_engine::jobs::OpenSource::Bytes(std::sync::Arc::new(vec![0; 16]))).unwrap(),
+            source: magicpic_engine::jobs::OpenSource::Bytes(std::sync::Arc::new(vec![0; 16])),
+            fingerprint: magicpic_engine::jobs::SourceFingerprint::of(&magicpic_engine::jobs::OpenSource::Bytes(std::sync::Arc::new(vec![0; 16]))).unwrap(),
             required: 7 * gb,
             soft_limit: 4 * gb,
             hard_limit: 8 * gb,
@@ -558,7 +558,7 @@ fn profile_cancel_cancels_whole_queue_including_memory_prompts() {
     crate::open_prompt::arrive(
         &mut app,
         crate::open_prompt::Held {
-            doc: photocraft_doc::Document::new("test", photocraft_geom::Size::new(4, 4), photocraft_doc::ColorMode::Rgb, photocraft_doc::SampleType::U8),
+            doc: magicpic_doc::Document::new("test", magicpic_geom::Size::new(4, 4), magicpic_doc::ColorMode::Rgb, magicpic_doc::SampleType::U8),
             read_only: false,
             damage_pending: false,
             name: "profile.psd".into(),
@@ -590,7 +590,7 @@ fn mixed_prompts_follow_arrival_order_fifo() {
     crate::open_prompt::arrive(
         &mut app,
         crate::open_prompt::Held {
-            doc: photocraft_doc::Document::new("test", photocraft_geom::Size::new(4, 4), photocraft_doc::ColorMode::Rgb, photocraft_doc::SampleType::U8),
+            doc: magicpic_doc::Document::new("test", magicpic_geom::Size::new(4, 4), magicpic_doc::ColorMode::Rgb, magicpic_doc::SampleType::U8),
             read_only: false,
             damage_pending: true,
             name: "first_damage.psd".into(),
@@ -608,11 +608,11 @@ fn mixed_prompts_follow_arrival_order_fifo() {
     // 2. Arrive memory prompt second
     let preflight_id = app
         .session
-        .store_pending_preflight(photocraft_engine::jobs::PendingPsdPreflight {
+        .store_pending_preflight(magicpic_engine::jobs::PendingPsdPreflight {
             id: 0,
             name: "second_mem.psd".into(),
-            source: photocraft_engine::jobs::OpenSource::Bytes(std::sync::Arc::new(vec![0; 16])),
-            fingerprint: photocraft_engine::jobs::SourceFingerprint::of(&photocraft_engine::jobs::OpenSource::Bytes(std::sync::Arc::new(vec![0; 16]))).unwrap(),
+            source: magicpic_engine::jobs::OpenSource::Bytes(std::sync::Arc::new(vec![0; 16])),
+            fingerprint: magicpic_engine::jobs::SourceFingerprint::of(&magicpic_engine::jobs::OpenSource::Bytes(std::sync::Arc::new(vec![0; 16]))).unwrap(),
             required: 7 * gb,
             soft_limit: 4 * gb,
             hard_limit: 8 * gb,
@@ -640,12 +640,12 @@ fn mixed_prompts_follow_arrival_order_fifo() {
 
 /// A stored preflight for the prompt tests, with a tiny in-memory source so nothing large is
 /// ever held.
-fn store_preflight(app: &mut PhotocraftApp, name: &str, required: u64, available: Option<u64>) -> u64 {
+fn store_preflight(app: &mut MagicpicApp, name: &str, required: u64, available: Option<u64>) -> u64 {
     let bytes = std::sync::Arc::new(vec![0u8; 16]);
-    let source = photocraft_engine::jobs::OpenSource::Bytes(std::sync::Arc::clone(&bytes));
-    let fingerprint = photocraft_engine::jobs::SourceFingerprint::of(&source).unwrap();
+    let source = magicpic_engine::jobs::OpenSource::Bytes(std::sync::Arc::clone(&bytes));
+    let fingerprint = magicpic_engine::jobs::SourceFingerprint::of(&source).unwrap();
     app.session
-        .store_pending_preflight(photocraft_engine::jobs::PendingPsdPreflight {
+        .store_pending_preflight(magicpic_engine::jobs::PendingPsdPreflight {
             id: 0,
             name: name.into(),
             source,
@@ -662,15 +662,15 @@ fn store_preflight(app: &mut PhotocraftApp, name: &str, required: u64, available
 /// #10897: the browser and desktop share one consent route. The web shell runs every open inline
 /// (`background_jobs == false`), answers the same `MemoryPrompt`, and dispatches the same
 /// `file.approveMemory` command: it is not menu-only, journaled or gated off wasm. The web's own
-/// allowance and 2 GiB product cap stay in `photocraft-io`'s policy, so approval never raises
+/// allowance and 2 GiB product cap stay in `magicpic-io`'s policy, so approval never raises
 /// them. This checks the routing half on the host; the web policy half is covered by
-/// `photocraft_io::memory`'s web-policy tests.
+/// `magicpic_io::memory`'s web-policy tests.
 #[test]
 fn memory_approval_routes_through_the_file_approve_memory_command() {
     let app = app();
     assert!(!app.background_jobs, "the browser shell is always inline");
     assert!(app.session.is_enabled("file.approveMemory"), "the one-shot approval command is available on every target");
-    let spec = photocraft_engine::commands::find("file.approveMemory").expect("registered");
+    let spec = magicpic_engine::commands::find("file.approveMemory").expect("registered");
     assert!(spec.menu.is_empty(), "it is not a menu item");
     assert!(!spec.journal, "a one-shot permission is never journaled or replayed");
 }
@@ -681,14 +681,14 @@ fn memory_approval_routes_through_the_file_approve_memory_command() {
 /// snapshot is ignored on wasm (the web policy does not read one), so the charge alone sets the
 /// window. This target is compile-checked, not executed, by the current CI (`cargo xtask wasm`
 /// checks the crates without test targets); the same web policy is exercised on native by
-/// `photocraft_io::memory`'s web-policy tests.
+/// `magicpic_io::memory`'s web-policy tests.
 #[cfg(target_arch = "wasm32")]
 #[test]
 fn web_memory_prompt_offers_consent_within_the_two_gib_product_cap() {
     let gb = 1u64 << 30;
     let psd = recovery_psd::make_psd(false);
     let mut approved = app();
-    photocraft_io::psd_budget::with_test_estimate_charge(3 * gb / 2, || {
+    magicpic_io::psd_budget::with_test_estimate_charge(3 * gb / 2, || {
         approved.open_bytes_from("web.psd", &psd, Some("web.psd")).unwrap();
         assert_eq!(approved.held_memory_prompts.len(), 1, "1.5 GiB is above the web's 1 GiB automatic allowance");
         let fields = &approved.ui.dialogs[0].fields;
@@ -699,7 +699,7 @@ fn web_memory_prompt_offers_consent_within_the_two_gib_product_cap() {
         assert_eq!(approved.session.documents().len(), 1, "consent opens an estimate within the product cap");
     });
     let mut refused = app();
-    photocraft_io::psd_budget::with_test_estimate_charge(3 * gb, || {
+    magicpic_io::psd_budget::with_test_estimate_charge(3 * gb, || {
         assert!(refused.open_bytes_from("too-big.psd", &psd, Some("too-big.psd")).is_err(), "consent cannot raise the 2 GiB product cap");
         assert!(refused.ui.dialogs.is_empty());
         assert!(refused.session.documents().is_empty());
@@ -715,7 +715,7 @@ fn memory_prompt_states_unknown_capacity_and_the_eight_gib_warning() {
     let mut app = app();
     let id = store_preflight(&mut app, "unknown.psd", 9 * gb, None);
     let tab = crate::jobs_ui::OpenTab {
-        job: photocraft_engine::jobs::JobId(1),
+        job: magicpic_engine::jobs::JobId(1),
         name: "unknown.psd".into(),
         path: Some("/pics/unknown.psd".into()),
         slot: None,
@@ -742,7 +742,7 @@ fn memory_prompt_states_unknown_capacity_and_the_eight_gib_warning() {
 
     // A measured capacity shows the number and drops the uncertainty warning.
     let id = store_preflight(&mut app, "known.psd", 3 * gb, Some(5 * gb));
-    let tab = crate::jobs_ui::OpenTab { job: photocraft_engine::jobs::JobId(2), name: "known.psd".into(), path: None, slot: None, order: None };
+    let tab = crate::jobs_ui::OpenTab { job: magicpic_engine::jobs::JobId(2), name: "known.psd".into(), path: None, slot: None, order: None };
     crate::jobs_ui::finish_open_tab(
         &mut app,
         &tab,
@@ -768,7 +768,7 @@ fn memory_prompt_warns_when_little_memory_would_be_left() {
     let mut app = app();
     let available = 3 * gb + gb / 2;
     let id = store_preflight(&mut app, "tight.psd", 3 * gb, Some(available));
-    let tab = crate::jobs_ui::OpenTab { job: photocraft_engine::jobs::JobId(3), name: "tight.psd".into(), path: None, slot: None, order: None };
+    let tab = crate::jobs_ui::OpenTab { job: magicpic_engine::jobs::JobId(3), name: "tight.psd".into(), path: None, slot: None, order: None };
     crate::jobs_ui::finish_open_tab(
         &mut app,
         &tab,
@@ -807,8 +807,8 @@ fn reopening_a_file_whose_memory_prompt_waits_does_not_queue_a_duplicate() {
 /// A tiny PNG so a set can hold one PSD that needs approval and one flat file that opens at once.
 #[cfg(not(target_arch = "wasm32"))]
 fn png_file() -> Vec<u8> {
-    let img = photocraft_codecs::Image::from_u8(2, 2, photocraft_codecs::ChannelLayout::Rgb, vec![10; 2 * 2 * 3]).unwrap();
-    photocraft_codecs::encode(&img, photocraft_codecs::Format::Png, &Default::default()).unwrap()
+    let img = magicpic_codecs::Image::from_u8(2, 2, magicpic_codecs::ChannelLayout::Rgb, vec![10; 2 * 2 * 3]).unwrap();
+    magicpic_codecs::encode(&img, magicpic_codecs::Format::Png, &Default::default()).unwrap()
 }
 
 /// #10897: a set opened inline keeps the charged PSD's place in the set through its memory
@@ -827,9 +827,9 @@ fn inline_set_keeps_the_memory_prompted_file_in_batch_order() {
     std::fs::write(&png, png_file()).unwrap();
     let paths = vec![psd.to_string_lossy().into_owned(), png.to_string_lossy().into_owned()];
     let mut app = app();
-    let snap = photocraft_io::memory::MemorySnapshot { available_ram: Some(5 * gb), swap_free: None, commit_headroom: None };
-    photocraft_io::psd_budget::with_test_estimate_charge(3 * gb, || {
-        photocraft_io::memory::with_mock_memory(snap, || {
+    let snap = magicpic_io::memory::MemorySnapshot { available_ram: Some(5 * gb), swap_free: None, commit_headroom: None };
+    magicpic_io::psd_budget::with_test_estimate_charge(3 * gb, || {
+        magicpic_io::memory::with_mock_memory(snap, || {
             assert_eq!(app.open_paths(&paths), 2);
             assert_eq!(app.held_memory_prompts.len(), 1, "the charged PSD waits for approval");
             assert_eq!(app.held_memory_prompts.front().unwrap().order.map(|o| o.seq), Some(0), "the set order travels with the prompt");
@@ -851,18 +851,18 @@ fn inline_set_keeps_the_memory_prompted_file_in_batch_order() {
 /// The fixture is the actual file the UI opens, not a fabricated preflight.
 #[cfg(not(target_arch = "wasm32"))]
 fn exported_layered_tiff(w: u32, h: u32) -> Vec<u8> {
-    use photocraft_doc::{Document, Layer, LayerContent};
-    use photocraft_raster::Surface;
+    use magicpic_doc::{Document, Layer, LayerContent};
+    use magicpic_raster::Surface;
 
-    let mut doc = Document::new("layers.tif", photocraft_geom::Size::new(w, h), photocraft_color::ColorMode::Rgb, photocraft_color::SampleType::U8);
+    let mut doc = Document::new("layers.tif", magicpic_geom::Size::new(w, h), magicpic_color::ColorMode::Rgb, magicpic_color::SampleType::U8);
     let fmt = doc.pixel_format();
     let bytes = (w as usize * h as usize * fmt.bytes_per_pixel()).max(1);
     for name in ["bottom", "top"] {
         let mut s = Surface::new(fmt);
-        s.write_interleaved(photocraft_geom::Rect::new(0, 0, w as i32, h as i32), &vec![96u8; bytes]);
+        s.write_interleaved(magicpic_geom::Rect::new(0, 0, w as i32, h as i32), &vec![96u8; bytes]);
         doc.layers.push(Layer::new(name, LayerContent::Raster(s)));
     }
-    photocraft_io::export(&doc, "layers.tif", &photocraft_io::ExportOptions { tiff_layers: true, ..Default::default() }).expect("export a layered TIFF").bytes
+    magicpic_io::export(&doc, "layers.tif", &magicpic_io::ExportOptions { tiff_layers: true, ..Default::default() }).expect("export a layered TIFF").bytes
 }
 
 /// #10897: a layered TIFF opened inline reaches the same high-memory prompt a PSD does. Only the
@@ -881,9 +881,9 @@ fn inline_layered_tiff_prompts_before_decoding_and_opens_or_declines() {
     let path = "/pics/layered.tif";
     let mut app = app();
     assert!(!app.background_jobs, "the inline path the web shell uses");
-    let snap = photocraft_io::memory::MemorySnapshot { available_ram: Some(5 * gb), swap_free: None, commit_headroom: None };
-    photocraft_io::psd_budget::with_test_estimate_charge(3 * gb, || {
-        photocraft_io::memory::with_mock_memory(snap, || {
+    let snap = magicpic_io::memory::MemorySnapshot { available_ram: Some(5 * gb), swap_free: None, commit_headroom: None };
+    magicpic_io::psd_budget::with_test_estimate_charge(3 * gb, || {
+        magicpic_io::memory::with_mock_memory(snap, || {
             let order = crate::jobs_ui::OpenOrder { batch: crate::jobs_ui::begin_batch(&mut app), seq: 0 };
             app.open_bytes_placed("layered.tif", &bytes, Some(path), None, Some(order)).unwrap();
             // The prompt comes first: nothing is decoded, no tab is opened, and the engine holds
@@ -933,14 +933,14 @@ fn inline_layered_tiff_prompts_before_decoding_and_opens_or_declines() {
 #[cfg(not(target_arch = "wasm32"))]
 #[test]
 fn inline_tiff_with_a_malformed_layer_tag_opens_flattened() {
-    use photocraft_codecs::{ChannelLayout, EncodeOptions, Format, Image, SampleType};
+    use magicpic_codecs::{ChannelLayout, EncodeOptions, Format, Image, SampleType};
 
     let mut img = Image::from_raw(4, 3, ChannelLayout::Rgb, SampleType::U8, vec![40; 4 * 3 * 3]).unwrap();
     img.meta.photoshop_layers = Some(b"not Photoshop image source data".to_vec());
-    let bytes = photocraft_codecs::encode(&img, Format::Tiff, &EncodeOptions::default()).unwrap();
+    let bytes = magicpic_codecs::encode(&img, Format::Tiff, &EncodeOptions::default()).unwrap();
     let mut app = app();
-    let snap = photocraft_io::memory::MemorySnapshot { available_ram: Some(16 << 30), swap_free: None, commit_headroom: None };
-    photocraft_io::memory::with_mock_memory(snap, || {
+    let snap = magicpic_io::memory::MemorySnapshot { available_ram: Some(16 << 30), swap_free: None, commit_headroom: None };
+    magicpic_io::memory::with_mock_memory(snap, || {
         let warnings = app.open_bytes("bogus.tif", &bytes).unwrap();
         assert_eq!(app.session.documents().len(), 1, "the composite still opens");
         assert_eq!(app.session.active().unwrap().doc.layers.len(), 1, "a malformed tag opens one flat layer");
@@ -963,9 +963,9 @@ fn inline_drop_slot_survives_the_memory_prompt() {
         app.open_bytes(name, &recovery_psd::make_psd(false)).unwrap();
     }
     assert_eq!(app.session.documents().len(), 2);
-    let snap = photocraft_io::memory::MemorySnapshot { available_ram: Some(5 * gb), swap_free: None, commit_headroom: None };
-    photocraft_io::psd_budget::with_test_estimate_charge(3 * gb, || {
-        photocraft_io::memory::with_mock_memory(snap, || {
+    let snap = magicpic_io::memory::MemorySnapshot { available_ram: Some(5 * gb), swap_free: None, commit_headroom: None };
+    magicpic_io::psd_budget::with_test_estimate_charge(3 * gb, || {
+        magicpic_io::memory::with_mock_memory(snap, || {
             app.open_bytes_placed("dropped.psd", &recovery_psd::make_psd(false), None, Some(0), None).unwrap();
             assert_eq!(app.held_memory_prompts.len(), 1);
             assert_eq!(app.held_memory_prompts.front().unwrap().slot, Some(0), "the drop slot travels with the prompt");
@@ -983,7 +983,7 @@ fn inline_drop_slot_survives_the_memory_prompt() {
 fn confirmed_damaged_smart_object_opens_are_admitted_as_smart_objects_with_distinct_names() {
     let mut app = app();
     let bytes = recovery_psd::make_psd(true);
-    let dir = std::env::temp_dir().join(format!("photocraft-damaged-so-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("magicpic-damaged-so-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let mut paths = Vec::new();
     for sub in ["a", "b"] {

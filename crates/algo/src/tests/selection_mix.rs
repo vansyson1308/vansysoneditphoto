@@ -1,5 +1,5 @@
 use super::*;
-use photocraft_color::{PixelFormat, SampleType};
+use magicpic_color::{PixelFormat, SampleType};
 
 fn selection(coverage: f32) -> Surface {
     Surface::with_default(PixelFormat::new(ColorMode::Grayscale, SampleType::F32, false), &[coverage])
@@ -101,7 +101,7 @@ fn selection_mixing_without_alpha_keeps_every_channel_independent() {
 /// Exercise shared selection mixing with extreme finite HDR through five independently checked native filter entry
 /// points.
 fn selected_finite_hdr_is_safe_through_all_five_checked_native_apis() {
-    let ctl = photocraft_raster::Interrupt::NONE;
+    let ctl = magicpic_raster::Interrupt::NONE;
     let b = Rect::new(0, 0, 1, 1);
     let mut source = Surface::new(PixelFormat::RGBA32F);
     source.write_pixel(0, 0, &[f32::MAX, 0., 0., 1.]);
@@ -150,7 +150,7 @@ fn changed_alpha_hdr_roundoff_and_unrepresentable_mix_do_not_corrupt_source() {
     let mut source = Surface::new(PixelFormat::RGBA32F);
     source.write_pixel(0, 0, &[f32::MAX, 0., 0., 0.001]);
     let original = source.clone();
-    let out = coverage::apply_with(&source, coverage::Operation::SetAlpha(1.), b, b, Some(&selection(0.003)), &photocraft_raster::Interrupt::NONE).unwrap();
+    let out = coverage::apply_with(&source, coverage::Operation::SetAlpha(1.), b, b, Some(&selection(0.003)), &magicpic_raster::Interrupt::NONE).unwrap();
     assert_eq!(out.pixel(0, 0)[0], f32::MAX);
     assert_eq!(source, original);
     assert_eq!(out.pixel(0, 0)[3], 0.001 + (1. - 0.001) * 0.003);
@@ -165,7 +165,7 @@ fn changed_alpha_hdr_roundoff_and_unrepresentable_mix_do_not_corrupt_source() {
             b,
             b,
             Some(&selection(0.5)),
-            &photocraft_raster::Interrupt::NONE
+            &magicpic_raster::Interrupt::NONE
         )
         .unwrap_err(),
         coverage::Error::NonFiniteSample

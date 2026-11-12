@@ -1,34 +1,34 @@
 //! #5052: the actual Brush options caption and field form one scrub target.
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use egui::{Modifiers, Pos2, Rect, pos2, vec2};
 use egui_kittest::{
     Harness,
     kittest::{NodeT, Queryable},
 };
 
-fn harness() -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn harness() -> Harness<'static, MagicpicApp> {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.ui.tool = crate::state::Tool::Brush;
     app.session.tools.brush.hardness = 0.5;
     let mut h = Harness::builder().with_size(vec2(1400.0, 60.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut MagicpicApp| {
             if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 crate::panels::options_bar(app, ui);
             }
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
+    MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::Studio);
     h.run_steps(4);
     h
 }
 
-fn geometry(h: &Harness<'_, PhotocraftApp>) -> (Rect, Rect) {
+fn geometry(h: &Harness<'_, MagicpicApp>) -> (Rect, Rect) {
     geometry_of(h, "Hardness")
 }
 
 /// The `caption` label and the number field right of it.
-fn geometry_of(h: &Harness<'_, PhotocraftApp>, caption: &str) -> (Rect, Rect) {
+fn geometry_of(h: &Harness<'_, MagicpicApp>, caption: &str) -> (Rect, Rect) {
     // The visible caption, not the number field it names: kittest returns the labelled control
     // for `get_by_label`, whose rect would put the drag inside the numeric editor.
     let label = h
@@ -45,7 +45,7 @@ fn geometry_of(h: &Harness<'_, PhotocraftApp>, caption: &str) -> (Rect, Rect) {
     (label, field)
 }
 
-fn drag(h: &mut Harness<'_, PhotocraftApp>, at: Pos2, dx: f32, mods: Modifiers) {
+fn drag(h: &mut Harness<'_, MagicpicApp>, at: Pos2, dx: f32, mods: Modifiers) {
     h.hover_at(at);
     h.run();
     h.drag_at(at);
@@ -97,7 +97,7 @@ fn options_hardness_gap_and_suffix_scrub() {
     }
 }
 
-fn click(h: &mut Harness<'_, PhotocraftApp>, at: Pos2) {
+fn click(h: &mut Harness<'_, MagicpicApp>, at: Pos2) {
     h.hover_at(at);
     h.run();
     h.drag_at(at);
@@ -219,7 +219,7 @@ fn options_tab_moves_from_opacity_to_flow_without_a_caption_stop() {
 fn options_bar_has_a_single_full_width_border() {
     for kind in [crate::theme::ThemeKind::Studio, crate::theme::ThemeKind::Pro, crate::theme::ThemeKind::Classic] {
         let mut h = harness();
-        PhotocraftApp::setup_context(&h.ctx, kind);
+        MagicpicApp::setup_context(&h.ctx, kind);
         h.run_steps(4);
         let separator = crate::theme::Tokens::get(&h.ctx).separator;
         let borders: Vec<_> = h

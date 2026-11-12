@@ -1,5 +1,5 @@
 //! Mesh warps (Edit › Transform › Warp, smart-object warps): resampling a surface through any
-//! forward map, such as a [`photocraft_geom::warp::Warp`] (bicubic Bezier patches or a preset).
+//! forward map, such as a [`magicpic_geom::warp::Warp`] (bicubic Bezier patches or a preset).
 //!
 //! The source rectangle is subdivided into a fine grid whose vertices are mapped forward; each
 //! cell's two triangles are rasterized in destination space with the source position
@@ -15,9 +15,9 @@
 //! the layers composite; for other mesh maps (lens corrections, distortions) the later
 //! (lower-right) cell wins. Work is split per destination tile (parallel on native).
 
-use photocraft_color::PixelFormat;
-use photocraft_geom::{Rect, TileCoord};
-use photocraft_raster::{Interrupt, Surface, Tile};
+use magicpic_color::PixelFormat;
+use magicpic_geom::{Rect, TileCoord};
+use magicpic_raster::{Interrupt, Surface, Tile};
 use std::sync::Arc;
 
 use crate::transform::{Interp, bicubic};
@@ -54,9 +54,9 @@ const MAX_SS: f64 = 8.0;
 pub fn place_source(
     src: &Surface,
     src_rect: Rect,
-    t: &photocraft_geom::Affine,
-    warp: Option<&photocraft_geom::warp::Warp>,
-) -> Result<Surface, photocraft_raster::AllocationError> {
+    t: &magicpic_geom::Affine,
+    warp: Option<&magicpic_geom::warp::Warp>,
+) -> Result<Surface, magicpic_raster::AllocationError> {
     let [a, b, c, d, e, f] = t.m;
     if let Some(w) = warp.filter(|w| !w.is_identity()) {
         let map = |x: f64, y: f64| {
@@ -80,8 +80,8 @@ pub fn place_source_projective(
     src: &Surface,
     src_rect: Rect,
     h: &crate::transform::Homography,
-    warp: Option<&photocraft_geom::warp::Warp>,
-) -> Result<Surface, photocraft_raster::AllocationError> {
+    warp: Option<&magicpic_geom::warp::Warp>,
+) -> Result<Surface, magicpic_raster::AllocationError> {
     if let Some(w) = warp.filter(|w| !w.is_identity()) {
         let map = |x: f64, y: f64| {
             let (u, v) = w.map(x, y);
@@ -437,7 +437,7 @@ fn triangles(
     let dst = Rect::new(x0.max(-lim).floor() as i32 - 1, y0.max(-lim).floor() as i32 - 1, x1.min(lim).ceil() as i32 + 1, y1.min(lim).ceil() as i32 + 1);
     // Bookkeeping is kept per destination tile, so a mesh flung across the whole coordinate range
     // would ask for millions of entries before drawing anything: draw nothing instead.
-    let ts_px = photocraft_geom::TILE_SIZE as u64;
+    let ts_px = magicpic_geom::TILE_SIZE as u64;
     if u64::from(dst.width()).div_ceil(ts_px).saturating_add(1).saturating_mul(u64::from(dst.height()).div_ceil(ts_px).saturating_add(1)) > MAX_DST_TILES {
         return out;
     }
@@ -445,7 +445,7 @@ fn triangles(
     let tiles: Vec<Rect> = dst.tiles().map(|tc| tc.rect().intersect(&dst)).filter(|r| !r.is_empty()).collect();
     // Triangles by index into `tris`, in its order.
     let mut bins: Vec<Vec<u32>> = vec![Vec::new(); tiles.len()];
-    let ts = photocraft_geom::TILE_SIZE;
+    let ts = magicpic_geom::TILE_SIZE;
     // Bin origin on the tile grid (the first tile is clipped to `dst`, so its x0/y0 may not be).
     let tx0 = tiles.iter().map(|t| t.x0).min().unwrap_or(0).div_euclid(ts) * ts;
     let ty0 = tiles.iter().map(|t| t.y0).min().unwrap_or(0).div_euclid(ts) * ts;
@@ -896,7 +896,7 @@ mod tests {
     #[test]
     fn a_fold_shows_what_is_under_its_transparent_parts() {
         let fmt = PixelFormat::new(ColorMode::Rgb, SampleType::U8, true);
-        let ts = photocraft_geom::TILE_SIZE;
+        let ts = magicpic_geom::TILE_SIZE;
         for width in [100, 4 * ts] {
             let half = width / 2;
             // The red left half stays; the right half, transparent (no pixels), folds back over it.
@@ -1006,8 +1006,8 @@ mod tests {
         assert!((at - 1.0).abs() < 1e-3, "the folded-back edge strip is on top: {at}");
     }
 
-    use photocraft_color::{ColorMode, SampleType};
-    use photocraft_geom::warp::{BezierMesh, Warp, WarpStyle};
+    use magicpic_color::{ColorMode, SampleType};
+    use magicpic_geom::warp::{BezierMesh, Warp, WarpStyle};
 
     fn sample(s: SampleType) -> Surface {
         let mut surf = Surface::new(PixelFormat::new(ColorMode::Rgb, s, true));
@@ -1166,7 +1166,7 @@ mod tests {
             let r = Rect::new(0, 0, w, h);
             src.write_region(r, &px);
             let warp = Warp::preset(WarpStyle::Arc, 15.0, [0.0, 0.0, f64::from(w), f64::from(h)]);
-            let t = photocraft_geom::Affine { m: [0.2, 0.0, 0.0, 0.2, 7.0, 5.0] };
+            let t = magicpic_geom::Affine { m: [0.2, 0.0, 0.0, 0.2, 7.0, 5.0] };
             let out = place_source(&src, r, &t, Some(&warp)).unwrap();
             let b = out.content_bounds();
             let o = out.read_region(b);

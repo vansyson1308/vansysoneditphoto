@@ -6,8 +6,8 @@
 use std::hint::black_box;
 use std::time::Instant;
 
-use photocraft_geom::Rect;
-use photocraft_paint::render::CoverageMap;
+use magicpic_geom::Rect;
+use magicpic_paint::render::CoverageMap;
 
 fn run(size: i32, moving: bool) -> (f64, f32) {
     let mut map = CoverageMap::new(3);

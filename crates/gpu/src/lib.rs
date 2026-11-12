@@ -1,7 +1,7 @@
 //! GPU compositor (architecture §7.2, milestone M5).
 //!
 //! Renders a [`Document`] with wgpu, producing the same straight-alpha composite as the CPU
-//! reference (`photocraft-compose`) within ~1/255:
+//! reference (`magicpic-compose`) within ~1/255:
 //!
 //! - **Residency.** Layer and mask surfaces live on the GPU in square *pages* (up to [`PAGE`]²,
 //!   never above the device's texture limit) covering their allocated tiles. A page is uploaded
@@ -54,11 +54,11 @@ use std::collections::HashMap;
 use std::num::NonZeroU64;
 use std::sync::Arc;
 
-use photocraft_color::{PixelFormat, SampleType};
-use photocraft_compose::effects::FieldKind;
-use photocraft_doc::{DocId, Document, LayerContent, LayerId, Pattern};
-use photocraft_geom::{Rect, TILE_SIZE, TileCoord};
-use photocraft_raster::{Surface, Tile};
+use magicpic_color::{PixelFormat, SampleType};
+use magicpic_compose::effects::FieldKind;
+use magicpic_doc::{DocId, Document, LayerContent, LayerId, Pattern};
+use magicpic_geom::{Rect, TILE_SIZE, TileCoord};
+use magicpic_raster::{Surface, Tile};
 
 pub use camera_raw::{CAMERA_RAW_SHADER, CameraRawDevelop};
 pub use camera_raw_tone::{CAMERA_RAW_FILTERS_SHADER, CAMERA_RAW_TONE_SHADER};
@@ -77,8 +77,8 @@ pub struct Compositor {
     temps: Vec<(Tex, u64)>,
     patterns: HashMap<String, CachedPattern>,
     /// The colour mode of the document being encoded: patterns paint in it
-    /// (`photocraft_compose::pattern::pattern_rgba`).
-    pattern_mode: photocraft_color::ColorMode,
+    /// (`magicpic_compose::pattern::pattern_rgba`).
+    pattern_mode: magicpic_color::ColorMode,
     /// The document being encoded, which owns the patterns it paints with.
     pattern_doc: DocId,
     /// GPU memory pattern textures may hold ([`PATTERN_BUDGET`] by default).

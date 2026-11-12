@@ -103,7 +103,7 @@ fn recorded(d: &Descriptor) -> Option<Settings> {
     Some(Settings { section, name })
 }
 
-/// The descriptor a step recorded in PhotoCraft saves as: the measured keys without the session
+/// The descriptor a step recorded in MagicPic saves as: the measured keys without the session
 /// ids, `Nm  ` only for a name of the step's own.
 fn canonical(settings: &Settings) -> Descriptor {
     let mut d = desc("null").with("null", class_ref("artboardSection"));
@@ -139,7 +139,7 @@ pub(super) fn from(d: &Descriptor) -> Mapped {
     // Bytes, not descriptor equality: that takes an edge of -0.0 for 0.0, which would save
     // another value than the one recorded.
     if bytes != canonical(&settings).to_bytes() {
-        p[SOURCE] = photocraft_paint::tile::b64_encode(&bytes).into();
+        p[SOURCE] = magicpic_paint::tile::b64_encode(&bytes).into();
     }
     step(id, p)
 }
@@ -214,7 +214,7 @@ pub(super) fn to(id: &str, p: &Value) -> Option<Descriptor> {
     // Only a value no larger than a kept recording is decoded and parsed at all.
     let source = jstr(p, SOURCE)
         .filter(|text| text.len() <= MAX_SOURCE_BYTES.div_ceil(3) * 4)
-        .and_then(photocraft_paint::tile::b64_decode)
+        .and_then(magicpic_paint::tile::b64_decode)
         .filter(|bytes| bytes.len() <= MAX_SOURCE_BYTES)
         .and_then(|bytes| Descriptor::from_bytes(&bytes).ok())
         .filter(|d| recorded(d).is_some_and(|r| r.section == settings.section && r.name.as_deref().unwrap_or("") == settings.name.as_deref().unwrap_or("")));

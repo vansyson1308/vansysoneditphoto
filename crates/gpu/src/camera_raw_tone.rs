@@ -3,14 +3,14 @@
 //! Texture, and the measurement of Whites and Blacks' points after them.
 //!
 //! Shadows and Highlights are the local Laplacian filter of
-//! `photocraft_algo::camera_raw::local_tone` (`camera_raw_tone.wgsl`). Each
-//! [`TonePass`](photocraft_algo::camera_raw::TonePass) builds the Gaussian pyramid of its input,
+//! `magicpic_algo::camera_raw::local_tone` (`camera_raw_tone.wgsl`). Each
+//! [`TonePass`](magicpic_algo::camera_raw::TonePass) builds the Gaussian pyramid of its input,
 //! the remapped pyramids of up to [`MAX_REFS`] references (four per `Rgba32Float` tile, all tiles
 //! of a level in one atlas), and the output from coarse to fine, each coefficient interpolated
 //! between the two references around the input there.
 //!
 //! Dehaze, Clarity and Texture (`camera_raw_filters.wgsl`, constants from
-//! `photocraft_algo::camera_raw::spatial`) are separable box and minimum filters and guided
+//! `magicpic_algo::camera_raw::spatial`) are separable box and minimum filters and guided
 //! filters on small copies; `camera_raw.wgsl` applies their results per pixel.
 //!
 //! The quantiles the filters and Whites and Blacks read (including Dehaze's brightest cells) are
@@ -22,9 +22,9 @@
 
 use std::collections::HashMap;
 
-use photocraft_algo::camera_raw::local_tone::{KNOTS, MAX_REFS, RANGE_QUANTILES, RANGE_SIDE, REF_LOW_QUANTILE, REF_STEP, TAPS};
-use photocraft_algo::camera_raw::spatial::{CLARITY_EPS, DEHAZE_AIR_FLOOR, DEHAZE_EPS, DEHAZE_OMEGA};
-use photocraft_algo::camera_raw::{LocalTone, PerPixel, ToneKind, WhitesBlacksModel, quantile_rank};
+use magicpic_algo::camera_raw::local_tone::{KNOTS, MAX_REFS, RANGE_QUANTILES, RANGE_SIDE, REF_LOW_QUANTILE, REF_STEP, TAPS};
+use magicpic_algo::camera_raw::spatial::{CLARITY_EPS, DEHAZE_AIR_FLOOR, DEHAZE_EPS, DEHAZE_OMEGA};
+use magicpic_algo::camera_raw::{LocalTone, PerPixel, ToneKind, WhitesBlacksModel, quantile_rank};
 
 use crate::Unsupported;
 
@@ -297,7 +297,7 @@ impl TonePipelines {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        let rows = model_rows(&photocraft_algo::camera_raw::whites_blacks_model());
+        let rows = model_rows(&magicpic_algo::camera_raw::whites_blacks_model());
         let model =
             Tex::new(device, "pc_camera_raw_wb_model", [rows.width, rows.rows], PLANE, wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST);
         let sampled = wgpu::TextureUsages::TEXTURE_BINDING;
@@ -325,7 +325,7 @@ impl TonePipelines {
     pub(crate) fn write(&mut self, queue: &wgpu::Queue, tone: Option<&LocalTone>, whites_blacks: Option<[f32; 2]>) {
         let none = LocalTone { passes: Vec::new() };
         let tone = tone.unwrap_or(&none);
-        let m = photocraft_algo::camera_raw::whites_blacks_model();
+        let m = magicpic_algo::camera_raw::whites_blacks_model();
         let rows = model_rows(&m);
         if !self.model_written {
             let width = rows.width as usize;
@@ -734,7 +734,7 @@ pub(crate) type CellsKey = (u64, Option<[u32; 3]>);
 struct Haze {
     /// The copy's size.
     size: [u32; 2],
-    /// The copy ([`Dehaze::cells`](photocraft_algo::camera_raw::Dehaze::cells), uploaded) and
+    /// The copy ([`Dehaze::cells`](magicpic_algo::camera_raw::Dehaze::cells), uploaded) and
     /// what it was made from.
     cells: Tex,
     cells_key: Option<CellsKey>,
@@ -825,7 +825,7 @@ pub(crate) struct ToneFrame {
 impl ToneFrame {
     /// The textures every plan of a `size` frame uses.
     pub(crate) fn new(device: &wgpu::Device, size: [u32; 2]) -> Self {
-        let (points_size, points_edge) = cells_of(size, photocraft_algo::camera_raw::whites_blacks_model().points_side);
+        let (points_size, points_edge) = cells_of(size, magicpic_algo::camera_raw::whites_blacks_model().points_side);
         ToneFrame {
             size,
             pyramid: None,
@@ -1100,7 +1100,7 @@ impl ToneFrame {
         bounds[2] = b.ops.len();
         if key.whites_blacks {
             let points = self.points_size[0] * self.points_size[1];
-            let q = photocraft_algo::camera_raw::whites_blacks_model().point_quantiles;
+            let q = magicpic_algo::camera_raw::whites_blacks_model().point_quantiles;
             b.select(
                 &self.points.view,
                 self.points_size,
@@ -1112,7 +1112,7 @@ impl ToneFrame {
                 &self.state,
             );
             let step = Step { misc: [0, WB_SLOT, WB_ROW, 0], ..Default::default() };
-            let rows = Some([0.0, WB_ROW as f32, photocraft_algo::camera_raw::WB_STEPS as f32, 2.0]);
+            let rows = Some([0.0, WB_ROW as f32, magicpic_algo::camera_raw::WB_STEPS as f32, 2.0]);
             b.draw(Pipe::WbRows, step, Reads::default(), &[luts], rows);
         }
         let (steps, mut ops) = b.finish(device, queue, pipes, &self.stats.view);

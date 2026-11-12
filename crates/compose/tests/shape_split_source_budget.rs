@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
-use photocraft_color::{Color, PixelFormat, SampleType};
-use photocraft_compose::shape_split;
-use photocraft_doc::Fill;
-use photocraft_doc::vector::{Path, ShapeLayer, ShapeStroke, Subpath};
-use photocraft_geom::{Rect, TileCoord};
-use photocraft_raster::Surface;
+use magicpic_color::{Color, PixelFormat, SampleType};
+use magicpic_compose::shape_split;
+use magicpic_doc::Fill;
+use magicpic_doc::vector::{Path, ShapeLayer, ShapeStroke, Subpath};
+use magicpic_geom::{Rect, TileCoord};
+use magicpic_raster::Surface;
 
 /// Source pixels retained to identify a split must count toward its cache budget too.
 #[test]

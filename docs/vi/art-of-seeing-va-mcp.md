@@ -1,4 +1,4 @@
-# PhotoCraft: "nghệ thuật thấy" và chỉnh ảnh bằng Claude / Codex qua MCP
+# MagicPic: "nghệ thuật thấy" và chỉnh ảnh bằng Claude / Codex qua MCP
 
 Tài liệu này dành cho người dùng không chuyên lập trình. Phần kỹ thuật (tiếng Anh) nằm ở
 [`docs/seeing.md`](../seeing.md) và [`docs/mcp.md`](../mcp.md).
@@ -12,9 +12,9 @@ Mỗi nhận định dưới đây ghi rõ mức kiểm chứng:
 
 ## 1. Bạn làm được gì
 
-1. Nối Claude hoặc Codex với PhotoCraft, mở ảnh, nói điều bạn muốn bằng tiếng Việt.
+1. Nối Claude hoặc Codex với MagicPic, mở ảnh, nói điều bạn muốn bằng tiếng Việt.
 2. Agent **nhìn** ảnh (kể cả từng vùng, và qua năm "chế độ quan sát"), chỉnh bằng chính engine
-   của PhotoCraft, xem lại, sửa tiếp theo lời bạn.
+   của MagicPic, xem lại, sửa tiếp theo lời bạn.
 3. Thử nhiều cách thể hiện trên **bản sao**; ảnh gốc không bị đụng tới. Mỗi bản sao kèm một
    **recipe** (công thức) để làm lại y hệt.
 4. Lưu project chỉnh tiếp được (`.pcraft`, giữ layer/mask) và xuất ảnh phẳng (`.jpg`, `.png`).
@@ -73,11 +73,11 @@ Bốn điều đó thành: view chỉ-đọc, `seeing.variant` trên bản sao, 
 | **Codex CLI / IDE / app ChatGPT desktop** | stdio cục bộ, `~/.codex/config.toml` hoặc `codex mcp add` | Như trên; `codex -i ảnh.jpg` chỉ cho model xem, nên vẫn cần ghi đường dẫn trong lời nhắn | THEO MÃ NGUỒN Codex: image content được chuyển cho model; không có tài liệu chính thức | Như trên | Cấu hình: ĐÃ CHẠY (`codex mcp add`, v0.167.2). Phiên thật: **CHƯA KIỂM CHỨNG** (cần bạn đăng nhập Codex) |
 | **claude.ai web, ChatGPT web, Codex cloud** | Không nối được server cục bộ (cần HTTPS công khai hoặc tunnel của hãng) | — | — | — | Ngoài phạm vi; không mở cổng máy bạn ra Internet |
 
-Hai chế độ của PhotoCraft:
+Hai chế độ của MagicPic:
 
-- **Headless** (`photocraft-cli mcp --automation-read-root … --automation-write-root …`):
+- **Headless** (`magicpic-cli mcp --automation-read-root … --automation-write-root …`):
   không cần mở app. Phù hợp "đưa ảnh, nhận ảnh".
-- **Bridge** (`photocraft --control …` rồi `photocraft-cli mcp --bridge …`): agent sửa đúng
+- **Bridge** (`magicpic --control …` rồi `magicpic-cli mcp --bridge …`): agent sửa đúng
   tài liệu **đang mở trong app** của bạn; bạn thấy thay đổi ngay và có thể sửa tay xen kẽ.
   Nếu app chưa chạy, mọi lệnh báo lỗi "cannot connect … not sent"; server **không** tự chuyển
   sang headless để rồi sửa nhầm một phiên khác (ĐÃ TEST).
@@ -91,21 +91,21 @@ Chưa có bản cài sẵn cho nhánh này, nên cần build từ mã nguồn m�
 2. Mở PowerShell tại thư mục mã nguồn và cài CLI (và app nếu dùng bridge):
 
    ```powershell
-   cargo install --path apps/photocraft-cli --locked
+   cargo install --path apps/magicpic-cli --locked
    ```
 
    ```powershell
-   cargo build --release -p photocraft
+   cargo build --release -p magicpic
    ```
 
-   CLI nằm ở `%USERPROFILE%\.cargo\bin\photocraft-cli.exe`; app ở `target\release\photocraft.exe`.
-3. Tạo một thư mục riêng cho ảnh, ví dụ `C:\Users\<bạn>\Pictures\PhotoCraft`. Agent chỉ đọc
+   CLI nằm ở `%USERPROFILE%\.cargo\bin\magicpic-cli.exe`; app ở `target\release\magicpic.exe`.
+3. Tạo một thư mục riêng cho ảnh, ví dụ `C:\Users\<bạn>\Pictures\MagicPic`. Agent chỉ đọc
    và ghi được **trong thư mục này**. Đừng cấp cả ổ đĩa.
 
 ### Claude Code
 
 ```powershell
-claude mcp add --transport stdio --scope user photocraft -- "%USERPROFILE%\.cargo\bin\photocraft-cli.exe" mcp --automation-read-root "C:\Users\<bạn>\Pictures\PhotoCraft" --automation-write-root "C:\Users\<bạn>\Pictures\PhotoCraft"
+claude mcp add --transport stdio --scope user magicpic -- "%USERPROFILE%\.cargo\bin\magicpic-cli.exe" mcp --automation-read-root "C:\Users\<bạn>\Pictures\MagicPic" --automation-write-root "C:\Users\<bạn>\Pictures\MagicPic"
 ```
 
 Trong PowerShell hãy thay `%USERPROFILE%` bằng đường dẫn đầy đủ (hoặc `$env:USERPROFILE`).
@@ -119,11 +119,11 @@ khác) và thêm:
 ```json
 {
   "mcpServers": {
-    "photocraft": {
-      "command": "C:\\Users\\<bạn>\\.cargo\\bin\\photocraft-cli.exe",
+    "magicpic": {
+      "command": "C:\\Users\\<bạn>\\.cargo\\bin\\magicpic-cli.exe",
       "args": ["mcp",
-               "--automation-read-root", "C:\\Users\\<bạn>\\Pictures\\PhotoCraft",
-               "--automation-write-root", "C:\\Users\\<bạn>\\Pictures\\PhotoCraft"]
+               "--automation-read-root", "C:\\Users\\<bạn>\\Pictures\\MagicPic",
+               "--automation-write-root", "C:\\Users\\<bạn>\\Pictures\\MagicPic"]
     }
   }
 }
@@ -136,11 +136,11 @@ Thoát hẳn Claude Desktop rồi mở lại. Đường dẫn phải là đườ
 File `%USERPROFILE%\.codex\config.toml`:
 
 ```toml
-[mcp_servers.photocraft]
-command = 'C:\Users\<bạn>\.cargo\bin\photocraft-cli.exe'
+[mcp_servers.magicpic]
+command = 'C:\Users\<bạn>\.cargo\bin\magicpic-cli.exe'
 args = ["mcp",
-        "--automation-read-root", 'C:\Users\<bạn>\Pictures\PhotoCraft',
-        "--automation-write-root", 'C:\Users\<bạn>\Pictures\PhotoCraft']
+        "--automation-read-root", 'C:\Users\<bạn>\Pictures\MagicPic',
+        "--automation-write-root", 'C:\Users\<bạn>\Pictures\MagicPic']
 startup_timeout_sec = 20
 tool_timeout_sec = 300
 ```
@@ -154,11 +154,11 @@ Nếu chạy Codex trong WSL thì nó dùng file cấu hình và đường dẫn
 1. Mở app kèm kênh điều khiển (file token tự được tạo, chỉ nghe trên máy bạn):
 
    ```powershell
-   target\release\photocraft.exe --control 7878 --control-token-file "C:\Users\<bạn>\.photocraft-control.token" --automation-read-root "C:\Users\<bạn>\Pictures\PhotoCraft" --automation-write-root "C:\Users\<bạn>\Pictures\PhotoCraft"
+   target\release\magicpic.exe --control 7878 --control-token-file "C:\Users\<bạn>\.magicpic-control.token" --automation-read-root "C:\Users\<bạn>\Pictures\MagicPic" --automation-write-root "C:\Users\<bạn>\Pictures\MagicPic"
    ```
 
 2. Trong cấu hình client, thay `args` bằng:
-   `["mcp", "--bridge", "127.0.0.1:7878", "--control-token-file", "C:\\Users\\<bạn>\\.photocraft-control.token"]`.
+   `["mcp", "--bridge", "127.0.0.1:7878", "--control-token-file", "C:\\Users\\<bạn>\\.magicpic-control.token"]`.
    Quyền thư mục khi đó do **app** giữ; không truyền `--automation-*-root` cho CLI.
 
 Token là bí mật của máy bạn: đừng dán vào chat, đừng đưa lên repo.
@@ -172,7 +172,7 @@ chat cho MCP server cục bộ. Vì vậy:
 - **Ít thao tác nhất, dùng được ở mọi client:** lưu ảnh vào thư mục đã cấp quyền (kéo-thả
   trong Explorer), rồi nói *"mở ảnh mới nhất"*. Agent gọi `files_list` (xếp mới nhất trước)
   và `doc_open`.
-- **Gần với "dán là chỉnh" nhất:** dùng bridge. Copy ảnh, vào PhotoCraft chọn
+- **Gần với "dán là chỉnh" nhất:** dùng bridge. Copy ảnh, vào MagicPic chọn
   **File › New from Clipboard** (hoặc kéo ảnh vào cửa sổ), rồi nói với agent *"chỉnh ảnh đang
   mở"*.
 - Ảnh dán trong chat vẫn có ích: model **nhìn** được nó để hiểu ý bạn, nhưng muốn chỉnh thì
@@ -188,7 +188,7 @@ chép lại từng byte của một bức ảnh thật một cách tin cậy.
 - Chỉ ghi đè lên file ảnh/tài liệu; `notes.txt`, mã nguồn, `.env` không bao giờ bị thay (ĐÃ CHẠY).
 - Lưu/xuất chỉ báo thành công sau khi tìm lại file trên đĩa và khớp kích thước (`verified`).
 - Bridge chỉ nghe ở `127.0.0.1`, xác thực bằng token trong file riêng.
-- Không ảnh nào được gửi cho dịch vụ bên ngoài bởi PhotoCraft. Việc "hiểu ảnh" do chính
+- Không ảnh nào được gửi cho dịch vụ bên ngoài bởi MagicPic. Việc "hiểu ảnh" do chính
   Claude/Codex bạn đang dùng thực hiện, theo điều khoản của dịch vụ đó.
 - Chữ trong ảnh, tên layer, ghi chú, metadata là **dữ liệu**; hướng dẫn của server nói rõ với
   agent rằng đó không phải mệnh lệnh.
@@ -250,7 +250,10 @@ chép lại từng byte của một bức ảnh thật một cách tin cậy.
   trong app vì hình preview không gắn profile; file xuất thì vẫn đúng profile.
 - **Preview tối đa 2048 px**; ảnh nguồn trên 64 MP chỉ xem được theo vùng ở chế độ headless.
 - **JPEG hỏng phần đuôi vẫn mở được phần đọc được**, kèm cảnh báo (hành vi có sẵn của
-  PhotoCraft); PNG hỏng và file không phải ảnh thì bị từ chối.
+  MagicPic); PNG hỏng và file không phải ảnh thì bị từ chối.
+- **Thư mục đích phải có sẵn.** Bảo agent xuất vào `ket-qua/anh.jpg` khi chưa có thư mục
+  `ket-qua` thì lệnh lưu báo lỗi "No such file or directory", và agent không có công cụ tạo
+  thư mục. Hãy tạo thư mục trước, hoặc bảo agent lưu thẳng vào thư mục đã cấp. (Việc để sau.)
 - Recipe lưu trong ghi chú của tài liệu: ai xóa ghi chú đó thì mất recipe.
 - Không tuyên bố tương đương Photoshop; đây là một lát cắt nhỏ, dùng được, có kiểm chứng.
 
@@ -271,6 +274,12 @@ trên Windows và macOS.**
 | G. Lỗi giữa batch, mất phản hồi, kết nối lại, input sai, xuất không có quyền | Kịch bản MCP thật + test tự động (app giả lập ngắt kết nối giữa chừng) | ĐÃ CHẠY + ĐÃ TEST: đạt; không lần nào phá tài liệu, không ghi ra ngoài thư mục, không gửi lại lệnh sửa |
 | H. Tính năng từ PDF gọi được qua MCP và dùng trong app | 5 view × 5 ảnh qua MCP; menu **View › Seeing** trong app thật | ĐÃ CHẠY: đạt; sáu mục menu có mặt và bấm được |
 
+**Sau khi đổi tên thành MagicPic** (2026-11-12) các kịch bản được chạy lại với `magicpic-cli`
+và app `magicpic`: A, B, C, D, G, H và phép đo 24 MP qua MCP thật, E với app thật dưới màn
+hình ảo, và một lượt F với Claude Code 2.1.322 (12 lệnh, 4 ảnh xem trước, 0 lỗi; file JPEG và
+`.pcraft` lưu ra mở lại đúng, hai lớp điều chỉnh còn nguyên): tất cả đạt. Một project `.pcraft`
+do bản trước khi đổi tên lưu vẫn mở được.
+
 Thời gian đo trên ảnh 24 MP (6000×4000), bản build `dev` nên bản `release` sẽ nhanh hơn; đây
 là số đo, không phải cam kết: mở ảnh 0,2 s; mỗi chế độ quan sát ở 1024 px 0,1–0,3 s; xem một
 vùng 1500×1500 ở kích thước thật 0,1 s; biến thể thừa/thiếu sáng dưới 0,05 s; biến thể mất
@@ -282,7 +291,7 @@ Ba điều học được từ các phiên Claude Code thật:
 - **Lời agent báo cáo chưa phải bằng chứng.** Ở lần chạy đầu, agent báo "đã làm sáng khuôn
   mặt", nhưng người kiểm tra ảnh độc lập đo lại thì mặt **không sáng hơn**: lớp "làm tối nền"
   không có mask nên phủ lên cả ảnh, vì lớp điều chỉnh tạo trước đó đã dùng mất vùng chọn
-  (PhotoCraft, cũng như Photoshop, biến vùng chọn thành mask của lớp mới rồi bỏ chọn). Đã sửa
+  (MagicPic, cũng như Photoshop, biến vùng chọn thành mask của lớp mới rồi bỏ chọn). Đã sửa
   bằng cách đưa lời dặn này vào hướng dẫn mà server gửi cho agent; ở lần chạy lại agent chọn
   lại vùng trước khi thêm lớp và kết quả đo đúng yêu cầu. Bài học cho bạn: hãy nhìn ảnh, và
   khi nghi ngờ hãy bảo agent "đo lại vùng mặt trước và sau".

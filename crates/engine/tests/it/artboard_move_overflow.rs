@@ -1,7 +1,7 @@
 //! Cross-board reparenting must either preserve board-relative pixels or refuse atomically.
-use photocraft_doc::LayerId;
-use photocraft_engine::{Session, layer_multi_cmds::preview_move};
-use photocraft_geom::Rect;
+use magicpic_doc::LayerId;
+use magicpic_engine::{Session, layer_multi_cmds::preview_move};
+use magicpic_geom::Rect;
 use serde_json::{Value, json};
 
 fn move_into(layer: LayerId, board: LayerId) -> Value {
@@ -127,14 +127,14 @@ fn nonpixel_layer(s: &mut Session, board: LayerId, kind: &str, state: &str) -> L
         layer.effects.reference = None;
         match state {
             "linked mask" | "unlinked mask" => {
-                let mut mask = photocraft_doc::LayerMask::hide_all();
+                let mut mask = magicpic_doc::LayerMask::hide_all();
                 mask.surface.fill_rect(Rect::new(1, 2, 3, 4), &[1.0]);
                 mask.linked = state == "linked mask";
                 layer.mask = Some(mask);
             }
             "linked vector" | "unlinked vector" => {
-                let path = photocraft_doc::Path::new(vec![photocraft_doc::Subpath::polygon(&[(1.0, 2.0), (3.0, 2.0), (3.0, 4.0)])]);
-                let mut mask = photocraft_doc::VectorMask::new(path);
+                let path = magicpic_doc::Path::new(vec![magicpic_doc::Subpath::polygon(&[(1.0, 2.0), (3.0, 2.0), (3.0, 4.0)])]);
+                let mut mask = magicpic_doc::VectorMask::new(path);
                 mask.linked = state == "linked vector";
                 layer.vector_mask = Some(mask);
             }
@@ -155,7 +155,7 @@ fn unpositioned_move(kind: &str) {
         let (mut s, _red, a, b) = two_boards([-1_500_000_000, 0], [1_500_000_000, 0]);
         let id = nonpixel_layer(&mut s, a, kind, state);
         let before = s.active().unwrap().doc.clone();
-        let shifted = photocraft_engine::layer_multi_cmds::moved(&before, &[id], 5, 7).unwrap();
+        let shifted = magicpic_engine::layer_multi_cmds::moved(&before, &[id], 5, 7).unwrap();
         assert_eq!(shifted.layer(id), before.layer(id), "{kind}/{state}: no state moves");
         let params = move_into(id, b);
         s.execute("layer.moveTo", params.clone()).unwrap_or_else(|e| panic!("{kind}/{state}: unpositioned layer must reparent: {e}"));
@@ -186,7 +186,7 @@ fn positioned_adjustment_and_fill_overflow_still_refuses_atomically() {
             let (mut s, _red, a, b) = two_boards([-1_500_000_000, 0], [1_500_000_000, 0]);
             let id = nonpixel_layer(&mut s, a, kind, state);
             let before = s.active().unwrap().clone();
-            let shifted = photocraft_engine::layer_multi_cmds::moved(&before.doc, &[id], 5, 7).unwrap();
+            let shifted = magicpic_engine::layer_multi_cmds::moved(&before.doc, &[id], 5, 7).unwrap();
             assert_ne!(shifted.layer(id), before.doc.layer(id), "{kind}/{state}: positioned state moves");
             let params = move_into(id, b);
             assert!(s.execute("layer.moveTo", params.clone()).is_err(), "{kind}/{state}");
@@ -210,7 +210,7 @@ fn representable_nonpixel_moves_match_the_existing_translation_path() {
             let (mut s, _red, a, b) = two_boards([0, 0], [32, 16]);
             let id = nonpixel_layer(&mut s, a, kind, state);
             let before = s.active().unwrap().doc.clone();
-            let shifted = photocraft_engine::layer_multi_cmds::moved(&before, &[id], 32, 16).unwrap();
+            let shifted = magicpic_engine::layer_multi_cmds::moved(&before, &[id], 32, 16).unwrap();
             let params = move_into(id, b);
             let preview = preview_move(&before, &params, true).unwrap();
             s.execute("layer.moveTo", params).unwrap();

@@ -1,21 +1,21 @@
-//! Regenerates the shipped synthetic CMYK profile when `PHOTOCRAFT_REGEN_PROFILES=1`:
+//! Regenerates the shipped synthetic CMYK profile when `MAGICPIC_REGEN_PROFILES=1`:
 //!
 //! ```sh
-//! PHOTOCRAFT_REGEN_PROFILES=1 cargo test -p photocraft-cms --release --test it -- regen::
+//! MAGICPIC_REGEN_PROFILES=1 cargo test -p magicpic-cms --release --test it -- regen::
 //! ```
 //!
 //! Without the variable the test only checks that the generator's model still matches the
 //! shipped AToB table (cheap), so model edits are not forgotten.
 
-use photocraft_cms::synth::{CmykModel, CmykParams};
-use photocraft_cms::{Builtin, Intent, Profile, Transform};
+use magicpic_cms::synth::{CmykModel, CmykParams};
+use magicpic_cms::{Builtin, Intent, Profile, Transform};
 
 #[test]
 fn regen_or_check_coated_cmyk() {
-    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/profiles/photocraft-coated-cmyk.icc");
-    if std::env::var_os("PHOTOCRAFT_REGEN_PROFILES").is_some() {
+    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/profiles/magicpic-coated-cmyk.icc");
+    if std::env::var_os("MAGICPIC_REGEN_PROFILES").is_some() {
         let t = std::time::Instant::now();
-        let p = photocraft_cms::synth::coated_cmyk();
+        let p = magicpic_cms::synth::coated_cmyk();
         let bytes = p.to_bytes();
         std::fs::write(path, &*bytes).unwrap();
         eprintln!("wrote {} bytes in {:?}", bytes.len(), t.elapsed());
@@ -35,7 +35,7 @@ fn regen_or_check_coated_cmyk() {
                     t.eval(&[c as f32, m as f32, y as f32, k as f32], &mut o);
                     let got = [o[0] as f64 * 100.0, o[1] as f64 * 255.0 - 128.0, o[2] as f64 * 255.0 - 128.0];
                     let want = model.lab([c, m, y, k]);
-                    worst = worst.max(photocraft_cms::math::delta_e76(got, want));
+                    worst = worst.max(magicpic_cms::math::delta_e76(got, want));
                 }
             }
         }

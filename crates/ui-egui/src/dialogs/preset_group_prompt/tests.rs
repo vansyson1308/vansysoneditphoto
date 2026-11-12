@@ -9,7 +9,7 @@ enum Kind {
 }
 
 struct Fixture {
-    app: Box<PhotocraftApp>,
+    app: Box<MagicpicApp>,
     ctx: egui::Context,
     kind: Kind,
     name: &'static str,
@@ -20,7 +20,7 @@ struct Fixture {
     unrelated: Value,
 }
 
-fn call(app: &mut PhotocraftApp, ctx: &egui::Context, method: &str, params: Value) -> Value {
+fn call(app: &mut MagicpicApp, ctx: &egui::Context, method: &str, params: Value) -> Value {
     let (request, _reply) = ControlRequest::new(method, params);
     match handle(app, ctx, &request) {
         Outcome::Done(value) => value,
@@ -28,18 +28,18 @@ fn call(app: &mut PhotocraftApp, ctx: &egui::Context, method: &str, params: Valu
     }
 }
 
-fn group(app: &PhotocraftApp, kind: Kind, name: &str) -> Value {
+fn group(app: &MagicpicApp, kind: Kind, name: &str) -> Value {
     match kind {
         Kind::Brushes => json!(app.session.tools.presets.iter().filter(|p| p.group == name).collect::<Vec<_>>()),
         Kind::Gradients => json!(app.session.presets.gradients.iter().filter(|g| g.name == name).collect::<Vec<_>>()),
     }
 }
 
-fn library(app: &PhotocraftApp) -> Value {
+fn library(app: &MagicpicApp) -> Value {
     json!({"brushes": app.session.tools.presets, "gradients": app.session.presets.gradients, "selectedBrush": app.session.tools.brush})
 }
 
-fn held(app: &PhotocraftApp) -> Value {
+fn held(app: &MagicpicApp) -> Value {
     app.held_preset_import.as_ref().map(|h| json!({"cmd":h.cmd,"what":h.what,"stem":h.stem,"params":h.params})).unwrap_or(Value::Null)
 }
 
@@ -48,7 +48,7 @@ impl Fixture {
     fn new(kind: Kind) -> Self {
         let (name, stem, bytes) = match kind {
             Kind::Brushes => {
-                use photocraft_psd::abr::{LegacyBrush, LegacyTip, write_v12};
+                use magicpic_psd::abr::{LegacyBrush, LegacyTip, write_v12};
                 let brush = |diameter| LegacyBrush {
                     name: String::new(),
                     spacing: 25,
@@ -58,7 +58,7 @@ impl Fixture {
                 ("Kit.abr", "Kit", write_v12(2, &[brush(9), brush(17)], true).unwrap())
             }
             Kind::Gradients => {
-                use photocraft_psd::grd::{GrdColor, GrdGradient, GrdStop, write};
+                use magicpic_psd::grd::{GrdColor, GrdGradient, GrdStop, write};
                 let gradient = |name: &str, rgb| GrdGradient {
                     name: name.into(),
                     stops: vec![
@@ -70,7 +70,7 @@ impl Fixture {
                 ("Fire.grd", "Fire", write(&[gradient("Ember", [1.0, 0.0, 0.0]), gradient("Tide", [0.0, 0.0, 1.0])]))
             }
         };
-        let mut app = Box::new(PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default()));
+        let mut app = Box::new(MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default()));
         app.open_bytes(name, &bytes).unwrap();
         let original = group(&app, kind, stem);
         match kind {

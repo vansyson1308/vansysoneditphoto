@@ -2,7 +2,7 @@
 
 > **Status:** first release · **Scope:** engine commands `seeing.*`, `document.transaction`, and the MCP tools that use them · **Vietnamese user guide:** [`docs/vi/art-of-seeing-va-mcp.md`](vi/art-of-seeing-va-mcp.md)
 
-PhotoCraft's seeing tools help a person (or an agent working for one) *look* at a picture
+MagicPic's seeing tools help a person (or an agent working for one) *look* at a picture
 before and while editing it, and try several ways of showing it without ever touching the
 original. They came out of reading a 15-page Vietnamese excerpt of Freeman Patterson's
 *Photography and the Art of Seeing*. The excerpt is not in this repository and nothing is
@@ -73,7 +73,7 @@ is not the viewer's habit, and that a frame someone liked can be found again.
 A **recipe** is JSON:
 
 ```json
-{"photocraftSeeing": 1, "label": "exposure +2 EV", "kind": "overexpose", "rule": "expose correctly",
+{"magicpicSeeing": 1, "label": "exposure +2 EV", "kind": "overexpose", "rule": "expose correctly",
  "seed": 7, "frame": null,
  "steps": [{"id": "layer.newAdjustmentLayer.exposure", "params": {"exposure": 2, "name": "Seeing: +2 EV"}}],
  "source": {"name": "photo.jpg", "width": 6000, "height": 4000}}
@@ -87,7 +87,7 @@ or closed any other document, the whole session is put back as it was (see
 again, and the error names the step. There are at most 32 steps, and the same kinds of
 command a transaction refuses are refused here.
 
-The recipe is stored in the variant as a note (author `PhotoCraft Seeing`), so it is saved
+The recipe is stored in the variant as a note (author `MagicPic Seeing`), so it is saved
 with the document (tested for `.pcraft`; notes are also part of what the PSD writer saves)
 and shows in Window › Notes. `seeing.recipe` reads it back. A variant starts its own record:
 the source's recipe and reactions are not copied into it. Replaying a stored recipe on the

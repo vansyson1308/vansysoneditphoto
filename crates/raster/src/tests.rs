@@ -121,7 +121,7 @@ fn conversion_keeps_shared_tiles_shared() {
 }
 
 use super::*;
-use photocraft_color::PixelFormat;
+use magicpic_color::PixelFormat;
 use proptest::prelude::*;
 
 fn write_region_reference(surface: &mut Surface, r: Rect, data: &[f32]) {
@@ -448,7 +448,7 @@ fn fallible_default_tiles_preserve_every_encoded_pixel() {
 fn benchmark_fallible_default_tiles() {
     use std::{hint::black_box, time::Instant};
     // Isolate the unchanged float-zero control from the other cases' different CPU loads.
-    let zero_only = std::env::var_os("PHOTOCRAFT_TILE_FILL_ZERO_ONLY").is_some();
+    let zero_only = std::env::var_os("MAGICPIC_TILE_FILL_ZERO_ONLY").is_some();
     let count = Rect::new(0, 0, 6000, 4000).tile_count();
     for fmt in [PixelFormat::GRAY8, PixelFormat::RGBA8, PixelFormat::CMYKA8, PixelFormat::RGBA16, PixelFormat::RGBA32F] {
         if zero_only && fmt != PixelFormat::RGBA32F {

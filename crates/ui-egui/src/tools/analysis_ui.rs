@@ -13,11 +13,11 @@
 //! (#12033).
 
 use egui::{Align2, Color32, CornerRadius, FontId, Pos2, RichText, Stroke, pos2, vec2};
-use photocraft_doc::{Document, Ruler};
+use magicpic_doc::{Document, Ruler};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::canvas::{ToolEvent, ViewXform};
 use crate::state::{DialogKind, Tool};
 use crate::theme::Tokens;
@@ -31,7 +31,7 @@ mod count_readout_tests;
 /// is hidden), as "5 (2)". The single-group case counts a hidden group too (not measured, so it
 /// keeps the old total). An out-of-range current index means the last group, as in the Group
 /// dropdown and `count.add`.
-pub(crate) fn count_readout(m: &photocraft_doc::analysis::Measurement) -> String {
+pub(crate) fn count_readout(m: &magicpic_doc::analysis::Measurement) -> String {
     if m.count_groups.len() < 2 {
         return m.count_total().to_string();
     }
@@ -91,7 +91,7 @@ impl Default for AnalysisUi {
             log_selected: Vec::new(),
             note_selected: None,
             note_author: String::new(),
-            note_color: photocraft_engine::notes_cmds::DEFAULT_NOTE_COLOR,
+            note_color: magicpic_engine::notes_cmds::DEFAULT_NOTE_COLOR,
             use_measurement_scale: false,
             dialog: None,
             drag: None,
@@ -106,7 +106,7 @@ pub fn handles(id: &str) -> bool {
     PANELS.contains(&id)
 }
 
-pub fn checked(app: &PhotocraftApp, id: &str) -> Option<bool> {
+pub fn checked(app: &MagicpicApp, id: &str) -> Option<bool> {
     match id {
         "window.panel.measurementLog" => Some(app.ui.analysis.measurement_log),
         "window.panel.notes" => Some(app.ui.analysis.notes),
@@ -115,7 +115,7 @@ pub fn checked(app: &PhotocraftApp, id: &str) -> Option<bool> {
         _ => {
             // View › Proof Setup simulations: checked while that proof is shown.
             // A check item with no document too: an item's kind never changes (native menus).
-            let kind = id.strip_prefix("view.proofSetup.").and_then(photocraft_engine::proof_sim::ProofKind::from_id)?;
+            let kind = id.strip_prefix("view.proofSetup.").and_then(magicpic_engine::proof_sim::ProofKind::from_id)?;
             let Some(d) = app.session.active() else { return Some(false) };
             let pv = app.session.color.proof(d.doc.id);
             Some(pv.enabled && pv.setup.kind == kind)
@@ -133,7 +133,7 @@ fn fields(v: Value) -> Map<String, Value> {
 
 /// Menu front ends: panel toggles, tool selection, dialogs and pickers in front of the engine's
 /// analysis commands. `None` when `id` isn't ours (or the engine should run it directly).
-pub fn menu(app: &mut PhotocraftApp, id: &str, params: &Value) -> Option<Result<Value, String>> {
+pub fn menu(app: &mut MagicpicApp, id: &str, params: &Value) -> Option<Result<Value, String>> {
     let a = &mut app.ui.analysis;
     match id {
         "window.panel.measurementLog" | "window.panel.notes" => {
@@ -194,7 +194,7 @@ pub fn menu(app: &mut PhotocraftApp, id: &str, params: &Value) -> Option<Result<
         "file.import.notes" => match app.active_doc_id() {
             Ok(doc) => app.pick_file_bytes(move |app, name, bytes| {
                 app.refocus(doc)?;
-                let r = photocraft_engine::notes_cmds::import_notes_from(&mut app.session, &name, &bytes).map_err(|e| e.to_string());
+                let r = magicpic_engine::notes_cmds::import_notes_from(&mut app.session, &name, &bytes).map_err(|e| e.to_string());
                 if r.is_ok() {
                     app.ui.analysis.notes = true;
                     app.sync_views();
@@ -208,7 +208,7 @@ pub fn menu(app: &mut PhotocraftApp, id: &str, params: &Value) -> Option<Result<
     })
 }
 
-fn open(app: &mut PhotocraftApp, kind: &str, f: Value) -> Result<Value, String> {
+fn open(app: &mut MagicpicApp, kind: &str, f: Value) -> Result<Value, String> {
     app.ui.analysis.dialog = Some((kind.to_string(), fields(f)));
     Ok(json!({"dialog": kind}))
 }
@@ -221,7 +221,7 @@ fn suggested_length(d: &Document) -> f64 {
 }
 
 /// Export the Measurement Log (or the given rows) as CSV through the save picker.
-fn export_log(app: &mut PhotocraftApp, rows: Option<Vec<u64>>) -> Result<Value, String> {
+fn export_log(app: &mut MagicpicApp, rows: Option<Vec<u64>>) -> Result<Value, String> {
     let p = rows.map_or(json!({}), |r| json!({"rows": r}));
     let csv = app.run("measurementLog.export", p)?;
     let text = csv["csv"].as_str().unwrap_or_default().to_string();
@@ -234,7 +234,7 @@ fn export_log(app: &mut PhotocraftApp, rows: Option<Vec<u64>>) -> Result<Value, 
 
 // ------------------------------------------------------------------ tools
 
-fn tolerance(app: &PhotocraftApp) -> f64 {
+fn tolerance(app: &MagicpicApp) -> f64 {
     7.0 / f64::from(app.point_zoom().max(0.01))
 }
 
@@ -262,7 +262,7 @@ fn constrain(from: [f64; 2], to: [f64; 2], shift: bool) -> [f64; 2] {
     [from[0] + cx, from[1] + cy]
 }
 
-fn set_ruler(app: &mut PhotocraftApp, r: Ruler) {
+fn set_ruler(app: &mut MagicpicApp, r: Ruler) {
     let _ = app.run("image.analysis.rulerTool", json!({"start": r.start, "end": r.end, "protractor": r.protractor}));
 }
 
@@ -277,7 +277,7 @@ mod note_show_on_new_tests;
 /// Create a note at the rounded document position using the Note tool's options.
 /// After `notes.add` succeeds, select the note and open the Notes panel. Enable Show Notes
 /// while leaving the master Extras switch alone.
-pub(crate) fn create_note(app: &mut PhotocraftApp, x: f64, y: f64) -> Result<Value, String> {
+pub(crate) fn create_note(app: &mut MagicpicApp, x: f64, y: f64) -> Result<Value, String> {
     let a = &app.ui.analysis;
     let params = json!({"x": x.round(), "y": y.round(), "author": a.note_author, "color": a.note_color});
     let result = app.run("notes.add", params)?;
@@ -288,7 +288,7 @@ pub(crate) fn create_note(app: &mut PhotocraftApp, x: f64, y: f64) -> Result<Val
 }
 
 /// Pointer input for the Ruler, Count, Note and Color Sampler tools. Returns true when consumed.
-pub fn pointer(app: &mut PhotocraftApp, ev: ToolEvent, mods: egui::Modifiers) -> bool {
+pub fn pointer(app: &mut MagicpicApp, ev: ToolEvent, mods: egui::Modifiers) -> bool {
     let tool = app.active_tool();
     if !matches!(tool, Tool::Ruler | Tool::Count | Tool::Note | Tool::ColorSampler) {
         return false;
@@ -441,7 +441,7 @@ fn nearest_sampler(points: &[[f64; 2]], at: [f64; 2], tol: f64) -> Option<usize>
 
 /// The Color Sampler point under document point `at` on the active document, by the same hit test
 /// a click uses, so the right-click menu acts on the sampler a click would grab.
-pub(crate) fn sampler_at(app: &PhotocraftApp, at: [f64; 2]) -> Option<usize> {
+pub(crate) fn sampler_at(app: &MagicpicApp, at: [f64; 2]) -> Option<usize> {
     if !at.iter().all(|v| v.is_finite()) {
         return None;
     }
@@ -452,7 +452,7 @@ pub(crate) fn sampler_at(app: &PhotocraftApp, at: [f64; 2]) -> Option<usize> {
 mod sampler_menu_tests;
 
 /// Show a command error in the status bar without treating the sample-limit message as a fault.
-fn status_on_err(app: &mut PhotocraftApp, r: Result<Value, String>) {
+fn status_on_err(app: &mut MagicpicApp, r: Result<Value, String>) {
     if let Err(e) = r {
         app.ui.status = e;
         app.ui.status_error = false;
@@ -462,7 +462,7 @@ fn status_on_err(app: &mut PhotocraftApp, r: Result<Value, String>) {
 /// The count marker a Count tool click at document point `at` would grab (the click's own hit
 /// test, with its tolerance), or `None`. The cursor uses it too, so it never says "1" where a click
 /// adds a marker (#11773).
-pub(crate) fn count_marker_at(app: &PhotocraftApp, at: [f64; 2]) -> Option<(usize, usize)> {
+pub(crate) fn count_marker_at(app: &MagicpicApp, at: [f64; 2]) -> Option<(usize, usize)> {
     nearest_marker(&app.session.active()?.doc, at, tolerance(app))
 }
 
@@ -491,7 +491,7 @@ fn handle(painter: &egui::Painter, p: Pos2) {
 }
 
 /// Ruler line (while the Ruler tool is active), count markers and note icons.
-pub fn draw_overlay(app: &PhotocraftApp, painter: &egui::Painter, xf: &ViewXform) {
+pub fn draw_overlay(app: &MagicpicApp, painter: &egui::Painter, xf: &ViewXform) {
     let Some(doc) = app.session.active().map(|d| d.doc.clone()) else { return };
     let v = &app.ui.view;
     if app.ui.tool == Tool::Ruler
@@ -549,7 +549,7 @@ pub fn draw_overlay(app: &PhotocraftApp, painter: &egui::Painter, xf: &ViewXform
     let mut samplers = app.session.active().map(|d| d.color_samplers.clone()).unwrap_or_default();
     match app.ui.analysis.drag {
         Some(Drag::Sampler(i, at)) if app.ui.tool == Tool::ColorSampler && i < samplers.len() => samplers[i] = at,
-        Some(Drag::SamplerNew(at)) if app.ui.tool == Tool::ColorSampler && samplers.len() < photocraft_engine::sampler_cmds::MAX_SAMPLERS => samplers.push(at),
+        Some(Drag::SamplerNew(at)) if app.ui.tool == Tool::ColorSampler && samplers.len() < magicpic_engine::sampler_cmds::MAX_SAMPLERS => samplers.push(at),
         _ => {}
     }
     for (i, p) in samplers.iter().enumerate() {
@@ -580,7 +580,7 @@ fn readout(ui: &mut egui::Ui, label: &str, value: Option<f64>) {
 }
 
 /// Options bar of the Ruler, Count, Note and Color Sampler tools. Returns true when drawn.
-pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, tool: Tool) -> bool {
+pub fn options_bar(app: &mut MagicpicApp, ui: &mut egui::Ui, tool: Tool) -> bool {
     let Some(doc) = app.session.active().map(|d| d.doc.clone()) else {
         return matches!(tool, Tool::Ruler | Tool::Count | Tool::Note | Tool::ColorSampler);
     };
@@ -588,7 +588,7 @@ pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, tool: Tool) -> bo
         Tool::Ruler => {
             let sc = doc.measurement.scale.clone();
             let f = if app.ui.analysis.use_measurement_scale { sc.factor() } else { 1.0 };
-            let info = doc.measurement.ruler.map(|r| photocraft_engine::analysis_cmds::ruler_info(&r, &sc));
+            let info = doc.measurement.ruler.map(|r| magicpic_engine::analysis_cmds::ruler_info(&r, &sc));
             let g = |k: &str| info.as_ref().and_then(|i| i[k].as_f64());
             readout(ui, "X:", g("x").map(|v| v * f));
             readout(ui, "Y:", g("y").map(|v| v * f));
@@ -605,7 +605,7 @@ pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, tool: Tool) -> bo
             // layer locked in place (#12033).
             let straighten = app.session.is_enabled("image.analysis.straightenLayer");
             if ui.add_enabled_ui(straighten, |ui| crate::widgets::secondary_button(ui, tl!("Straighten Layer"), 0.0)).inner.clicked() {
-                let hidden = photocraft_engine::analysis_cmds::STRAIGHTEN_HIDDEN_ERROR;
+                let hidden = magicpic_engine::analysis_cmds::STRAIGHTEN_HIDDEN_ERROR;
                 if let Err(why) = app.run("image.analysis.straightenLayer", json!({})) {
                     // A hidden target layer keeps the button on and answers the click with the
                     // reference's alert (its message and an OK button), changing nothing (#12033).
@@ -613,7 +613,7 @@ pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, tool: Tool) -> bo
                         app.ui.open_dialog(DialogKind::Error, json!({"message": tl!(hidden)}).as_object().cloned().unwrap_or_default());
                     }
                     // Every other refusal goes to the status line, as the eraser tools do. What the
-                    // command itself answered is reported there by `PhotocraftApp::run`, but a
+                    // command itself answered is reported there by `MagicpicApp::run`, but a
                     // refusal raised before it runs - the automation gate a control or MCP-driven
                     // click passes - returns early, and a click that says nothing reads as a dead
                     // button (#12148).
@@ -643,7 +643,7 @@ pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, tool: Tool) -> bo
                     let _ = app.run("count.setGroup", json!({"group": gi, "visible": !g.visible}));
                 }
                 let rgb = g.color.to_rgb();
-                // PhotoCraft's Color Picker (sRGB), as everywhere else (#2144).
+                // MagicPic's Color Picker (sRGB), as everywhere else (#2144).
                 if crate::widgets::color_swatch_button(ui, color32(rgb), tl!("Color")).clicked() {
                     crate::color_picker_ui::open_for_command(
                         app,
@@ -705,7 +705,7 @@ pub fn options_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, tool: Tool) -> bo
             ui.label(
                 RichText::new(crate::i18n::fmt(
                     tl!("{n} of {max} sample points"),
-                    &[("n", &n.to_string()), ("max", &photocraft_engine::sampler_cmds::MAX_SAMPLERS.to_string())],
+                    &[("n", &n.to_string()), ("max", &magicpic_engine::sampler_cmds::MAX_SAMPLERS.to_string())],
                 ))
                 .color(t.text)
                 .size(11.0),
@@ -758,7 +758,7 @@ pub(crate) fn title_row(ui: &mut egui::Ui, title: &str) -> bool {
 }
 
 /// A floating panel window; `movable` follows Window › Workspace › Lock Workspace.
-pub(crate) fn panel_window(app: &PhotocraftApp, ctx: &egui::Context, id: &str, title: &str, offset: egui::Vec2, width: f32, body: impl FnOnce(&mut egui::Ui)) {
+pub(crate) fn panel_window(app: &MagicpicApp, ctx: &egui::Context, id: &str, title: &str, offset: egui::Vec2, width: f32, body: impl FnOnce(&mut egui::Ui)) {
     let t = Tokens::get(ctx);
     let canvas = app.last_canvas_rect;
     egui::Window::new(title)
@@ -778,7 +778,7 @@ pub(crate) fn panel_window(app: &PhotocraftApp, ctx: &egui::Context, id: &str, t
 }
 
 /// Draws the open panels and dialogs.
-pub fn windows(app: &mut PhotocraftApp, ctx: &egui::Context) {
+pub fn windows(app: &mut MagicpicApp, ctx: &egui::Context) {
     if app.ui.analysis.measurement_log {
         let mut act: Option<(&str, Value)> = None;
         let mut close = false;
@@ -806,11 +806,11 @@ pub fn windows(app: &mut PhotocraftApp, ctx: &egui::Context) {
                     }
                 });
             });
-            let cols: Vec<&str> = photocraft_engine::analysis_cmds::log_columns(&rows).into_iter().filter(|c| *c != "histogram").collect();
+            let cols: Vec<&str> = magicpic_engine::analysis_cmds::log_columns(&rows).into_iter().filter(|c| *c != "histogram").collect();
             egui::ScrollArea::both().max_height(220.0).max_width(620.0).show(ui, |ui| {
                 egui::Grid::new("mlog-grid").striped(true).spacing(vec2(10.0, 2.0)).show(ui, |ui| {
                     for c in &cols {
-                        let name = photocraft_engine::analysis_cmds::COLUMNS.iter().find(|x| x.0 == *c).map_or(*c, |x| x.1);
+                        let name = magicpic_engine::analysis_cmds::COLUMNS.iter().find(|x| x.0 == *c).map_or(*c, |x| x.1);
                         ui.label(RichText::new(tl!(name)).color(t.text_dim).size(10.5).strong());
                     }
                     ui.end_row();
@@ -872,14 +872,14 @@ pub fn windows(app: &mut PhotocraftApp, ctx: &egui::Context) {
 
 /// Selecting note `i` shows its author and colour in the Note tool's options bar, as Photoshop
 /// does (#7940); a new note then takes them unless they are changed.
-fn show_note_options(app: &mut PhotocraftApp, i: usize) {
+fn show_note_options(app: &mut MagicpicApp, i: usize) {
     let Some(note) = app.session.active().and_then(|d| d.doc.notes.get(i)) else { return };
     let (author, color) = (note.author.clone(), note.color.to_rgb());
     app.ui.analysis.note_author = author;
     app.ui.analysis.note_color = color;
 }
 
-fn notes_panel(app: &mut PhotocraftApp, ctx: &egui::Context) {
+fn notes_panel(app: &mut MagicpicApp, ctx: &egui::Context) {
     let notes = app.session.active().map(|d| d.doc.notes.clone()).unwrap_or_default();
     let n = notes.len();
     let mut sel = app.ui.analysis.note_selected.filter(|i| *i < n).or((n > 0).then_some(0));
@@ -983,7 +983,7 @@ pub fn dialog_command(kind: &str, f: &Map<String, Value>) -> Option<(&'static st
     })
 }
 
-fn dialog(app: &mut PhotocraftApp, ctx: &egui::Context) {
+fn dialog(app: &mut MagicpicApp, ctx: &egui::Context) {
     let Some((kind, mut f)) = app.ui.analysis.dialog.clone() else { return };
     let t = Tokens::get(ctx);
     let title = match kind.as_str() {
@@ -1034,8 +1034,8 @@ fn dialog(app: &mut PhotocraftApp, ctx: &egui::Context) {
                                     .map(|a| a.iter().filter_map(Value::as_str).map(String::from).collect())
                                     .unwrap_or_default();
                                 let mut changed = false;
-                                for key in photocraft_engine::analysis_cmds::available(source) {
-                                    let name = photocraft_engine::analysis_cmds::COLUMNS.iter().find(|c| c.0 == key).map_or(key, |c| c.1);
+                                for key in magicpic_engine::analysis_cmds::available(source) {
+                                    let name = magicpic_engine::analysis_cmds::COLUMNS.iter().find(|c| c.0 == key).map_or(key, |c| c.1);
                                     let mut on = list.iter().any(|x| x == key);
                                     if crate::widgets::checkbox(ui, &mut on, name).changed() {
                                         list.retain(|x| x != key);
@@ -1106,7 +1106,7 @@ const CLEAR_NOTES_MARK: &str = "__clearAllNotes";
 
 /// The Note tool's Clear All: Photoshop's alert, OK / Cancel (#11791). OK deletes every note in one
 /// "Delete all Notes" step; Cancel (or Escape) changes nothing.
-pub fn ask_clear_notes(app: &mut PhotocraftApp) {
+pub fn ask_clear_notes(app: &mut MagicpicApp) {
     let Some(doc) = app.session.active().filter(|s| !s.doc.notes.is_empty()).map(|s| s.doc.id.0) else { return };
     if app.ui.dialogs.iter().any(|d| owns_clear_notes(&d.fields)) {
         return;
@@ -1129,7 +1129,7 @@ pub fn clear_notes_body(ui: &mut egui::Ui) {
 
 /// OK: every note goes in one step, nothing stays selected, and the options bar shows the tool
 /// defaults again (a selected note had put its author and colour there).
-pub fn confirm_clear_notes(app: &mut PhotocraftApp, fields: &Map<String, Value>) -> Result<Value, String> {
+pub fn confirm_clear_notes(app: &mut MagicpicApp, fields: &Map<String, Value>) -> Result<Value, String> {
     if app.session.active().map(|s| s.doc.id.0) != fields.get("document").and_then(Value::as_u64) {
         return Err(tl!("The document changed. Please choose Clear All again.").into());
     }
@@ -1145,7 +1145,7 @@ const DELETE_NOTE_PREF: &str = "notes.delete.confirmation";
 /// Delete note `index` of the active document, as the Note tool's ⌫/Delete and the Notes panel's
 /// trash do: after the alert "Delete this note?" ([Yes] [No], "Don't show again"), or at once once
 /// that is ticked. Nothing is selected afterwards.
-pub fn ask_delete_note(app: &mut PhotocraftApp, index: usize) {
+pub fn ask_delete_note(app: &mut MagicpicApp, index: usize) {
     let skip = app.session.prefs().dialogs.get(DELETE_NOTE_PREF).and_then(|v| v.get("skip")).and_then(Value::as_bool) == Some(true);
     let Some(doc) = app.session.active().map(|s| s.doc.id.0) else { return };
     if skip {
@@ -1165,7 +1165,7 @@ pub fn ask_delete_note(app: &mut PhotocraftApp, index: usize) {
     app.ui.open_dialog(crate::state::DialogKind::Command, f);
 }
 
-fn delete_note(app: &mut PhotocraftApp, index: usize) {
+fn delete_note(app: &mut MagicpicApp, index: usize) {
     match app.run("notes.delete", json!({"index": index})) {
         Ok(_) => app.ui.analysis.note_selected = None,
         Err(e) => {
@@ -1188,7 +1188,7 @@ pub fn delete_note_body(ui: &mut egui::Ui, fields: &mut Map<String, Value>) {
 }
 
 /// Yes: the note goes (one "Delete Note" step), and "Don't show again" is remembered.
-pub fn confirm_delete_note(app: &mut PhotocraftApp, fields: &Map<String, Value>) -> Result<Value, String> {
+pub fn confirm_delete_note(app: &mut MagicpicApp, fields: &Map<String, Value>) -> Result<Value, String> {
     let index = fields.get("index").and_then(Value::as_u64).and_then(|i| usize::try_from(i).ok()).ok_or(tl!("No note to delete"))?;
     let doc = app.session.active().map(|s| (s.doc.id.0, s.doc.notes.len()));
     if doc.map(|d| d.0) != fields.get("document").and_then(Value::as_u64) || doc.is_none_or(|d| index >= d.1) {
@@ -1210,7 +1210,7 @@ pub fn confirm_delete_note(app: &mut PhotocraftApp, fields: &Map<String, Value>)
 
 /// The Note tool with a note selected: ⌫/Delete asks to delete the note (#11788), never the
 /// layer (Delete Layer) or the pixels (Edit › Clear). Text fields keep the keys.
-pub fn note_keys(app: &mut PhotocraftApp, ctx: &egui::Context) -> bool {
+pub fn note_keys(app: &mut MagicpicApp, ctx: &egui::Context) -> bool {
     use crate::shortcut_dispatch::Focus;
     // Escape during a Color Sampler drag cancels it: no new point, or the dragged one stays (#11729).
     // A tool picked mid-drag gets the release, so the drag is over: drop it and leave Escape alone.

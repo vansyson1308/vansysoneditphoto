@@ -30,7 +30,7 @@ pub enum Backend {
 }
 
 #[derive(Clone)]
-pub struct PhotocraftMcp {
+pub struct MagicpicMcp {
     backend: Arc<Backend>,
     tool_router: ToolRouter<Self>,
 }
@@ -643,8 +643,8 @@ fn png_result(png: &[u8], note: String) -> CallToolResult {
 fn attach_memory_error_details(obj: &mut Value, err: &AutomationError) {
     let Some(obj) = obj.as_object_mut() else { return };
     match err {
-        AutomationError::Import(photocraft_io::IoError::PsdApprovalRequired { required, soft_limit, hard_limit, available_ram })
-        | AutomationError::Engine(photocraft_engine::EngineError::PsdApprovalRequired { required, soft_limit, hard_limit, available_ram, .. }) => {
+        AutomationError::Import(magicpic_io::IoError::PsdApprovalRequired { required, soft_limit, hard_limit, available_ram })
+        | AutomationError::Engine(magicpic_engine::EngineError::PsdApprovalRequired { required, soft_limit, hard_limit, available_ram, .. }) => {
             obj.insert("required".into(), json!(required));
             obj.insert("soft".into(), json!(soft_limit));
             obj.insert("softLimit".into(), json!(soft_limit));
@@ -655,8 +655,8 @@ fn attach_memory_error_details(obj: &mut Value, err: &AutomationError) {
                 obj.insert("availableRam".into(), json!(avail));
             }
         }
-        AutomationError::Import(photocraft_io::IoError::PsdImportBudget { required, limit, free_memory })
-        | AutomationError::Engine(photocraft_engine::EngineError::PsdHardBudget { required, limit, free_memory, .. }) => {
+        AutomationError::Import(magicpic_io::IoError::PsdImportBudget { required, limit, free_memory })
+        | AutomationError::Engine(magicpic_engine::EngineError::PsdHardBudget { required, limit, free_memory, .. }) => {
             obj.insert("required".into(), json!(required));
             obj.insert("hard".into(), json!(limit));
             obj.insert("hardLimit".into(), json!(limit));
@@ -702,12 +702,12 @@ fn place_options(p: &PlaceParams) -> Value {
 fn bridge_only(name: &str) -> Result<CallToolResult, McpError> {
     Ok(fail(format!(
         "`{name}` drives the live GUI and needs bridge mode: start the app with \
-         `photocraft --control <port> --control-token-file <path>`, then run \
-         `photocraft-cli mcp --bridge 127.0.0.1:<port> --control-token-file <path>`"
+         `magicpic --control <port> --control-token-file <path>`, then run \
+         `magicpic-cli mcp --bridge 127.0.0.1:<port> --control-token-file <path>`"
     )))
 }
 
-impl PhotocraftMcp {
+impl MagicpicMcp {
     pub fn headless() -> Self {
         Self::with_backend(Backend::Headless(Arc::new(Mutex::new(Headless::new()))))
     }
@@ -731,7 +731,7 @@ impl PhotocraftMcp {
             strict_schema(&mut schema);
             route.attr.input_schema = Arc::new(schema);
         }
-        PhotocraftMcp { backend: Arc::new(backend), tool_router }
+        MagicpicMcp { backend: Arc::new(backend), tool_router }
     }
 
     /// Serve MCP over stdin/stdout until the client disconnects.
@@ -798,11 +798,11 @@ impl PhotocraftMcp {
 
 fn downscale_png(png: &[u8], max_side: u32) -> Result<Option<Vec<u8>>, AutomationError> {
     // A compressed reply's byte limit does not bound its decoded pixel allocation.
-    let opts = photocraft_codecs::DecodeOptions {
-        limits: photocraft_codecs::Limits { max_width: 8192, max_height: 8192, max_pixels: 16 << 20, max_alloc: 64 << 20 },
+    let opts = magicpic_codecs::DecodeOptions {
+        limits: magicpic_codecs::Limits { max_width: 8192, max_height: 8192, max_pixels: 16 << 20, max_alloc: 64 << 20 },
         ..Default::default()
     };
-    let img = photocraft_codecs::decode_as_with(photocraft_codecs::Format::Png, png, &opts).map_err(|error| AutomationError::Other(error.to_string()))?;
+    let img = magicpic_codecs::decode_as_with(magicpic_codecs::Format::Png, png, &opts).map_err(|error| AutomationError::Other(error.to_string()))?;
     let (w, h) = img.dimensions();
     if max_side == 0 || w.max(h) <= max_side {
         return Ok(None);
@@ -821,9 +821,9 @@ fn downscale_png(png: &[u8], max_side: u32) -> Result<Option<Vec<u8>>, Automatio
         }
     }
     let small =
-        photocraft_codecs::Image::from_u8(nw, nh, photocraft_codecs::ChannelLayout::Rgba, out).map_err(|error| AutomationError::Other(error.to_string()))?;
+        magicpic_codecs::Image::from_u8(nw, nh, magicpic_codecs::ChannelLayout::Rgba, out).map_err(|error| AutomationError::Other(error.to_string()))?;
     let bytes =
-        photocraft_codecs::encode(&small, photocraft_codecs::Format::Png, &Default::default()).map_err(|error| AutomationError::Other(error.to_string()))?;
+        magicpic_codecs::encode(&small, magicpic_codecs::Format::Png, &Default::default()).map_err(|error| AutomationError::Other(error.to_string()))?;
     Ok(Some(bytes))
 }
 
@@ -832,7 +832,7 @@ fn downscale_png(png: &[u8], max_side: u32) -> Result<Option<Vec<u8>>, Automatio
 // ---------------------------------------------------------------------------
 
 #[tool_router]
-impl PhotocraftMcp {
+impl MagicpicMcp {
     #[tool(description = "List open documents (index, name, size, dirty) and the active index.")]
     async fn session_list(&self) -> Result<CallToolResult, McpError> {
         if let Some(r) = self.headless_op(|h| Ok(h.session_list())).await {
@@ -1132,7 +1132,7 @@ impl PhotocraftMcp {
         let items: Vec<Value> = into_command_rows(all)
             .into_iter()
             .filter(|c| {
-                needle.as_ref().is_none_or(|n| photocraft_engine::commands::list_entry_matches(c, n))
+                needle.as_ref().is_none_or(|n| magicpic_engine::commands::list_entry_matches(c, n))
                     && (!enabled_only || c.get("enabled").and_then(Value::as_bool).unwrap_or(true))
             })
             .collect();
@@ -1250,7 +1250,7 @@ fn bridge_only_headless(name: &str) -> Result<CallToolResult, McpError> {
     Ok(fail(format!("`{name}` is only available in headless mode (in the GUI use the window/tab UI or control_call)")))
 }
 
-impl PhotocraftMcp {
+impl MagicpicMcp {
     /// `seeing.view` of a document as image content, in either backend.
     async fn document_view(&self, p: PreviewParams) -> CallToolResult {
         let params = p.view_params();
@@ -1455,24 +1455,24 @@ impl PhotocraftMcp {
     }
 
     async fn save_impl(&self, p: SaveParams) -> Result<CallToolResult, McpError> {
-        let tga_bits = match p.tga_bits.map(|b| (b, photocraft_io::TgaBits::from_bits(u64::from(b)))) {
+        let tga_bits = match p.tga_bits.map(|b| (b, magicpic_io::TgaBits::from_bits(u64::from(b)))) {
             None => None,
             Some((_, Some(bits))) => Some(bits),
             Some((b, None)) => return Ok(fail(format!("`tgaBits` must be 24 or 32, got {b}"))),
         };
-        let dpx_bits = match p.dpx_bits.map(|b| (b, photocraft_io::DpxBits::from_bits(u64::from(b)))) {
+        let dpx_bits = match p.dpx_bits.map(|b| (b, magicpic_io::DpxBits::from_bits(u64::from(b)))) {
             None => None,
             Some((_, Some(bits))) => Some(bits),
             Some((b, None)) => return Ok(fail(format!("`dpxBits` must be 8, 10, 12 or 16, got {b}"))),
         };
-        let tiff_compression = match photocraft_engine::file_cmds::tiff_compression_param(&json!({"tiffCompression": p.tiff_compression}), "save") {
+        let tiff_compression = match magicpic_engine::file_cmds::tiff_compression_param(&json!({"tiffCompression": p.tiff_compression}), "save") {
             Ok(c) => c,
             Err(e) => return Ok(fail(e.to_string())),
         };
         if let Some(q) = p.quality.filter(|q| !(1..=100).contains(q)) {
             return Ok(fail(format!("`quality` must be a whole number from 1 to 100, got {q}")));
         }
-        let dds_compression = match p.dds_compression.as_deref().map(|c| (c, photocraft_io::DdsCompression::from_name(c))) {
+        let dds_compression = match p.dds_compression.as_deref().map(|c| (c, magicpic_io::DdsCompression::from_name(c))) {
             None => None,
             Some((_, Some(c))) => Some(c),
             Some((c, None)) => return Ok(fail(format!("`ddsCompression` must be none, bc1, bc2 or bc3, got {c:?}"))),
@@ -1529,7 +1529,7 @@ impl PhotocraftMcp {
         }
         let Some(r) = self
             .headless_op(move |h| {
-                let mut opts = photocraft_io::ExportOptions {
+                let mut opts = magicpic_io::ExportOptions {
                     tiff_layers: p.tiff_layers,
                     tiff_transparency: p.tiff_transparency,
                     tga_bits,
@@ -1542,7 +1542,7 @@ impl PhotocraftMcp {
                     opts.encode.tiff_compression = c;
                 }
                 opts.encode.tiff_pyramid = p.tiff_pyramid;
-                opts.encode.dds = photocraft_io::DdsOptions { compression: dds_compression.unwrap_or_default(), mipmaps: p.dds_mipmaps };
+                opts.encode.dds = magicpic_io::DdsOptions { compression: dds_compression.unwrap_or_default(), mipmaps: p.dds_mipmaps };
                 if let Some(maximize) = p.maximize_compatibility {
                     opts.psd_maximize_compatibility = maximize;
                 }
@@ -1574,7 +1574,7 @@ mod transport;
 use progress::Waiter;
 
 /// Used by the render helper in tests and the CLI.
-pub fn render_document_png(doc: &photocraft_doc::Document, max_side: u32) -> Result<Vec<u8>, AutomationError> {
+pub fn render_document_png(doc: &magicpic_doc::Document, max_side: u32) -> Result<Vec<u8>, AutomationError> {
     files::render_png(doc, max_side)
 }
 
@@ -1642,8 +1642,8 @@ mod tests {
 
     #[test]
     fn bridge_screenshot_decode_limits_apply_even_without_downscaling() {
-        let image = photocraft_codecs::Image::from_u8(8193, 1, photocraft_codecs::ChannelLayout::Rgba, vec![0; 8193 * 4]).unwrap();
-        let png = photocraft_codecs::encode(&image, photocraft_codecs::Format::Png, &Default::default()).unwrap();
+        let image = magicpic_codecs::Image::from_u8(8193, 1, magicpic_codecs::ChannelLayout::Rgba, vec![0; 8193 * 4]).unwrap();
+        let png = magicpic_codecs::encode(&image, magicpic_codecs::Format::Png, &Default::default()).unwrap();
         assert!(downscale_png(b"not a png", 32).is_err());
         assert!(downscale_png(&png, 0).is_err());
         assert!(downscale_png(&png, 1024).is_err());
@@ -1651,7 +1651,7 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn mcp_reports_invalid_filter_parameters_without_changing_history() {
-        let mcp = PhotocraftMcp::headless();
+        let mcp = MagicpicMcp::headless();
         mcp.headless_op(|h| h.command_run("file.new", json!({"width":8,"height":8}))).await.unwrap().unwrap();
         let before = mcp.headless_op(|h| h.inspect(None)).await.unwrap().unwrap();
         for (params, key) in
@@ -1669,7 +1669,7 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn a_panicking_command_does_not_wedge_the_session() {
-        let mcp = PhotocraftMcp::headless();
+        let mcp = MagicpicMcp::headless();
         let r = mcp.headless_op(|_| -> Result<(), AutomationError> { panic!("boom") }).await.unwrap();
         assert!(r.is_err());
         let r = mcp.headless_op(|h| h.command_run("file.new", json!({"width": 8, "height": 8}))).await.unwrap();
@@ -1681,7 +1681,7 @@ mod tests {
     /// client lost every step result.
     #[tokio::test(flavor = "multi_thread")]
     async fn mcp_command_batch_stopped_by_the_budget_keeps_its_step_results() {
-        let mcp = PhotocraftMcp::headless();
+        let mcp = MagicpicMcp::headless();
         let step = |id: &str, params: Value| RunParams { id: id.into(), params: Some(params), wait: None, expect_revision: None, expect_document: None };
         let mut steps: Vec<RunParams> = (0..MAX_BATCH_STEPS - 1).map(|_| step("command.list", json!({}))).collect();
         steps.push(step("file.new", json!({"width": 8, "height": 8})));
@@ -1704,7 +1704,7 @@ mod tests {
     /// stop and leave the document unchanged (#8129).
     #[tokio::test(flavor = "multi_thread")]
     async fn dropping_a_waited_command_cancels_its_job() {
-        let mcp = PhotocraftMcp::headless();
+        let mcp = MagicpicMcp::headless();
         mcp.headless_op(|h| {
             h.command_run("file.new", json!({"width": 6000, "height": 6000}))?;
             h.command_run("filter.noise.addNoise", json!({"amount": 50}))
@@ -1734,7 +1734,7 @@ mod tests {
     /// command would): the job that starts afterwards is cancelled too, not left running.
     #[tokio::test(flavor = "multi_thread")]
     async fn a_wait_dropped_before_its_job_starts_cancels_the_job() {
-        let mcp = PhotocraftMcp::headless();
+        let mcp = MagicpicMcp::headless();
         mcp.headless_op(|h| {
             h.command_run("file.new", json!({"width": 6000, "height": 6000}))?;
             h.command_run("filter.noise.addNoise", json!({"amount": 50}))
@@ -1775,7 +1775,7 @@ mod tests {
     async fn cancelled_queued_commands_never_start() {
         use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
-        let mcp = PhotocraftMcp::headless();
+        let mcp = MagicpicMcp::headless();
         mcp.headless_op(|h| h.command_run("file.new", json!({"width": 8, "height": 8}))).await.unwrap().unwrap();
         let before = mcp.headless_op(|h| h.inspect(None)).await.unwrap().unwrap();
         let Backend::Headless(session) = &*mcp.backend else { panic!("headless") };
@@ -1884,7 +1884,7 @@ mod tests {
                 }
             }
         });
-        let mcp = PhotocraftMcp::with_backend(Backend::Bridge(Arc::new(BridgeClient::new(addr, TOKEN).unwrap())));
+        let mcp = MagicpicMcp::with_backend(Backend::Bridge(Arc::new(BridgeClient::new(addr, TOKEN).unwrap())));
         let mut waited = Box::pin(mcp.run_command("filter.blur.gaussianBlur".into(), json!({"radius": 4}), true));
         tokio::select! {
             result = &mut waited => panic!("the running job answered before its wait was dropped: {result:?}"),
@@ -1898,7 +1898,7 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn mcp_doc_open_schema_and_structured_error() {
-        let schema = &PhotocraftMcp::tool_router().map["doc_open"].attr.input_schema;
+        let schema = &MagicpicMcp::tool_router().map["doc_open"].attr.input_schema;
         assert_eq!(schema["properties"]["approve_high_memory"]["type"], "boolean");
         let omitted: OpenParams = serde_json::from_value(json!({"path": "file.psd"})).unwrap();
         assert!(!omitted.approve_high_memory);
@@ -1908,7 +1908,7 @@ mod tests {
             assert!(serde_json::from_value::<OpenParams>(json!({"path": "file.psd", "approve_high_memory": invalid})).is_err());
         }
 
-        let err = AutomationError::Import(photocraft_io::IoError::PsdApprovalRequired {
+        let err = AutomationError::Import(magicpic_io::IoError::PsdApprovalRequired {
             required: 6000,
             soft_limit: 3000,
             hard_limit: 9000,
@@ -1929,7 +1929,7 @@ mod tests {
     /// typed `required`/`hardLimit` fields and claims nothing about a soft limit or capacity.
     #[tokio::test(flavor = "multi_thread")]
     async fn mcp_doc_place_schema_approval_and_structured_hard_error() {
-        let schema = &PhotocraftMcp::tool_router().map["doc_place"].attr.input_schema;
+        let schema = &MagicpicMcp::tool_router().map["doc_place"].attr.input_schema;
         assert_eq!(schema["properties"]["approve_high_memory"]["type"], "boolean");
         let omitted: PlaceParams = serde_json::from_value(json!({"path": "file.psd"})).unwrap();
         assert!(!omitted.approve_high_memory);
@@ -1943,12 +1943,8 @@ mod tests {
             assert!(serde_json::from_value::<PlaceParams>(json!({"path": "file.psd", "approve_high_memory": invalid})).is_err(), "{invalid}");
         }
 
-        let err = AutomationError::Engine(photocraft_engine::EngineError::PsdHardBudget {
-            name: "huge.psd".into(),
-            required: 9_000,
-            limit: 8_000,
-            free_memory: None,
-        });
+        let err =
+            AutomationError::Engine(magicpic_engine::EngineError::PsdHardBudget { name: "huge.psd".into(), required: 9_000, limit: 8_000, free_memory: None });
         let res = to_result(Err(err)).unwrap();
         assert_eq!(res.is_error, Some(true));
         let text = &res.content.first().and_then(|c| c.as_text()).unwrap().text;
@@ -1961,7 +1957,7 @@ mod tests {
         }
 
         // With measured free memory behind the limit, the refusal reports it too.
-        let err = AutomationError::Engine(photocraft_engine::EngineError::PsdHardBudget {
+        let err = AutomationError::Engine(magicpic_engine::EngineError::PsdHardBudget {
             name: "huge.psd".into(),
             required: 9_000,
             limit: 8_000,
@@ -1979,7 +1975,7 @@ mod tests {
     /// The MCP server applies finished jobs before every tool call too (#503).
     #[tokio::test(flavor = "multi_thread")]
     async fn mcp_tools_see_a_finished_background_job() {
-        let mcp = PhotocraftMcp::headless();
+        let mcp = MagicpicMcp::headless();
         mcp.headless_op(|h| {
             h.command_run("file.new", json!({"width": 64, "height": 48}))?;
             h.command_run("filter.noise.addNoise", json!({"amount": 50}))?;

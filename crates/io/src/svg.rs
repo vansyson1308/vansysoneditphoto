@@ -12,13 +12,13 @@
 
 use std::sync::{Arc, Mutex, OnceLock, PoisonError};
 
-use photocraft_color::blend::BlendMode;
-use photocraft_color::{Color, ColorMode, PixelFormat, SampleType};
-use photocraft_doc::effects::GradientStyle;
-use photocraft_doc::vector::{FillRule, Knot, LineCap, LineJoin, Path, PathOp, ShapeLayer, ShapeStroke, StrokeAlign, Subpath, VectorMask};
-use photocraft_doc::{Document, Fill, Group, Layer, LayerContent, MAX_GROUP_DEPTH};
-use photocraft_geom::{Point, Rect, Size};
-use photocraft_raster::Surface;
+use magicpic_color::blend::BlendMode;
+use magicpic_color::{Color, ColorMode, PixelFormat, SampleType};
+use magicpic_doc::effects::GradientStyle;
+use magicpic_doc::vector::{FillRule, Knot, LineCap, LineJoin, Path, PathOp, ShapeLayer, ShapeStroke, StrokeAlign, Subpath, VectorMask};
+use magicpic_doc::{Document, Fill, Group, Layer, LayerContent, MAX_GROUP_DEPTH};
+use magicpic_geom::{Point, Rect, Size};
+use magicpic_raster::Surface;
 use resvg::tiny_skia;
 use resvg::usvg;
 
@@ -83,13 +83,13 @@ fn jpeg_dimensions(data: &[u8]) -> Option<(u32, u32)> {
 fn embedded_image_dimensions(mime: &str, data: &[u8]) -> Option<Option<(u32, u32)>> {
     match mime {
         "image/png" => Some(png_dimensions(data)),
-        "image/webp" | "image/gif" => Some(photocraft_codecs::probe_size(data).ok()),
+        "image/webp" | "image/gif" => Some(magicpic_codecs::probe_size(data).ok()),
         "image/jpeg" | "image/jpg" => Some(jpeg_dimensions(data)),
         "text/plain" => {
             if data.starts_with(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]) {
                 Some(png_dimensions(data))
             } else if (data.get(0..4) == Some(b"RIFF") && data.get(8..12) == Some(b"WEBP")) || data.starts_with(b"GIF8") {
-                Some(photocraft_codecs::probe_size(data).ok())
+                Some(magicpic_codecs::probe_size(data).ok())
             } else if data.starts_with(&[0xFF, 0xD8, 0xFF]) {
                 Some(jpeg_dimensions(data))
             } else {
@@ -150,7 +150,7 @@ fn fonts() -> Arc<usvg::fontdb::Database> {
     static DB: OnceLock<Arc<usvg::fontdb::Database>> = OnceLock::new();
     DB.get_or_init(|| {
         let mut db = usvg::fontdb::Database::new();
-        for f in photocraft_text::CRAFT_FONTS {
+        for f in magicpic_text::CRAFT_FONTS {
             db.load_font_data(f.bytes.to_vec());
         }
         #[cfg(not(target_arch = "wasm32"))]
@@ -163,9 +163,9 @@ fn fonts() -> Arc<usvg::fontdb::Database> {
 
 /// Installed families that stand in for each generic one, best first: the metric-compatible
 /// Liberation and Croscore fonts, then common Linux defaults, then the bundled craft fonts.
-const SANS_SERIF: &[&str] = &["Liberation Sans", "Arimo", "Helvetica", "DejaVu Sans", "Noto Sans", photocraft_text::fonts::DEFAULT_FAMILY];
+const SANS_SERIF: &[&str] = &["Liberation Sans", "Arimo", "Helvetica", "DejaVu Sans", "Noto Sans", magicpic_text::fonts::DEFAULT_FAMILY];
 const SERIF: &[&str] = &["Liberation Serif", "Tinos", "Times", "DejaVu Serif", "Noto Serif"];
-const MONOSPACE: &[&str] = &["Liberation Mono", "Cousine", "Courier", "DejaVu Sans Mono", "Noto Sans Mono", photocraft_text::fonts::MONO_FAMILY];
+const MONOSPACE: &[&str] = &["Liberation Mono", "Cousine", "Courier", "DejaVu Sans Mono", "Noto Sans Mono", magicpic_text::fonts::MONO_FAMILY];
 
 /// Points the generic families (`sans-serif`, `serif`, `monospace`, `cursive`, `fantasy`) at
 /// fonts the database holds. fontdb names Windows fonts for them (Arial, Times New Roman,
@@ -382,7 +382,7 @@ fn on_svg_stack<T: Send>(operation: impl FnOnce() -> Result<T, IoError> + Send) 
         }
         std::thread::scope(|scope| {
             let worker = std::thread::Builder::new()
-                .name("photocraft-svg".into())
+                .name("magicpic-svg".into())
                 .stack_size(PARSER_STACK_BYTES)
                 .spawn_scoped(scope, move || {
                     SVG_WORKER.with(|active| active.set(true));
@@ -427,7 +427,7 @@ fn parse_at_depth<T: Send>(depth: usize, isolated: bool, parse: impl FnOnce(bool
             return parse(isolated).map_err(ParseFailure::Decode);
         }
         Err(ParseFailure::Isolation(IoError::Svg(format!(
-            "SVG parsing deeper than {INLINE_XML_DEPTH} levels requires the native app's isolated parser; simplify the drawing or open it in PhotoCraft desktop"
+            "SVG parsing deeper than {INLINE_XML_DEPTH} levels requires the native app's isolated parser; simplify the drawing or open it in MagicPic desktop"
         ))))
     }
 }
@@ -708,7 +708,7 @@ fn bounded_data_image(
     if budget.lock().unwrap_or_else(std::sync::PoisonError::into_inner).error.is_some() {
         return None;
     }
-    let format = photocraft_codecs::detect(&data);
+    let format = magicpic_codecs::detect(&data);
     if mime == "image/svg+xml" || (mime == "text/plain" && format.is_none()) {
         if depth >= MAX_EMBEDDED_SVG_DEPTH {
             image_error(budget, "embedded SVG images exceed the nesting limit");
@@ -724,18 +724,16 @@ fn bounded_data_image(
         counter.svg_chain = counter.svg_chain.max(u64::try_from(depth + 1).unwrap_or(u64::MAX));
         Some(usvg::ImageKind::SVG(tree))
     } else {
-        let supported = matches!(
-            format,
-            Some(photocraft_codecs::Format::Png | photocraft_codecs::Format::Jpeg | photocraft_codecs::Format::Gif | photocraft_codecs::Format::WebP)
-        );
+        let supported =
+            matches!(format, Some(magicpic_codecs::Format::Png | magicpic_codecs::Format::Jpeg | magicpic_codecs::Format::Gif | magicpic_codecs::Format::WebP));
         let size = supported.then(|| imagesize::blob_size(&data).ok()).flatten();
         let Some(size) = size else { return unreadable_image(budget, "embedded SVG image has unsupported or invalid raster data") };
         let mut dimensions = (size.width, size.height);
-        if format == Some(photocraft_codecs::Format::Gif) {
+        if format == Some(magicpic_codecs::Format::Gif) {
             let Some(frame) = gif_frame_size(&data) else { return unreadable_image(budget, "can't read embedded GIF frame dimensions") };
             dimensions = (dimensions.0.max(frame.0), dimensions.1.max(frame.1));
         }
-        if format == Some(photocraft_codecs::Format::WebP) && data.get(12..).and_then(|chunks| webp_frame_sizes(chunks, &mut dimensions, false)).is_none() {
+        if format == Some(magicpic_codecs::Format::WebP) && data.get(12..).and_then(|chunks| webp_frame_sizes(chunks, &mut dimensions, false)).is_none() {
             return unreadable_image(budget, "can't read embedded WebP frame dimensions");
         }
         // usvg's resolver only wraps the bytes (resvg decodes them when drawing): an image under
@@ -1308,7 +1306,7 @@ fn import_parsed_with_limits(
 
 /// The whole drawing rendered at `scale` (1 = its own size), as a straight-alpha RGBA buffer at
 /// the origin. Smart objects use it to stay sharp at any placement.
-pub fn rasterize(bytes: &[u8], scale: f32) -> Result<photocraft_compose::Buffer, IoError> {
+pub fn rasterize(bytes: &[u8], scale: f32) -> Result<magicpic_compose::Buffer, IoError> {
     on_svg_stack(|| {
         let tree = parse(bytes)?.tree;
         rasterize_tree(&tree, scale)
@@ -1316,7 +1314,7 @@ pub fn rasterize(bytes: &[u8], scale: f32) -> Result<photocraft_compose::Buffer,
 }
 
 /// Render untrusted embedded SVG with intrinsic raster-image and aggregate decode budgets.
-pub fn rasterize_bounded(bytes: &[u8], scale: f32, max_decoded_pixels: u64) -> Result<photocraft_compose::Buffer, IoError> {
+pub fn rasterize_bounded(bytes: &[u8], scale: f32, max_decoded_pixels: u64) -> Result<magicpic_compose::Buffer, IoError> {
     on_svg_stack(|| {
         let (parsed, chain) = parse_bounded_inner(bytes, max_decoded_pixels)?;
         let tree = parsed.tree;
@@ -1334,12 +1332,12 @@ pub fn rasterize_bounded(bytes: &[u8], scale: f32, max_decoded_pixels: u64) -> R
 
 /// Render the whole tree at `scale` (clamped to 1/64–64) times its canvas size into a straight-alpha
 /// buffer at the origin; a result over the 24 MP rasterisation limit is an error.
-fn rasterize_tree(tree: &usvg::Tree, scale: f32) -> Result<photocraft_compose::Buffer, IoError> {
+fn rasterize_tree(tree: &usvg::Tree, scale: f32) -> Result<magicpic_compose::Buffer, IoError> {
     let cv = canvas(tree, &mut Vec::new());
     let pixmap = render(tree, cv.scale * scale.clamp(1.0 / 64.0, 64.0))?;
     let rect = Rect::new(0, 0, pixmap.width() as i32, pixmap.height() as i32);
     let px = pixmap.pixels().iter().map(|p| rgba(p.demultiply())).collect();
-    Ok(photocraft_compose::Buffer { rect, px })
+    Ok(magicpic_compose::Buffer { rect, px })
 }
 
 /// The whole drawing at one pixel per SVG unit, scaled down to fit [`MAX_SIDE`] a side and
@@ -1407,7 +1405,7 @@ fn surface(pixmap: &tiny_skia::Pixmap, rect: Rect, fmt: PixelFormat) -> Surface 
     let n = fmt.channels();
     let mut data = vec![0.0f32; pixmap.pixels().len() * n];
     for (p, out) in pixmap.pixels().iter().zip(data.chunks_exact_mut(n)) {
-        photocraft_raster::from_rgba_into(&fmt, rgba(p.demultiply()), out);
+        magicpic_raster::from_rgba_into(&fmt, rgba(p.demultiply()), out);
     }
     let mut s = Surface::new(fmt);
     if !rect.is_empty() {
@@ -1772,7 +1770,7 @@ impl Conv {
         .intersect(&self.canvas);
         let pixels = u64::from(area.width()) * u64::from(area.height());
         if self.can_retain_pixels(pixels) {
-            sh.cache = Some(photocraft_vector::render_shape(&sh, self.fmt, self.canvas));
+            sh.cache = Some(magicpic_vector::render_shape(&sh, self.fmt, self.canvas));
             let bytes = pixels * self.fmt.bytes_per_pixel() as u64;
             self.pixel_budget -= bytes;
             self.retained_pixel_bytes += bytes;

@@ -3,7 +3,7 @@
 use std::io::Write;
 
 use base64::Engine as _;
-use photocraft_automation::{AuthorizedWorkspace, PhotocraftMcp};
+use magicpic_automation::{AuthorizedWorkspace, MagicpicMcp};
 use rmcp::model::{CallToolRequestParams, CallToolResult, ClientConfig};
 use rmcp::service::RunningService;
 use rmcp::{ClientHandler, RoleClient, ServiceExt};
@@ -20,7 +20,7 @@ impl ClientHandler for Client {
     }
 }
 
-async fn connect(server: PhotocraftMcp) -> RunningService<RoleClient, Client> {
+async fn connect(server: MagicpicMcp) -> RunningService<RoleClient, Client> {
     let (s, c) = tokio::io::duplex(1 << 20);
     tokio::spawn(async move {
         if let Ok(running) = server.serve(s).await {
@@ -65,14 +65,14 @@ fn cleanup(path: &std::path::Path) {
     std::fs::remove_dir_all(path).expect("remove test workspace after server shutdown");
 }
 
-fn headless_in(root: &std::path::Path) -> PhotocraftMcp {
+fn headless_in(root: &std::path::Path) -> MagicpicMcp {
     let workspace = AuthorizedWorkspace::new(Some(root), Some(root)).expect("test workspace");
-    PhotocraftMcp::headless_with_workspace(workspace)
+    MagicpicMcp::headless_with_workspace(workspace)
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn lists_expected_tools() {
-    let client = connect(PhotocraftMcp::headless()).await;
+    let client = connect(MagicpicMcp::headless()).await;
     let tools = client.list_all_tools().await.unwrap();
     let names: Vec<String> = tools.iter().map(|t| t.name.to_string()).collect();
     for n in [
@@ -107,7 +107,7 @@ async fn lists_expected_tools() {
         assert!(t.description.as_ref().is_some_and(|d| !d.is_empty()));
     }
     let info = client.peer_info().expect("server info");
-    assert_eq!(info.server_info.as_ref().unwrap().name, "photocraft");
+    assert_eq!(info.server_info.as_ref().unwrap().name, "magicpic");
     assert!(info.instructions.as_ref().is_some_and(|i| i.contains("command_list")));
     client.cancel().await.unwrap();
 }
@@ -134,7 +134,7 @@ async fn headless_edit_render_save_roundtrip() {
     let img = r.content.iter().find_map(|c| c.as_image()).expect("image content");
     assert_eq!(img.mime_type, "image/png");
     let png = base64::engine::general_purpose::STANDARD.decode(&img.data).unwrap();
-    let decoded = photocraft_codecs::decode(&png).unwrap();
+    let decoded = magicpic_codecs::decode(&png).unwrap();
     assert_eq!(decoded.dimensions(), (32, 24));
 
     let r = json_of(&call(&client, "doc_save", json!({"path": "agent.pcraft"})).await);
@@ -143,7 +143,7 @@ async fn headless_edit_render_save_roundtrip() {
     json_of(&call(&client, "doc_export", json!({"path": "agent.png"})).await);
     let jpg_path = dir.join("agent.jpg");
     json_of(&call(&client, "doc_export", json!({"path": "agent.jpg", "quality": 70})).await);
-    assert!(photocraft_codecs::decode(&std::fs::read(&png_path).unwrap()).is_ok());
+    assert!(magicpic_codecs::decode(&std::fs::read(&png_path).unwrap()).is_ok());
     assert!(std::fs::metadata(&jpg_path).unwrap().len() > 100);
 
     // Re-open the native file: identical layer tree.
@@ -161,7 +161,7 @@ async fn headless_edit_render_save_roundtrip() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn command_list_filters() {
-    let client = connect(PhotocraftMcp::headless()).await;
+    let client = connect(MagicpicMcp::headless()).await;
     let all = json_of(&call(&client, "command_list", json!({})).await);
     let n_all = all.as_array().unwrap().len();
     assert!(n_all > 20);
@@ -221,7 +221,7 @@ fn strict_schema_problems(path: &str, schema: &Value, out: &mut Vec<String>) {
 async fn tool_schemas_pass_strict_validators() {
     // #1782: `ui_pointer`'s `items: true` and `command_batch`'s `$ref`/`$defs` made strict
     // providers (e.g. Moonshot via Volcano Ark) reject the whole request.
-    let client = connect(PhotocraftMcp::headless()).await;
+    let client = connect(MagicpicMcp::headless()).await;
     let tools = client.list_all_tools().await.unwrap();
     let mut problems = Vec::new();
     for t in &tools {
@@ -257,7 +257,7 @@ fn id_examples(schema: &Value, out: &mut Vec<String>) {
 #[tokio::test(flavor = "multi_thread")]
 async fn command_ids_in_tool_schemas_exist() {
     // Agents copy these examples verbatim (#378).
-    let client = connect(PhotocraftMcp::headless()).await;
+    let client = connect(MagicpicMcp::headless()).await;
     let all = json_of(&call(&client, "command_list", json!({})).await);
     let ids: Vec<&str> = all.as_array().unwrap().iter().filter_map(|c| c["id"].as_str()).collect();
     let tools = client.list_all_tools().await.unwrap();
@@ -294,7 +294,7 @@ fn ui_set_fields() -> Vec<String> {
 /// three fields missing when the issue was filed.
 #[tokio::test(flavor = "multi_thread")]
 async fn ui_set_description_names_every_accepted_field() {
-    let client = connect(PhotocraftMcp::headless()).await;
+    let client = connect(MagicpicMcp::headless()).await;
     let tools = client.list_all_tools().await.unwrap();
     let tool = tools.iter().find(|t| t.name == "ui_set").expect("ui_set tool");
     let schema = Value::Object((*tool.input_schema).clone());
@@ -307,7 +307,7 @@ async fn ui_set_description_names_every_accepted_field() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn errors_are_tool_errors_not_crashes() {
-    let client = connect(PhotocraftMcp::headless()).await;
+    let client = connect(MagicpicMcp::headless()).await;
     let r = call(&client, "command_run", json!({"id": "no.such.command"})).await;
     assert_eq!(r.is_error, Some(true));
     assert!(text(&r).contains("unknown command"));
@@ -335,7 +335,7 @@ async fn errors_are_tool_errors_not_crashes() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn preview_budget_failure_preserves_the_mcp_session() {
-    let client = connect(PhotocraftMcp::headless()).await;
+    let client = connect(MagicpicMcp::headless()).await;
     json_of(&call(&client, "doc_new", json!({"width": 2049, "height": 1})).await);
     for side in [0, 2049] {
         let reply = call(&client, "doc_render_preview", json!({"max_side": side})).await;
@@ -354,7 +354,7 @@ async fn bridge_doc_save_rejects_headless_only_options_instead_of_saving_with_de
     // Bridge mode forwards only the path to the running app: quality/format/tiffLayers/index
     // must be refused up front (no bridge connection needed for that) rather than silently
     // saving with the app's current settings.
-    let server = PhotocraftMcp::bridge("127.0.0.1:1", &"a".repeat(64)).unwrap();
+    let server = MagicpicMcp::bridge("127.0.0.1:1", &"a".repeat(64)).unwrap();
     let client = connect(server).await;
     for params in [
         json!({"path": "out.jpg", "quality": 50}),
@@ -375,7 +375,7 @@ async fn bridge_doc_save_rejects_headless_only_options_instead_of_saving_with_de
 #[tokio::test(flavor = "multi_thread")]
 async fn bridge_doc_save_without_path_forwards_app_save_for_write_back() {
     let (addr, app) = fake_app().await;
-    let client = connect(PhotocraftMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
+    let client = connect(MagicpicMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
     let saved = json_of(&call(&client, "doc_save", json!({})).await);
     assert_eq!(saved, json!({"saved": {}}), "no `path` is sent, not even null");
     let saved = json_of(&call(&client, "doc_save", json!({"path": "out.psd"})).await);
@@ -389,7 +389,7 @@ async fn bridge_doc_save_without_path_forwards_app_save_for_write_back() {
 #[tokio::test(flavor = "multi_thread")]
 async fn bridge_doc_save_forwards_targa_bits() {
     let (addr, app) = fake_app().await;
-    let client = connect(PhotocraftMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
+    let client = connect(MagicpicMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
     let saved = json_of(&call(&client, "doc_save", json!({"path": "out.tga", "tgaBits": 24})).await);
     assert_eq!(saved, json!({"saved": {"path": "out.tga", "tgaBits": 24}}));
     let r = call(&client, "doc_save", json!({"path": "out.tga", "tgaBits": 16})).await;
@@ -432,7 +432,7 @@ async fn headless_doc_save_writes_targa_bits() {
 #[tokio::test(flavor = "multi_thread")]
 async fn bridge_doc_save_forwards_dds_options() {
     let (addr, app) = fake_app().await;
-    let client = connect(PhotocraftMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
+    let client = connect(MagicpicMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
     let saved = json_of(&call(&client, "doc_save", json!({"path": "out.dds", "ddsCompression": "DXT5", "ddsMipmaps": true})).await);
     assert_eq!(saved, json!({"saved": {"path": "out.dds", "ddsCompression": "bc3", "ddsMipmaps": true}}));
     let r = call(&client, "doc_save", json!({"path": "out.dds", "ddsCompression": "bc7"})).await;
@@ -471,7 +471,7 @@ async fn headless_doc_save_writes_dds_options() {
 #[tokio::test(flavor = "multi_thread")]
 async fn bridge_doc_save_forwards_tiff_options() {
     let (addr, app) = fake_app().await;
-    let client = connect(PhotocraftMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
+    let client = connect(MagicpicMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
     let saved = json_of(&call(&client, "doc_save", json!({"path": "out.tif", "tiffCompression": "lzw", "tiffTransparency": false, "tiffPyramid": true})).await);
     assert_eq!(saved, json!({"saved": {"path": "out.tif", "tiffCompression": "lzw", "tiffTransparency": false, "tiffPyramid": true}}));
     for bad in [json!({"path": "out.tif", "tiffCompression": "jpeg"}), json!({"path": "out.tif", "tiffPyramid": "yes"})] {
@@ -499,10 +499,10 @@ async fn headless_doc_save_writes_tiff_options() {
         let r = call(&client, tool, params.clone()).await;
         assert_ne!(r.is_error, Some(true), "{params}: {}", text(&r));
         let bytes = std::fs::read(dir.join(params["path"].as_str().unwrap())).unwrap();
-        let info = photocraft_codecs::tiff_info(&bytes).unwrap();
+        let info = magicpic_codecs::tiff_info(&bytes).unwrap();
         assert!(info.pages.iter().all(|p| p.compression == compression), "{params}: {:?}", info.pages);
         assert_eq!(info.pages.len(), dirs, "{params}");
-        assert_eq!(photocraft_codecs::decode(&bytes).unwrap().layout().has_alpha(), alpha, "{params}");
+        assert_eq!(magicpic_codecs::decode(&bytes).unwrap().layout().has_alpha(), alpha, "{params}");
     }
     for bad in [json!({"path": "bad.tif", "tiffCompression": "jpeg"}), json!({"path": "bad.tif", "tiffTransparency": "off"})] {
         let r = call(&client, "doc_export", bad.clone()).await;
@@ -532,7 +532,7 @@ async fn headless_doc_save_takes_maximize_compatibility() {
         let r = call(&client, tool, params.clone()).await;
         assert_ne!(r.is_error, Some(true), "{params}: {}", text(&r));
         let bytes = std::fs::read(dir.join(params["path"].as_str().unwrap())).unwrap();
-        assert_eq!(photocraft_psd::PsdFile::from_bytes(&bytes).unwrap().has_real_merged_data(), Some(real), "{params}");
+        assert_eq!(magicpic_psd::PsdFile::from_bytes(&bytes).unwrap().has_real_merged_data(), Some(real), "{params}");
     }
     let r = call(&client, "doc_export", json!({"path": "bad.psd", "maximizeCompatibility": "no"})).await;
     assert_eq!(r.is_error, Some(true), "{}", text(&r));
@@ -555,7 +555,7 @@ async fn headless_doc_export_layers_takes_maximize_compatibility() {
         let file = result["files"][0].as_str().unwrap();
         assert!(file.starts_with(sub), "{file}");
         let bytes = std::fs::read(dir.join(file)).unwrap();
-        assert_eq!(photocraft_psd::PsdFile::from_bytes(&bytes).unwrap().has_real_merged_data(), Some(real), "{params}");
+        assert_eq!(magicpic_psd::PsdFile::from_bytes(&bytes).unwrap().has_real_merged_data(), Some(real), "{params}");
     }
     let r = call(&client, "doc_export_layers", json!({"dir": "bad", "format": "psd", "maximizeCompatibility": "no"})).await;
     assert_eq!(r.is_error, Some(true), "{}", text(&r));
@@ -568,7 +568,7 @@ async fn headless_doc_export_layers_takes_maximize_compatibility() {
 #[tokio::test(flavor = "multi_thread")]
 async fn bridge_doc_save_forwards_maximize_compatibility() {
     let (addr, app) = fake_app().await;
-    let client = connect(PhotocraftMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
+    let client = connect(MagicpicMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
     let saved = json_of(&call(&client, "doc_save", json!({"path": "out.psd", "maximizeCompatibility": false})).await);
     assert_eq!(saved, json!({"saved": {"path": "out.psd", "maximizeCompatibility": false}}));
     let saved = json_of(&call(&client, "doc_save", json!({"path": "out.psd"})).await);
@@ -581,7 +581,7 @@ async fn bridge_doc_save_forwards_maximize_compatibility() {
 /// operation on a fresh, authenticated connection.
 #[tokio::test(flavor = "multi_thread")]
 async fn bridge_response_budget_drops_connection_without_retrying_the_operation() {
-    use photocraft_automation::{BridgeClient, budgets::MAX_RESPONSE_BYTES};
+    use magicpic_automation::{BridgeClient, budgets::MAX_RESPONSE_BYTES};
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap().to_string();
     let app = tokio::spawn(async move {
@@ -612,9 +612,9 @@ async fn bridge_response_budget_drops_connection_without_retrying_the_operation(
 #[tokio::test(flavor = "multi_thread")]
 async fn open_png_and_inspect() {
     let dir = tmp("open");
-    let img = photocraft_codecs::Image::from_u8(8, 4, photocraft_codecs::ChannelLayout::Rgb, vec![200; 96]).unwrap();
+    let img = magicpic_codecs::Image::from_u8(8, 4, magicpic_codecs::ChannelLayout::Rgb, vec![200; 96]).unwrap();
     let path = dir.join("in.png");
-    std::fs::File::create(&path).unwrap().write_all(&photocraft_codecs::encode(&img, photocraft_codecs::Format::Png, &Default::default()).unwrap()).unwrap();
+    std::fs::File::create(&path).unwrap().write_all(&magicpic_codecs::encode(&img, magicpic_codecs::Format::Png, &Default::default()).unwrap()).unwrap();
     let client = connect(headless_in(&dir)).await;
     let o = json_of(&call(&client, "doc_open", json!({"path": "in.png"})).await);
     assert_eq!((o["width"].as_u64(), o["height"].as_u64()), (Some(8), Some(4)));
@@ -628,7 +628,7 @@ async fn open_png_and_inspect() {
 #[tokio::test(flavor = "multi_thread")]
 async fn open_reports_decode_warnings() {
     let dir = tmp("open-warnings");
-    let jpeg = write_image(&dir, "whole.jpg", photocraft_codecs::Format::Jpeg);
+    let jpeg = write_image(&dir, "whole.jpg", magicpic_codecs::Format::Jpeg);
     std::fs::write(dir.join("cut.jpg"), &jpeg[..jpeg.len() - 4]).unwrap();
     // Two 1x1 frames.
     let mut gif = b"GIF89a\x01\0\x01\0\x80\0\0\0\0\0\xFF\xFF\xFF".to_vec();
@@ -646,9 +646,9 @@ async fn open_reports_decode_warnings() {
     cleanup(&dir);
 }
 
-fn write_image(dir: &std::path::Path, name: &str, format: photocraft_codecs::Format) -> Vec<u8> {
-    let img = photocraft_codecs::Image::from_u8(16, 8, photocraft_codecs::ChannelLayout::Rgb, (0..384).map(|i| (i * 7 % 251) as u8).collect()).unwrap();
-    let bytes = photocraft_codecs::encode(&img, format, &Default::default()).unwrap();
+fn write_image(dir: &std::path::Path, name: &str, format: magicpic_codecs::Format) -> Vec<u8> {
+    let img = magicpic_codecs::Image::from_u8(16, 8, magicpic_codecs::ChannelLayout::Rgb, (0..384).map(|i| (i * 7 % 251) as u8).collect()).unwrap();
+    let bytes = magicpic_codecs::encode(&img, format, &Default::default()).unwrap();
     std::fs::write(dir.join(name), &bytes).unwrap();
     bytes
 }
@@ -656,7 +656,7 @@ fn write_image(dir: &std::path::Path, name: &str, format: photocraft_codecs::For
 #[tokio::test(flavor = "multi_thread")]
 async fn affinity_preview_warns_and_requires_a_new_save_path() {
     let dir = tmp("affinity-preview");
-    let png = write_image(&dir, "preview.png", photocraft_codecs::Format::Png);
+    let png = write_image(&dir, "preview.png", magicpic_codecs::Format::Png);
     // Synthetic v12 envelope; the native document graph is intentionally absent.
     let mut bytes = vec![0; 72];
     bytes[..4].copy_from_slice(b"\x00\xffKA");
@@ -700,8 +700,8 @@ async fn affinity_preview_warns_and_requires_a_new_save_path() {
 #[tokio::test(flavor = "multi_thread")]
 async fn save_without_path_never_flattens_over_the_opened_file() {
     let dir = tmp("save-in-place");
-    let png = write_image(&dir, "seed.png", photocraft_codecs::Format::Png);
-    let jpg = write_image(&dir, "seed.jpg", photocraft_codecs::Format::Jpeg);
+    let png = write_image(&dir, "seed.png", magicpic_codecs::Format::Png);
+    let jpg = write_image(&dir, "seed.jpg", magicpic_codecs::Format::Jpeg);
     let client = connect(headless_in(&dir)).await;
     let refused = |r: &CallToolResult| r.is_error == Some(true) && text(r).contains("pass `path`");
 
@@ -729,7 +729,7 @@ async fn save_without_path_never_flattens_over_the_opened_file() {
     assert!(refused(&r), "{}", text(&r));
     assert_eq!(std::fs::read(dir.join("layered.psd")).unwrap(), psd);
     assert_eq!(json_of(&call(&client, "doc_save", json!({})).await)["path"], "layered.psd");
-    assert!(photocraft_io::is_psd(&std::fs::read(dir.join("layered.psd")).unwrap()));
+    assert!(magicpic_io::is_psd(&std::fs::read(dir.join("layered.psd")).unwrap()));
 
     // Once saved as .pcraft, a flat-born document saves in place there.
     json_of(&call(&client, "doc_select", json!({"index": 0})).await);
@@ -754,16 +754,16 @@ async fn ordered_read_roots_preserve_save_identity_over_mcp() {
     let work = base.join("work");
     for (root, width, background) in [(&library, 11, "white"), (&work, 7, "black")] {
         std::fs::create_dir_all(root).unwrap();
-        let mut fixture = photocraft_automation::Headless::new();
+        let mut fixture = magicpic_automation::Headless::new();
         fixture.command_run("file.new", json!({"width": width, "height": 5, "background": background})).unwrap();
         fixture.command_run("layer.new.layer", json!({"name": "Source marker"})).unwrap();
-        let bytes = photocraft_automation::files::save_bytes(&fixture.session.active().unwrap().doc, "same.pcraft", None, &Default::default()).unwrap().0;
+        let bytes = magicpic_automation::files::save_bytes(&fixture.session.active().unwrap().doc, "same.pcraft", None, &Default::default()).unwrap().0;
         std::fs::write(root.join("same.pcraft"), bytes).unwrap();
     }
     let original_library = std::fs::read(library.join("same.pcraft")).unwrap();
     let original_work = std::fs::read(work.join("same.pcraft")).unwrap();
     let workspace = AuthorizedWorkspace::with_read_roots([library.as_path(), work.as_path()], Some(work.as_path())).unwrap();
-    let client = connect(PhotocraftMcp::headless_with_workspace(workspace)).await;
+    let client = connect(MagicpicMcp::headless_with_workspace(workspace)).await;
 
     assert_eq!(json_of(&call(&client, "doc_open", json!({"path": "same.pcraft"})).await)["width"], 11);
     json_of(&call(&client, "command_run", json!({"id": "layer.new.layer", "params": {"name": "Library edit"}})).await);
@@ -798,8 +798,8 @@ async fn filesystem_policy_rejects_absolute_and_escaping_paths_before_effects() 
     std::fs::create_dir_all(&root).unwrap();
     std::fs::create_dir_all(&outside).unwrap();
 
-    let img = photocraft_codecs::Image::from_u8(4, 3, photocraft_codecs::ChannelLayout::Rgb, vec![42; 36]).unwrap();
-    let bytes = photocraft_codecs::encode(&img, photocraft_codecs::Format::Png, &Default::default()).unwrap();
+    let img = magicpic_codecs::Image::from_u8(4, 3, magicpic_codecs::ChannelLayout::Rgb, vec![42; 36]).unwrap();
+    let bytes = magicpic_codecs::encode(&img, magicpic_codecs::Format::Png, &Default::default()).unwrap();
     std::fs::write(root.join("inside.png"), bytes).unwrap();
     let client = connect(headless_in(&root)).await;
 
@@ -836,8 +836,8 @@ async fn doc_place_is_capability_scoped() {
     let outside = base.join("outside");
     std::fs::create_dir_all(&root).unwrap();
     std::fs::create_dir_all(&outside).unwrap();
-    let img = photocraft_codecs::Image::from_u8(8, 6, photocraft_codecs::ChannelLayout::Rgb, vec![42; 144]).unwrap();
-    let bytes = photocraft_codecs::encode(&img, photocraft_codecs::Format::Png, &Default::default()).unwrap();
+    let img = magicpic_codecs::Image::from_u8(8, 6, magicpic_codecs::ChannelLayout::Rgb, vec![42; 144]).unwrap();
+    let bytes = magicpic_codecs::encode(&img, magicpic_codecs::Format::Png, &Default::default()).unwrap();
     std::fs::write(root.join("inside.png"), &bytes).unwrap();
     std::fs::write(outside.join("outside.png"), bytes).unwrap();
     let client = connect(headless_in(&root)).await;
@@ -875,8 +875,8 @@ async fn doc_replace_smart_object_is_capability_scoped() {
     let outside = base.join("outside");
     std::fs::create_dir_all(&root).unwrap();
     std::fs::create_dir_all(&outside).unwrap();
-    let img = photocraft_codecs::Image::from_u8(8, 6, photocraft_codecs::ChannelLayout::Rgb, vec![42; 144]).unwrap();
-    let bytes = photocraft_codecs::encode(&img, photocraft_codecs::Format::Png, &Default::default()).unwrap();
+    let img = magicpic_codecs::Image::from_u8(8, 6, magicpic_codecs::ChannelLayout::Rgb, vec![42; 144]).unwrap();
+    let bytes = magicpic_codecs::encode(&img, magicpic_codecs::Format::Png, &Default::default()).unwrap();
     std::fs::write(root.join("inside.png"), &bytes).unwrap();
     std::fs::write(outside.join("outside.png"), bytes).unwrap();
     let client = connect(headless_in(&root)).await;
@@ -998,7 +998,7 @@ async fn doc_export_layers_reports_skipped_layers() {
 /// The template workflow stays in memory, including saving nested contents back to the parent.
 #[tokio::test(flavor = "multi_thread")]
 async fn embedded_smart_objects_can_be_edited_saved_and_unpacked_without_file_authority() {
-    let client = connect(PhotocraftMcp::headless()).await;
+    let client = connect(MagicpicMcp::headless()).await;
     let run = async |id: &str, params: Value| json_of(&call(&client, "command_run", json!({"id": id, "params": params})).await);
     json_of(&call(&client, "doc_new", json!({"width": 16, "height": 12, "background": "white"})).await);
     let outer = run("layer.smartObjects.convertToSmartObject", json!({})).await["layer"].clone();
@@ -1032,17 +1032,17 @@ async fn embedded_smart_objects_can_be_edited_saved_and_unpacked_without_file_au
 
 #[tokio::test(flavor = "multi_thread")]
 async fn smart_object_commands_refuse_real_linked_files_without_changing_the_session() {
-    use photocraft_engine::doc::{LayerContent, SmartSource};
+    use magicpic_engine::doc::{LayerContent, SmartSource};
 
     let dir = tmp("linked-smart-object");
-    let original = write_image(&dir, "external.png", photocraft_codecs::Format::Png);
-    let mut session = photocraft_engine::Session::new();
+    let original = write_image(&dir, "external.png", magicpic_codecs::Format::Png);
+    let mut session = magicpic_engine::Session::new();
     session.execute("file.new", json!({"width": 16, "height": 8, "background": "white"})).unwrap();
     let layer = session.execute("layer.smartObjects.convertToSmartObject", json!({})).unwrap()["layer"].clone();
     let state = session.active_mut().unwrap();
     let LayerContent::Smart(smart) = &mut std::sync::Arc::make_mut(&mut state.doc).layers[0].content else { panic!("smart object") };
     smart.source = SmartSource::Linked { path: dir.join("external.png").to_string_lossy().into_owned() };
-    std::fs::write(dir.join("parent.pcraft"), photocraft_engine::smart_cmds::encode_source(&state.doc).unwrap()).unwrap();
+    std::fs::write(dir.join("parent.pcraft"), magicpic_engine::smart_cmds::encode_source(&state.doc).unwrap()).unwrap();
     let client = connect(headless_in(&dir)).await;
     json_of(&call(&client, "doc_open", json!({"path": "parent.pcraft"})).await);
     let before = json_of(&call(&client, "doc_inspect", json!({})).await);
@@ -1069,13 +1069,13 @@ async fn fake_app() -> (String, tokio::task::JoinHandle<Vec<Value>>) {
 /// A fake app on one connection: it authenticates with the real [`ServerHandshake`], then
 /// answers the control methods the bridge tests use, returning the requests it saw.
 ///
-/// [`ServerHandshake`]: photocraft_automation::security::ServerHandshake
+/// [`ServerHandshake`]: magicpic_automation::security::ServerHandshake
 async fn fake_app_with_screenshot(screenshot_png: Option<Vec<u8>>) -> (String, tokio::task::JoinHandle<Vec<Value>>) {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap().to_string();
     let h = tokio::spawn(async move {
         let mut seen = Vec::new();
-        let mut handshake = photocraft_automation::security::ServerHandshake::new();
+        let mut handshake = magicpic_automation::security::ServerHandshake::new();
         let mut authenticated = false;
         let (sock, _) = listener.accept().await.unwrap();
         let (r, mut w) = sock.into_split();
@@ -1087,7 +1087,7 @@ async fn fake_app_with_screenshot(screenshot_png: Option<Vec<u8>>) -> (String, t
             let reply = match method.as_str() {
                 _ if !authenticated => {
                     let (reply, step) = handshake.reply(&line, CONTROL_TOKEN);
-                    authenticated = step == photocraft_automation::security::AuthStep::Authenticated;
+                    authenticated = step == magicpic_automation::security::AuthStep::Authenticated;
                     reply
                 }
                 "ui.inspect" => {
@@ -1103,8 +1103,8 @@ async fn fake_app_with_screenshot(screenshot_png: Option<Vec<u8>>) -> (String, t
                 "ui.pointer" => json!({"id": id, "ok": true, "result": req["params"]}),
                 "ui.screenshot" => {
                     let bytes = screenshot_png.clone().unwrap_or_else(|| {
-                        let img = photocraft_codecs::Image::from_u8(40, 20, photocraft_codecs::ChannelLayout::Rgba, vec![9; 3200]).unwrap();
-                        photocraft_codecs::encode(&img, photocraft_codecs::Format::Png, &Default::default()).unwrap()
+                        let img = magicpic_codecs::Image::from_u8(40, 20, magicpic_codecs::ChannelLayout::Rgba, vec![9; 3200]).unwrap();
+                        magicpic_codecs::encode(&img, magicpic_codecs::Format::Png, &Default::default()).unwrap()
                     });
                     let png = base64::engine::general_purpose::STANDARD.encode(bytes);
                     json!({"id": id, "ok": true, "result": {"mimeType": "image/png", "base64": png}})
@@ -1124,7 +1124,7 @@ async fn fake_app_with_screenshot(screenshot_png: Option<Vec<u8>>) -> (String, t
 #[tokio::test(flavor = "multi_thread")]
 async fn bridge_forwards_to_control_protocol() {
     let (addr, app) = fake_app().await;
-    let client = connect(PhotocraftMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
+    let client = connect(MagicpicMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
 
     let ui = json_of(&call(&client, "ui_inspect", json!({})).await);
     assert_eq!(ui["tool"], "brush");
@@ -1138,7 +1138,7 @@ async fn bridge_forwards_to_control_protocol() {
     let shot = call(&client, "ui_screenshot", json!({"max_side": 20})).await;
     let img = shot.content.iter().find_map(|c| c.as_image()).expect("image");
     let png = base64::engine::general_purpose::STANDARD.decode(&img.data).unwrap();
-    assert_eq!(photocraft_codecs::decode(&png).unwrap().dimensions(), (20, 10));
+    assert_eq!(magicpic_codecs::decode(&png).unwrap().dimensions(), (20, 10));
     let e = call(&client, "control_call", json!({"method": "bogus.method"})).await;
     assert_eq!(e.is_error, Some(true));
     assert!(text(&e).contains("unknown tool"));
@@ -1153,7 +1153,7 @@ async fn bridge_forwards_to_control_protocol() {
 /// authenticates again.
 #[tokio::test(flavor = "multi_thread")]
 async fn bridge_lost_reply_does_not_replay_an_edit_and_next_call_reconnects() {
-    use photocraft_automation::{BridgeClient, Headless};
+    use magicpic_automation::{BridgeClient, Headless};
     use std::time::Duration;
 
     tokio::time::timeout(Duration::from_secs(5), async {
@@ -1202,7 +1202,7 @@ async fn bridge_lost_reply_does_not_replay_an_edit_and_next_call_reconnects() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn bridge_previews_downscale_before_enforcing_the_png_budget() {
-    use photocraft_automation::budgets::MAX_PNG_BYTES;
+    use magicpic_automation::budgets::MAX_PNG_BYTES;
 
     let (width, height) = (1400, 1000);
     let mut pixels = vec![0; width * height * 4];
@@ -1213,12 +1213,12 @@ async fn bridge_previews_downscale_before_enforcing_the_png_budget() {
         state ^= state << 5;
         *pixel = state as u8;
     }
-    let image = photocraft_codecs::Image::from_u8(width as u32, height as u32, photocraft_codecs::ChannelLayout::Rgba, pixels).unwrap();
-    let source_png = photocraft_codecs::encode(&image, photocraft_codecs::Format::Png, &Default::default()).unwrap();
+    let image = magicpic_codecs::Image::from_u8(width as u32, height as u32, magicpic_codecs::ChannelLayout::Rgba, pixels).unwrap();
+    let source_png = magicpic_codecs::encode(&image, magicpic_codecs::Format::Png, &Default::default()).unwrap();
     assert!(source_png.len() > MAX_PNG_BYTES, "fixture must exceed the PNG budget");
 
     let (addr, app) = fake_app_with_screenshot(Some(source_png)).await;
-    let client = connect(PhotocraftMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
+    let client = connect(MagicpicMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
 
     for (tool, args) in [("ui_screenshot", json!({"max_side": 32})), ("doc_render_preview", json!({"max_side": 32}))] {
         let reply = call(&client, tool, args).await;
@@ -1226,7 +1226,7 @@ async fn bridge_previews_downscale_before_enforcing_the_png_budget() {
         let img = reply.content.iter().find_map(|content| content.as_image()).expect("preview image");
         let png = base64::engine::general_purpose::STANDARD.decode(&img.data).unwrap();
         assert!(png.len() <= MAX_PNG_BYTES, "{tool} returned {} bytes", png.len());
-        let decoded = photocraft_codecs::decode(&png).unwrap();
+        let decoded = magicpic_codecs::decode(&png).unwrap();
         assert_eq!(decoded.dimensions(), (32, 22), "{tool}");
     }
 
@@ -1244,7 +1244,7 @@ async fn bridge_previews_downscale_before_enforcing_the_png_budget() {
 #[tokio::test(flavor = "multi_thread")]
 async fn bridge_previews_never_pass_a_window_screenshot_off_as_a_document_index() {
     let (addr, app) = fake_app().await;
-    let client = connect(PhotocraftMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
+    let client = connect(MagicpicMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
     let args = json!({"index": 0, "max_side": 20}).as_object().unwrap().clone();
     let refused = client.call_tool(CallToolRequestParams::new("ui_screenshot").with_arguments(args.clone())).await;
     assert!(refused.is_err_and(|error| error.to_string().contains("index")));
@@ -1259,7 +1259,7 @@ async fn bridge_previews_never_pass_a_window_screenshot_off_as_a_document_index(
         assert_ne!(reply.is_error, Some(true), "{tool}: {}", text(&reply));
         let image = reply.content.iter().find_map(|content| content.as_image()).expect("screenshot");
         let png = base64::engine::general_purpose::STANDARD.decode(&image.data).unwrap();
-        assert_eq!(photocraft_codecs::decode(&png).unwrap().dimensions(), (20, 10), "{tool}");
+        assert_eq!(magicpic_codecs::decode(&png).unwrap().dimensions(), (20, 10), "{tool}");
     }
     let tools = client.list_all_tools().await.unwrap();
     let schema = &tools.iter().find(|tool| tool.name == "ui_screenshot").unwrap().input_schema;
@@ -1282,7 +1282,7 @@ async fn bridge_previews_never_pass_a_window_screenshot_off_as_a_document_index(
 #[tokio::test(flavor = "multi_thread")]
 async fn bridge_replace_smart_object_rejects_a_document_index() {
     let (addr, app) = fake_app().await;
-    let client = connect(PhotocraftMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
+    let client = connect(MagicpicMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
     let refused = call(&client, "doc_replace_smart_object", json!({"path": "new.png", "index": 1})).await;
     assert_eq!(refused.is_error, Some(true), "{}", text(&refused));
     assert!(text(&refused).contains("index"), "{}", text(&refused));
@@ -1298,7 +1298,7 @@ async fn bridge_replace_smart_object_rejects_a_document_index() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn headless_previews_preserve_document_indices() {
-    let client = connect(PhotocraftMcp::headless()).await;
+    let client = connect(MagicpicMcp::headless()).await;
     json_of(&call(&client, "doc_new", json!({"width": 12, "height": 6, "background": "white"})).await);
     json_of(&call(&client, "doc_new", json!({"width": 6, "height": 12, "background": "black"})).await);
     for (args, dimensions, pixel) in [(json!({"index": 0, "max_side": 6}), (6, 3), [255, 255, 255, 255]), (json!({"max_side": 6}), (3, 6), [0, 0, 0, 255])] {
@@ -1306,7 +1306,7 @@ async fn headless_previews_preserve_document_indices() {
         assert_ne!(reply.is_error, Some(true), "{}", text(&reply));
         let image = reply.content.iter().find_map(|content| content.as_image()).expect("preview");
         let png = base64::engine::general_purpose::STANDARD.decode(&image.data).unwrap();
-        let image = photocraft_codecs::decode(&png).unwrap();
+        let image = magicpic_codecs::decode(&png).unwrap();
         assert_eq!(image.dimensions(), dimensions);
         assert!(image.to_rgba8().as_chunks::<4>().0.iter().all(|actual| actual[..] == pixel[..]));
     }
@@ -1319,10 +1319,10 @@ async fn headless_previews_preserve_document_indices() {
 
 #[test]
 fn bridge_rejects_non_loopback() {
-    assert!(PhotocraftMcp::bridge("10.0.0.5:7878", CONTROL_TOKEN).is_err());
-    assert!(PhotocraftMcp::bridge("127.0.0.1:7878", CONTROL_TOKEN).is_ok());
-    assert!(PhotocraftMcp::bridge("localhost:1", CONTROL_TOKEN).is_ok());
-    assert!(PhotocraftMcp::bridge("localhost:1", "short").is_err());
+    assert!(MagicpicMcp::bridge("10.0.0.5:7878", CONTROL_TOKEN).is_err());
+    assert!(MagicpicMcp::bridge("127.0.0.1:7878", CONTROL_TOKEN).is_ok());
+    assert!(MagicpicMcp::bridge("localhost:1", CONTROL_TOKEN).is_ok());
+    assert!(MagicpicMcp::bridge("localhost:1", "short").is_err());
 }
 
 /// A bridge with the wrong token stops at the app's challenge proof, before any control method.
@@ -1330,7 +1330,7 @@ fn bridge_rejects_non_loopback() {
 async fn bridge_rejects_wrong_token_before_control_methods() {
     let (addr, app) = fake_app().await;
     let wrong = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-    let client = connect(PhotocraftMcp::bridge(&addr, wrong).unwrap()).await;
+    let client = connect(MagicpicMcp::bridge(&addr, wrong).unwrap()).await;
     let r = call(&client, "ui_inspect", json!({})).await;
     assert_eq!(r.is_error, Some(true));
     // The app's challenge proof does not match the client's token, so nothing more is sent.
@@ -1341,7 +1341,7 @@ async fn bridge_rejects_wrong_token_before_control_methods() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn bridge_reports_unreachable_app() {
-    let client = connect(PhotocraftMcp::bridge("127.0.0.1:1", CONTROL_TOKEN).unwrap()).await;
+    let client = connect(MagicpicMcp::bridge("127.0.0.1:1", CONTROL_TOKEN).unwrap()).await;
     let r = call(&client, "ui_inspect", json!({})).await;
     assert_eq!(r.is_error, Some(true));
     assert!(text(&r).contains("--control"), "{}", text(&r));
@@ -1350,7 +1350,7 @@ async fn bridge_reports_unreachable_app() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn command_batch_description_exposes_non_atomic_semantics_when_tools_are_listed() {
-    let client = connect(PhotocraftMcp::headless()).await;
+    let client = connect(MagicpicMcp::headless()).await;
     let tools = client.list_all_tools().await.unwrap();
     let tool = tools.iter().find(|tool| tool.name == "command_batch").expect("command_batch tool");
     let description = tool.description.as_deref().expect("command_batch description");
@@ -1362,7 +1362,7 @@ async fn command_batch_description_exposes_non_atomic_semantics_when_tools_are_l
 
 #[tokio::test(flavor = "multi_thread")]
 async fn command_batch_runs_steps_in_order() {
-    let client = connect(PhotocraftMcp::headless()).await;
+    let client = connect(MagicpicMcp::headless()).await;
     json_of(&call(&client, "doc_new", json!({"width": 32, "height": 32})).await);
     let r = json_of(
         &call(
@@ -1386,7 +1386,7 @@ async fn command_batch_runs_steps_in_order() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn command_batch_step_without_waiting_starts_a_background_job() {
-    let client = connect(PhotocraftMcp::headless()).await;
+    let client = connect(MagicpicMcp::headless()).await;
     json_of(&call(&client, "doc_new", json!({"width": 600, "height": 400})).await);
     let blur = json!({"id": "filter.blur.gaussianBlur", "params": {"radius": 40}, "wait": false});
     let r = json_of(
@@ -1417,7 +1417,7 @@ async fn command_batch_step_without_waiting_starts_a_background_job() {
 #[tokio::test(flavor = "multi_thread")]
 async fn bridge_command_batch_forwards_each_steps_wait() {
     let (addr, app) = fake_app().await;
-    let client = connect(PhotocraftMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
+    let client = connect(MagicpicMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
     let steps = json!([{"id": "filter.blur.gaussianBlur", "wait": false}, {"id": "layer.new.layer"}, {"id": "view.zoomIn"}]);
     let r = json_of(&call(&client, "command_batch", json!({"steps": steps})).await);
     assert_eq!(r["completed"], 3, "{r}");
@@ -1435,7 +1435,7 @@ async fn bridge_command_batch_forwards_each_steps_wait() {
 #[tokio::test(flavor = "multi_thread")]
 async fn bridge_ui_pointer_forwards_the_button_and_rejects_unknown_arguments() {
     let (addr, app) = fake_app().await;
-    let client = connect(PhotocraftMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
+    let client = connect(MagicpicMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
     let events = json!([{"kind": "down", "x": 5, "y": 6}, {"kind": "up", "x": 5, "y": 6}]);
     let sent = json_of(&call(&client, "ui_pointer", json!({"events": events, "button": "right", "modifiers": {"command": true}})).await);
     assert_eq!(sent, json!({"events": events, "button": "right", "modifiers": {"command": true}}));
@@ -1457,7 +1457,7 @@ async fn bridge_ui_pointer_forwards_the_button_and_rejects_unknown_arguments() {
 /// #368: agents can open the clipboard as a document of its own.
 #[tokio::test(flavor = "multi_thread")]
 async fn new_from_clipboard_opens_the_copy_as_a_document() {
-    let client = connect(PhotocraftMcp::headless()).await;
+    let client = connect(MagicpicMcp::headless()).await;
     json_of(&call(&client, "doc_new", json!({"width": 40, "height": 30})).await);
     let r = json_of(
         &call(
@@ -1481,8 +1481,8 @@ async fn new_from_clipboard_opens_the_copy_as_a_document() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn command_batch_rejects_too_many_steps() {
-    let client = connect(PhotocraftMcp::headless()).await;
-    let steps: Vec<Value> = (0..=photocraft_automation::security::MAX_BATCH_STEPS).map(|_| json!({"id": "command.list"})).collect();
+    let client = connect(MagicpicMcp::headless()).await;
+    let steps: Vec<Value> = (0..=magicpic_automation::security::MAX_BATCH_STEPS).map(|_| json!({"id": "command.list"})).collect();
     let r = call(&client, "command_batch", json!({"steps": steps})).await;
     assert_eq!(r.is_error, Some(true));
     assert!(text(&r).contains("maximum is 256"), "{}", text(&r));
@@ -1491,7 +1491,7 @@ async fn command_batch_rejects_too_many_steps() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn convention_tools_have_titles_hints_and_strict_schemas() {
-    let client = connect(PhotocraftMcp::headless()).await;
+    let client = connect(MagicpicMcp::headless()).await;
     let tools = client.list_all_tools().await.unwrap();
     assert!(tools.iter().any(|t| t.name == "render_preview"));
     // The existing documented spelling remains listed.
@@ -1544,7 +1544,7 @@ async fn convention_tool_hints_match_what_each_tool_does() {
         ("ui_set", EDITS),
         ("control_call", EDITS),
     ];
-    let client = connect(PhotocraftMcp::headless()).await;
+    let client = connect(MagicpicMcp::headless()).await;
     let tools = client.list_all_tools().await.unwrap();
     assert_eq!(tools.len(), expected.len(), "classify every tool here");
     for tool in tools {
@@ -1562,7 +1562,7 @@ async fn convention_tool_hints_match_what_each_tool_does() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn convention_unknown_arguments_name_the_key_without_side_effects() {
-    let client = connect(PhotocraftMcp::headless()).await;
+    let client = connect(MagicpicMcp::headless()).await;
     for (name, args) in [
         ("doc_new", json!({"widht": 8})),
         ("session_list", json!({"surprise": true})),
@@ -1580,9 +1580,9 @@ async fn convention_unknown_arguments_name_the_key_without_side_effects() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn convention_resources_are_live_json() {
-    let client = connect(PhotocraftMcp::headless()).await;
+    let client = connect(MagicpicMcp::headless()).await;
     let resources = client.list_all_resources().await.unwrap();
-    for uri in ["photocraft://document", "photocraft://commands"] {
+    for uri in ["magicpic://document", "magicpic://commands"] {
         assert!(resources.iter().any(|r| r.uri == uri));
     }
     let read = async |uri: &str| {
@@ -1590,9 +1590,9 @@ async fn convention_resources_are_live_json() {
         let v = serde_json::to_value(r).unwrap();
         serde_json::from_str::<Value>(v["contents"][0]["text"].as_str().unwrap()).unwrap()
     };
-    assert!(read("photocraft://document").await["document"].is_null());
+    assert!(read("magicpic://document").await["document"].is_null());
     json_of(&call(&client, "doc_new", json!({"width":8,"height":6})).await);
-    assert_eq!(read("photocraft://document").await["width"], 8);
+    assert_eq!(read("magicpic://document").await["width"], 8);
     // Edit › Purge › All is enabled while the process-wide effect, mask and stack caches hold
     // anything, and the other tests in this binary fill and purge those caches concurrently, so
     // its `enabled` flag and paired `disabledReason` can flip between the two reads. Validate
@@ -1609,10 +1609,10 @@ async fn convention_resources_are_live_json() {
         }
         v
     };
-    let commands = stable(read("photocraft://commands").await);
+    let commands = stable(read("magicpic://commands").await);
     assert!(commands.as_array().is_some_and(|a| a.len() > 100), "{commands}");
     assert_eq!(commands, stable(json_of(&call(&client, "command_list", json!({})).await)));
-    assert!(client.read_resource(rmcp::model::ReadResourceRequestParams::new("photocraft://missing")).await.is_err());
+    assert!(client.read_resource(rmcp::model::ReadResourceRequestParams::new("magicpic://missing")).await.is_err());
     let preview = call(&client, "render_preview", json!({"max_side":4})).await;
     assert!(preview.content.iter().any(|c| c.as_image().is_some()));
     client.cancel().await.unwrap();

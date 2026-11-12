@@ -39,30 +39,30 @@ Validation of this follow-up: full engine/UI `cargo test` **6,224 passed, 0 fail
 
 ## Main integration and review (2026-10-24)
 
-Current main integrated: `1c3db2e5c` (PhotoCraft 0.15.1). The overlap with Alt+adjustment last-used settings exposed additional target/context issues. Recall now keeps the current mask target, drops hidden colour records for scalar planes and grayscale layer pixels, and falls back to neutral for an incompatible tone space. Saved preferences retain settings without document/layer/channel addresses. Compatible colour-channel settings remain intact. The Levels localization test now derives the built-in label from the current translator, as upstream's Curves test does, while preserving literal custom-name assertions.
+Current main integrated: `1c3db2e5c` (MagicPic 0.15.1). The overlap with Alt+adjustment last-used settings exposed additional target/context issues. Recall now keeps the current mask target, drops hidden colour records for scalar planes and grayscale layer pixels, and falls back to neutral for an incompatible tone space. Saved preferences retain settings without document/layer/channel addresses. Compatible colour-channel settings remain intact. The Levels localization test now derives the built-in label from the current translator, as upstream's Curves test does, while preserving literal custom-name assertions.
 
 Three new regression functions first reproduced the problems and then passed after fixes. They cover 44 recall scenarios across RGB/Gray/CMYK/Lab, Levels/Curves, alpha/mask/Quick Mask and grayscale pixels, compatible/incompatible colour settings, malformed preferences, commit/cancel and preservation of other pixels. This PR now introduces 27 regression functions plus expanded Action metadata checks. Three local review/fix passes completed; the latest found no further actionable bugs within the reviewed scope.
 
-Validation on Linux with `PHOTOCRAFT_FULL_SWEEP=1`:
+Validation on Linux with `MAGICPIC_FULL_SWEEP=1`:
 
 - All engine/UI targets in the workspace sweep passed: **6,420 passed, 0 failed, 38 normally ignored** (engine 2,472; UI 3,948), including doctest builds. The 24 tone-target integration regressions passed separately too.
 - The ignored full-registry adversarial command test passed separately. Strict engine/UI all-target Clippy (`-D warnings`), formatting, layering and wasm passed. `cargo xtask test-corpus --changed` correctly skipped: this PR changes none of the corpus-critical paths relative to the integrated main.
 - Fresh offscreen Action and Alt+shortcut captures were inspected. Recalling a Lab colour dialog's settings on `Saved sky` shows Gamma 2 or the inverted neutral curve, with the expected grayscale preview; the resized Curves controls remain inside the dialog.
 - **The unfiltered workspace run is not fully green on this machine.** Two unchanged GPU tests comparing measured execution time with wall-clock waiting time failed on RTX 3090/Vulkan: `a_refresh_that_submits_several_times_is_one_measurement` and, on a later run, `gpu_time_tracks_execution_not_submission`. The first also failed in three isolated runs; the second passed in the initial run. The exact GPU integration binary passed **89 tests** with only those two timing assertions excluded. GPU code and its lower-layer dependencies match upstream main.
-- The remaining workspace sweep (`cargo test --workspace --exclude photocraft-gpu --no-fail-fast`) completed with **11,353 passed, 1 failed, 91 ignored**. The sole failure is the unchanged IPP test `error_statuses_and_broken_replies_are_errors`: this environment resolves `printer.invalid` and returns HTTP 400, while the test expects an unresolvable host. No printer or GPU code was altered to conceal these failures.
+- The remaining workspace sweep (`cargo test --workspace --exclude magicpic-gpu --no-fail-fast`) completed with **11,353 passed, 1 failed, 91 ignored**. The sole failure is the unchanged IPP test `error_statuses_and_broken_replies_are_errors`: this environment resolves `printer.invalid` and returns HTTP 400, while the test expects an unresolvable host. No printer or GPU code was altered to conceal these failures.
 - `cargo xtask perf --quick` completed five suites (`perf_scenarios`, `bevel_bench`, `camera_raw_bench`, `type_bench`, `bench_filters2`) and failed only in the unchanged `layout_bench` fixture at line 175, which converts already imported Smart Objects a second time. The repository-baseline comparison was skipped because it belongs to a different machine. These results are not a fresh before/after latency comparison; the historical 24 MP measurements below remain explicitly dated.
 
 Logs, failure reproductions, review notes and current captures are retained locally in `plan/merge-main-20261024/` (gitignored). Windows and macOS were not tested locally.
 
 ## Main integration and review (2026-10-26)
 
-Current main integrated: `59cb4c49b` (PhotoCraft 0.16.0 / egui 0.37). The target-resolver conflict now preserves explicit Action targets and captured Smart Filter defaults while adopting upstream Smart Filter mask targeting. The shared scalar discriminator includes filter masks. Black/white pickers read an untouched implicit Reveal All mask without creating or modifying it; its histogram counts the constant white samples without scanning pixels, using the same interval as a stored mask. Existing gray-surface pixel scanning is unchanged. The Levels field interaction now uses egui 0.37's accessible Gamma label.
+Current main integrated: `59cb4c49b` (MagicPic 0.16.0 / egui 0.37). The target-resolver conflict now preserves explicit Action targets and captured Smart Filter defaults while adopting upstream Smart Filter mask targeting. The shared scalar discriminator includes filter masks. Black/white pickers read an untouched implicit Reveal All mask without creating or modifying it; its histogram counts the constant white samples without scanning pixels, using the same interval as a stored mask. Existing gray-surface pixel scanning is unchanged. The Levels field interaction now uses egui 0.37's accessible Gamma label.
 
 Two new regression functions cover 48 filter-mask cases across RGB/Gray/CMYK/Lab, U8/U16/F32, Levels/Curves and stored/implicit masks, plus six explicit-alpha Action precedence cases. They check the actual target name, sampling without document mutation, recorded target persistence, mask-only commit and preservation of source pixels, filter stacks and other planes. The captured Smart Filter reopening matrix now also includes a selected filter mask (36 cases total). The implicit histogram regression matches a stored Reveal All at 32 × 32, 6000 × 4000 and uneven 6001 × 4003 dimensions. This PR now introduces 29 regression functions plus expanded existing checks.
 
 Validation on Linux:
 
-- Full engine/UI `cargo test` with `PHOTOCRAFT_FULL_SWEEP=1`: **6,751 passed, 0 failed, 38 normally ignored**, including doctest builds. Native tests used CI's exact `craft-fonts` revision `b076417b5880bd4154bd22f00695b1d28c6bea83` with `CRAFT_FONTS_REQUIRED=1`. The initial no-font run's egui missing-glyph failures were resolved by that documented CI input; no font files or weakened assertions are included in this PR.
+- Full engine/UI `cargo test` with `MAGICPIC_FULL_SWEEP=1`: **6,751 passed, 0 failed, 38 normally ignored**, including doctest builds. Native tests used CI's exact `craft-fonts` revision `b076417b5880bd4154bd22f00695b1d28c6bea83` with `CRAFT_FONTS_REQUIRED=1`. The initial no-font run's egui missing-glyph failures were resolved by that documented CI input; no font files or weakened assertions are included in this PR.
 - The ignored full-registry adversarial command test passed separately. Strict engine/UI all-target Clippy (`-D warnings`), formatting, layering and wasm passed. `cargo xtask test-corpus --changed` correctly skipped because no corpus-critical paths differ from integrated main.
 - Fresh offscreen Levels/Curves captures for last-used settings on `Saved sky` and explicitly targeted `Sky Filter Mask` were inspected. Names, neutral controls, previews, implicit-white histograms and the egui 0.37 layout agree with the targets. The final scoped integration review found no further actionable bugs.
 - The broader workspace and generic quick-performance attempts above remain dated to 2026-10-24 and were not repeated for this merge. The historical 24 MP comparison below is unchanged; no fresh before/after latency result is claimed for this integration. Windows and macOS were not tested locally.
@@ -71,9 +71,9 @@ Logs, the CI font input, review notes, scripts and current captures are retained
 
 ## Main integration and review (2026-10-27)
 
-Current main integrated: `d42f9da94` (PhotoCraft 0.16.0). Upstream split and relocated the engine commands and UI modules. The existing channel resolver and scalar discriminator now live under `cmd/channel_cmds/`, and the command registry retains the extracted adjustment helpers while using the shared gray-parameter filter. The Actions and adjustment-dialog changes and tests moved into `panels/` and `dialogs/`; normalized comparisons confirm their content matches the previous PR head. Levels imports the shared named-channel picker from its sibling Curves module with parent-only visibility. No intended behavior or imaging algorithm changed.
+Current main integrated: `d42f9da94` (MagicPic 0.16.0). Upstream split and relocated the engine commands and UI modules. The existing channel resolver and scalar discriminator now live under `cmd/channel_cmds/`, and the command registry retains the extracted adjustment helpers while using the shared gray-parameter filter. The Actions and adjustment-dialog changes and tests moved into `panels/` and `dialogs/`; normalized comparisons confirm their content matches the previous PR head. Levels imports the shared named-channel picker from its sibling Curves module with parent-only visibility. No intended behavior or imaging algorithm changed.
 
-Validation on Linux with `PHOTOCRAFT_FULL_SWEEP=1` and CI's pinned craft-fonts input:
+Validation on Linux with `MAGICPIC_FULL_SWEEP=1` and CI's pinned craft-fonts input:
 
 - Full engine/UI `cargo test`: **6,797 passed, 0 failed, 38 normally ignored**, including doctest builds. The first run was interrupted after engine/UI unit tests passed; the completed cached rerun above includes the UI integration suite too.
 - The ignored full-registry adversarial command test passed separately. Strict engine/UI all-target Clippy (`-D warnings`), formatting, layering and wasm passed. `cargo xtask test-corpus --changed` correctly skipped because no corpus-critical paths differ from integrated main.
@@ -84,9 +84,9 @@ Current logs, preservation comparisons, review notes, screenshot scripts and cap
 
 ## Further main integration (2026-10-27)
 
-Current main integrated: `dacecbfea` (PhotoCraft 0.16.0; 220 incoming commits since the previous integration). The sole conflict was adjacent helper insertions in `cmd/channel_cmds/targeting.rs`: our gray-target discriminator and upstream's new spot-channel helpers are both retained unchanged. Automatic merges preserve the explicit-target resolver exports, grayscale adjustment routing and upstream channel/history changes. No intended behavior or imaging algorithm change in the conflict resolution.
+Current main integrated: `dacecbfea` (MagicPic 0.16.0; 220 incoming commits since the previous integration). The sole conflict was adjacent helper insertions in `cmd/channel_cmds/targeting.rs`: our gray-target discriminator and upstream's new spot-channel helpers are both retained unchanged. Automatic merges preserve the explicit-target resolver exports, grayscale adjustment routing and upstream channel/history changes. No intended behavior or imaging algorithm change in the conflict resolution.
 
-Validation on Linux with `PHOTOCRAFT_FULL_SWEEP=1` and CI's pinned craft-fonts input:
+Validation on Linux with `MAGICPIC_FULL_SWEEP=1` and CI's pinned craft-fonts input:
 
 - Full engine/UI `cargo test`: **6,856 passed, 0 failed, 39 normally ignored**, including doctest builds. The ignored full-registry adversarial command test passed separately.
 - Strict engine/UI all-target Clippy (`-D warnings`), formatting, layering and wasm passed. `cargo xtask test-corpus --changed` correctly skipped because no corpus-critical paths differ from integrated main.
@@ -97,9 +97,9 @@ Current evidence is retained in `plan/merge-main-20261027b/` (gitignored).
 
 ## Main integration and review (2026-10-29)
 
-Current main integrated: `69b8fd9c1` (PhotoCraft 0.17.0; 240 incoming commits). Three conflicts were resolved by retaining upstream's extracted dialog-canvas handler, adding the shared named-channel picker to the explicit Levels imports, and retaining both the tone-target and transform-readout integration modules. The existing sampling comment now lives in the extracted handler. Engine target helpers use explicit imports required by main's wildcard-import ban; obsolete imports were removed. No runtime behavior change was introduced by these resolutions.
+Current main integrated: `69b8fd9c1` (MagicPic 0.17.0; 240 incoming commits). Three conflicts were resolved by retaining upstream's extracted dialog-canvas handler, adding the shared named-channel picker to the explicit Levels imports, and retaining both the tone-target and transform-readout integration modules. The existing sampling comment now lives in the extracted handler. Engine target helpers use explicit imports required by main's wildcard-import ban; obsolete imports were removed. No runtime behavior change was introduced by these resolutions.
 
-Validation on Linux with `PHOTOCRAFT_FULL_SWEEP=1` and CI's pinned craft-fonts input:
+Validation on Linux with `MAGICPIC_FULL_SWEEP=1` and CI's pinned craft-fonts input:
 
 - Full engine/UI `cargo test`: **7,001 passed, 0 failed, 39 normally ignored**, including doctest builds. The initial run hit the unchanged font-family UI test's eight-frame settling limit; its isolated run and complete cached rerun passed without changing or skipping the test. Both logs are retained. The ignored full-registry adversarial command test passed separately.
 - Strict engine/UI all-target Clippy (`-D warnings`) passed with main's new cognitive-complexity, argument-count and wildcard-import rules, without suppressions. Formatting, layering and wasm passed. The changed-corpus check correctly skipped because no corpus-critical paths differ from integrated main.
@@ -110,9 +110,9 @@ Current evidence is retained in `plan/merge-main-20261029/` (gitignored).
 
 ## Main integration and review (2026-10-30)
 
-Current main integrated: `b1cfff9d3` (PhotoCraft 0.17.0; 879 incoming commits). Production code merged automatically. The sole conflict was adjacent control-protocol documentation: both the named grayscale Levels/Curves behavior and upstream's Brush Mode menu description are retained. Reviewed Action playback's new recorded-parameter resolution and Smart Object save path alongside our explicit-target dialog normalization; target precedence and private-field sanitization remain intact. No CI workflow differs from main, respecting the new shared-workflow policy.
+Current main integrated: `b1cfff9d3` (MagicPic 0.17.0; 879 incoming commits). Production code merged automatically. The sole conflict was adjacent control-protocol documentation: both the named grayscale Levels/Curves behavior and upstream's Brush Mode menu description are retained. Reviewed Action playback's new recorded-parameter resolution and Smart Object save path alongside our explicit-target dialog normalization; target precedence and private-field sanitization remain intact. No CI workflow differs from main, respecting the new shared-workflow policy.
 
-Validation on Linux with `PHOTOCRAFT_FULL_SWEEP=1` and CI's pinned craft-fonts input:
+Validation on Linux with `MAGICPIC_FULL_SWEEP=1` and CI's pinned craft-fonts input:
 
 - Both full engine/UI `cargo test` runs: **7,403 passed, 1 failed, 43 normally ignored**, including doctest builds. The sole failure is `options_font_family_preserves_peer_faces_and_batches_layer_flags`, unchanged from main: its UI harness allows 8 settling frames, but caret repainting needed 12 and 15 frames. All channel-target regressions passed in both runs.
 - The exact font test passed in isolation. The entire same UI unit-test binary then passed with `--test-threads=1`: **4,460 passed, 0 failed, 21 normally ignored**. All 7,404 non-ignored engine/UI tests therefore passed across these runs, but the parallel full-suite result is not clean. No source or test was changed or skipped to obtain these results. Both failure logs and the serial control are retained.
@@ -124,11 +124,11 @@ Current evidence is retained in `plan/merge-main-20261030/` (gitignored).
 
 ## Main integration and review (2026-11-01)
 
-Current main integrated: `1f984bffb` (PhotoCraft 0.18.0; 225 incoming commits). Resolved conflicts with main's selected-colour-set work by retaining its shared Levels/Curves editor, captured native targets, combined Lab recall and preview routing alongside this PR's explicit scalar target resolution, gray defaults, named controls and native gray sampling. Explicit whole-pixel commands follow main's rule and bypass the selected colour set. Both control-protocol additions are preserved.
+Current main integrated: `1f984bffb` (MagicPic 0.18.0; 225 incoming commits). Resolved conflicts with main's selected-colour-set work by retaining its shared Levels/Curves editor, captured native targets, combined Lab recall and preview routing alongside this PR's explicit scalar target resolution, gray defaults, named controls and native gray sampling. Explicit whole-pixel commands follow main's rule and bypass the selected colour set. Both control-protocol additions are preserved.
 
 Added two regression functions for explicit native-colour-set and whole-pixel addressing beside selected alpha/mask targets: 27 engine metadata cases across RGB/Lab/CMYK and 8/16/32-bit data, plus six dialog initialization/reset cases. The incoming Lab mask-recall regression now requires neutral fields and rejects hidden Lightness records. A new captured-space assertion uses the shared resolver. No CI workflow differs from main.
 
-Validation on Linux with `PHOTOCRAFT_FULL_SWEEP=1` and CI's pinned craft-fonts input:
+Validation on Linux with `MAGICPIC_FULL_SWEEP=1` and CI's pinned craft-fonts input:
 
 - Full engine/UI `cargo test`: **7,672 passed, 0 failed, 43 normally ignored**, including doctest builds. Tests ran with `--test-threads=1` because of the parallel font-test interference recorded on 2026-10-30; no assertions were changed or tests skipped to accommodate that limitation. No current parallel-suite result is claimed.
 - The ignored full-registry adversarial command test passed separately. Strict engine/UI all-target Clippy (`-D warnings`), formatting, layering and wasm passed. The changed-corpus check correctly skipped because no corpus-critical paths differ from integrated main.
@@ -139,9 +139,9 @@ Current evidence is retained in `plan/merge-main-20261031/` (gitignored; work be
 
 ## Main integration and review (2026-11-03)
 
-Current main integrated: `81bd97376` (PhotoCraft 0.20.1; 532 incoming commits). All production code merged automatically. The sole conflict was competing documentation for the command-registry builder; main's comment is retained. Reviewed expanded Action set playback/recording, parameter resolution, adjustment-layer opacity handling and filter-mask layer lookup alongside the existing explicit target normalization. Target precedence, private-field sanitization, captured Smart Filter reopening and all 31 introduced regressions are retained. No CI workflow or contributor entry differs from main.
+Current main integrated: `81bd97376` (MagicPic 0.20.1; 532 incoming commits). All production code merged automatically. The sole conflict was competing documentation for the command-registry builder; main's comment is retained. Reviewed expanded Action set playback/recording, parameter resolution, adjustment-layer opacity handling and filter-mask layer lookup alongside the existing explicit target normalization. Target precedence, private-field sanitization, captured Smart Filter reopening and all 31 introduced regressions are retained. No CI workflow or contributor entry differs from main.
 
-Validation on Linux with `PHOTOCRAFT_FULL_SWEEP=1` and CI's pinned craft-fonts input:
+Validation on Linux with `MAGICPIC_FULL_SWEEP=1` and CI's pinned craft-fonts input:
 
 - Full engine/UI `cargo test`: **8,281 passed, 0 failed, 43 normally ignored**, including doctest builds. Tests used `--test-threads=1`, retaining the serial configuration from previous integrations; no current parallel-suite result is claimed.
 - The ignored full-registry adversarial command test passed separately. Strict engine/UI all-target Clippy (`-D warnings`), formatting, layering and wasm passed. Changed-corpus checking correctly skipped because no corpus-critical paths differ from integrated main.
@@ -156,7 +156,7 @@ The compatibility review after #9274 reproduced recorded `gray` aliases opening 
 
 Six new UI regression functions exercise actual modal Action playback beside a selected `Saved sky` alpha: 108 RGB/CMYK/Lab × U8/U16/F32 preview/commit/undo/redo comparisons, feathered selections, combined-control edits, invalid aliases and pencil maps, explicit-points precedence, cancel, literal target addressing, unchanged Action records and separate Lab recall. Two engine regressions cover every multi-component native subset (including full explicit sets), point/map inputs, native records, high-precision settings and invalid requests. Untargeted components, transparency, masks, other planes and selection coverage remain unchanged.
 
-Validation on Linux with `PHOTOCRAFT_FULL_SWEEP=1` and CI's pinned font input:
+Validation on Linux with `MAGICPIC_FULL_SWEEP=1` and CI's pinned font input:
 
 - Full engine/UI `cargo test`: **8,289 passed, 0 failed, 43 normally ignored**, including doctest builds, with `--test-threads=1`. After the sole test-only Clippy cleanup extracted a raw-parameter builder, both integration suites passed again: **555 passed, 0 failed, 6 normally ignored**. No production code changed after the full run.
 - Strict engine/UI all-target Clippy (`-D warnings`), formatting, layering and wasm passed. The ignored full-registry adversarial command test passed separately. Changed-corpus checking correctly skipped because no corpus-critical paths differ from integrated main.
@@ -176,7 +176,7 @@ Null native Lab records now match omission for combined and single-channel edits
 
 Ten new regression functions cover 72 addressed-mask sampling comparisons and 24 commit/undo cases across RGB/Gray/CMYK/Lab and U8/U16/F32; 108 real raster/filter-mask Action cases with id/name/name-object selectors; unresolved/malformed targets, large indices, layer-independent alpha, repaired targets/continuation tokens, null Lab records and precise recall. Existing tests now compare gamma preview/commit output, assert a known explicit-pixels Action result, use distinct per-component normalization records, and compare all 36 reopened tone Smart Filter previews with identity output. This PR introduces 49 regression functions in total.
 
-Validation on Linux with `PHOTOCRAFT_FULL_SWEEP=1`, CI's pinned font input and `--test-threads=1`:
+Validation on Linux with `MAGICPIC_FULL_SWEEP=1`, CI's pinned font input and `--test-threads=1`:
 
 - Full engine/UI `cargo test`: **8,299 passed, 0 failed, 43 normally ignored**, including doctest builds. The ignored full-registry adversarial command test passed separately.
 - Strict engine/UI all-target Clippy (`-D warnings`), formatting, layering and wasm passed. Changed-corpus checking correctly skipped because no corpus-critical paths differ from integrated main.
@@ -277,7 +277,7 @@ Reproduce:
 
 ```sh
 CARGO_INCREMENTAL=0 CARGO_BUILD_JOBS=2 cargo +1.99.0 run --release \
-  -p photocraft-ui-egui --example tone_targets_bench -- \
+  -p magicpic-ui-egui --example tone_targets_bench -- \
   --reps 9 --out /tmp/tone-targets-bench.json
 ```
 

@@ -3,12 +3,12 @@
 //! pasteboard (outside the image), a guide and a pending crop.
 
 use egui::Context;
-use photocraft_doc::{ColorMode, LayerContent};
-use photocraft_engine::prefs::{self, CanvasColor};
+use magicpic_doc::{ColorMode, LayerContent};
+use magicpic_engine::prefs::{self, CanvasColor};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-use crate::{PhotocraftApp, state::Tool};
+use crate::{MagicpicApp, state::Tool};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CanvasToolMenu {
@@ -330,7 +330,7 @@ fn crop_preset<'a>(menu: &'a CanvasToolMenu, command: &str) -> Option<&'a String
 /// The crop menu's checkmarks, as the options bar shows them: the dropdown's entry (a saved
 /// preset the fields hold, else the mode or ratio, so a size preset checks W x H x Resolution),
 /// the overlay and when it shows.
-fn crop_checked(app: &PhotocraftApp, menu: &CanvasToolMenu, command: &str) -> bool {
+fn crop_checked(app: &MagicpicApp, menu: &CanvasToolMenu, command: &str) -> bool {
     let o = &app.ui.tool_options;
     let user = crate::crop_presets::current_user(app);
     if let Some(k) = command.strip_prefix(CROP_RATIO) {
@@ -345,7 +345,7 @@ fn crop_checked(app: &PhotocraftApp, menu: &CanvasToolMenu, command: &str) -> bo
     command.strip_prefix(CROP_SHOW).is_some_and(|k| k == o.crop_overlay_show.id())
 }
 
-fn crop_enabled(app: &PhotocraftApp, menu: &CanvasToolMenu, command: &str) -> bool {
+fn crop_enabled(app: &MagicpicApp, menu: &CanvasToolMenu, command: &str) -> bool {
     match command {
         CROP_NEW => crate::crop_presets::savable(&app.ui.tool_options).is_some(),
         CROP_DELETE => menu.crop.as_ref().is_some_and(|u| !u.is_empty()),
@@ -355,7 +355,7 @@ fn crop_enabled(app: &PhotocraftApp, menu: &CanvasToolMenu, command: &str) -> bo
 
 /// Right-click with `tool` on a pending crop: the crop menu at screen point `pos`. Only the Crop
 /// tool itself, not one held over it (Space's Hand).
-pub fn open_crop(app: &mut PhotocraftApp, ctx: &Context, tool: Tool, pos: [f32; 2]) -> bool {
+pub fn open_crop(app: &mut MagicpicApp, ctx: &Context, tool: Tool, pos: [f32; 2]) -> bool {
     if tool != Tool::Crop || !crate::crop_ui::pending(app) || !pos.iter().all(|v| v.is_finite()) {
         return false;
     }
@@ -388,7 +388,7 @@ pub fn open_crop(app: &mut PhotocraftApp, ctx: &Context, tool: Tool, pos: [f32; 
 }
 
 /// A crop row: each runs what its options-bar twin runs.
-fn choose_crop(app: &mut PhotocraftApp, menu: &CanvasToolMenu, command: &str) -> Result<(), String> {
+fn choose_crop(app: &mut MagicpicApp, menu: &CanvasToolMenu, command: &str) -> Result<(), String> {
     use crate::crop_overlay::{CropOverlay, OverlayShow};
     use crate::crop_presets::{Choice, apply_choice};
     match command {
@@ -425,7 +425,7 @@ const CANVAS_COLORS: [CanvasColor; 6] =
 
 /// Photoshop's Space+F (⇧Space+F backwards): the next pasteboard colour, round and round. Saved
 /// like a choice in the pasteboard menu (`interface.canvasColor`).
-pub fn cycle_canvas_color(app: &mut PhotocraftApp, backward: bool) -> Result<(), String> {
+pub fn cycle_canvas_color(app: &mut MagicpicApp, backward: bool) -> Result<(), String> {
     let n = CANVAS_COLORS.len();
     let at = CANVAS_COLORS.iter().position(|c| *c == app.session.prefs().interface.canvas_color).unwrap_or(0);
     let next = if backward { (at + n - 1) % n } else { (at + 1) % n };
@@ -487,7 +487,7 @@ macro_rules! selection_menu {
 }
 
 /// Photoshop's selection-tool context menu with an active selection, in its order. Its Generative
-/// Fill row has no PhotoCraft command and is left out. Rows stay visible and grey out exactly like
+/// Fill row has no MagicPic command and is left out. Rows stay visible and grey out exactly like
 /// their menu-bar twins.
 pub const SELECTION_MENU: &[Row] = selection_menu![
     Some(("Distort", "edit.transform.distort")),
@@ -619,7 +619,7 @@ pub const PEN_MENU: &[Row] = &[
 /// Photoshop (#12913): the points of the path being drawn, or nothing when the document has no
 /// path at all. A path that exists but isn't active, and the Path Selection and Direct Selection
 /// menus, keep the table's label.
-pub(crate) fn row_label(app: &PhotocraftApp, menu: &CanvasToolMenu, label: &'static str, command: &str) -> &'static str {
+pub(crate) fn row_label(app: &MagicpicApp, menu: &CanvasToolMenu, label: &'static str, command: &str) -> &'static str {
     if command != "path.transform" || menu.tool != Tool::Pen {
         return label;
     }
@@ -664,7 +664,7 @@ pub const SAMPLER_MENU: &[Row] = &[
 
 /// Does the Color Sampler menu's index still name the sampler it opened on, in the same document?
 /// `true` off a sampler, where there is nothing to go stale.
-fn sampler_current(app: &PhotocraftApp, menu: &CanvasToolMenu) -> bool {
+fn sampler_current(app: &MagicpicApp, menu: &CanvasToolMenu) -> bool {
     let Some(i) = menu.sampler else { return true };
     let now = app.session.active_index().zip(app.session.active().and_then(|d| d.color_samplers.get(i).copied()));
     now.is_some() && now == menu.sampler_at
@@ -690,12 +690,12 @@ pub fn inside_selection(menu: &CanvasToolMenu) -> bool {
 
 /// Content-Aware Move's canvas context menu requires an open document and leaves Bitmap, Duotone
 /// and Multichannel documents on their existing no-menu path (#12194).
-fn cam_allowed(app: &PhotocraftApp) -> bool {
+fn cam_allowed(app: &MagicpicApp) -> bool {
     app.session.active().is_some_and(|s| !matches!(s.doc.mode, ColorMode::Bitmap | ColorMode::Duotone | ColorMode::Multichannel))
 }
 
 /// Is document point `d` on the image and inside the active selection?
-fn selected_at(app: &PhotocraftApp, d: [f64; 2]) -> bool {
+fn selected_at(app: &MagicpicApp, d: [f64; 2]) -> bool {
     d.iter().all(|v| v.is_finite())
         && d[0] >= 0.0
         && d[1] >= 0.0
@@ -709,7 +709,7 @@ fn selected_at(app: &PhotocraftApp, d: [f64; 2]) -> bool {
 /// Does a Red Eye right-click at `doc` open a menu (#12577)? Only where the reference application
 /// was measured: an RGB document whose one layer is a pixel layer, with no selection or the pointer
 /// inside it. Elsewhere it keeps opening nothing.
-fn red_eye_measured(app: &PhotocraftApp, doc: Option<[f64; 2]>) -> bool {
+fn red_eye_measured(app: &MagicpicApp, doc: Option<[f64; 2]>) -> bool {
     app.session.active().is_some_and(|s| {
         s.doc.mode == ColorMode::Rgb
             && matches!(s.doc.layers.as_slice(), [l] if matches!(l.content, LayerContent::Raster(_)) && l.frame.is_none())
@@ -750,7 +750,7 @@ pub fn applies(tool: Tool) -> bool {
 /// document doesn't count, even before `magnetic_lasso_ui::frame` drops it: the control
 /// channel's events run no frame. Nor does an ⌥-drag's freehand segment: that case wasn't
 /// measured, so it keeps the menu it had.
-pub fn magnetic_drawing(app: &PhotocraftApp) -> bool {
+pub fn magnetic_drawing(app: &MagicpicApp) -> bool {
     let m = &app.ui.magnetic;
     m.active() && !m.freehand && app.ui.tool == Tool::MagneticLasso && app.session.active().map(|d| d.doc.id.0) == Some(m.doc)
 }
@@ -807,14 +807,14 @@ pub fn rows(menu: &CanvasToolMenu) -> &'static [Row] {
 }
 
 /// Is `command` one of the open menu's rows, and enabled?
-pub fn available(app: &PhotocraftApp, menu: &CanvasToolMenu, command: &str) -> bool {
+pub fn available(app: &MagicpicApp, menu: &CanvasToolMenu, command: &str) -> bool {
     (rows(menu).iter().flatten().any(|(_, id)| *id == command) || is_spelling(menu, command) || is_crop(menu, command)) && entry_enabled(app, menu, command)
 }
 
 /// Is `command` the transform box's current mode (checked in the transform menu)?
 /// Scale stays Free Transform's mode (only Free Transform is checked). Rotate is its own mode.
 /// Warp is not a box mode (it is its own session), and `for_command` would read it as Free.
-pub(crate) fn mode_checked(app: &PhotocraftApp, menu: &CanvasToolMenu, command: &str) -> bool {
+pub(crate) fn mode_checked(app: &MagicpicApp, menu: &CanvasToolMenu, command: &str) -> bool {
     if menu.crop.is_some() {
         return crop_checked(app, menu, command);
     }
@@ -837,26 +837,26 @@ pub(crate) fn mode_checked(app: &PhotocraftApp, menu: &CanvasToolMenu, command: 
 
 /// The type edit menu's checkmarks: the faux styles at the selection, the layer's orientation and
 /// anti-aliasing.
-fn type_checked(app: &PhotocraftApp, command: &str) -> bool {
-    use photocraft_doc::text::Orientation;
+fn type_checked(app: &MagicpicApp, command: &str) -> bool {
+    use magicpic_doc::text::Orientation;
     let Some(t) = crate::type_tool::target_text(app) else { return false };
     match command {
         FAUX_BOLD | FAUX_ITALIC => crate::type_tool::styles_at(app).is_some_and(|(c, _)| if command == FAUX_BOLD { c.faux_bold } else { c.faux_italic }),
         "type.orientation.horizontal" => t.orientation == Orientation::Horizontal,
         "type.orientation.vertical" => t.orientation == Orientation::Vertical,
-        c => c.strip_prefix("type.antiAlias.") == Some(photocraft_engine::type_extra_cmds::aa_name(t.antialias)),
+        c => c.strip_prefix("type.antiAlias.") == Some(magicpic_engine::type_extra_cmds::aa_name(t.antialias)),
     }
 }
 
 /// Is the Type tool editing text, so that a right-click opens the type edit menu?
-pub fn editing_text(app: &PhotocraftApp, tool: Tool) -> bool {
+pub fn editing_text(app: &MagicpicApp, tool: Tool) -> bool {
     tool.is_type() && app.ui.text_edit.is_some()
 }
 
 /// The committed type layer under document point `doc` when a right-click there with a Type tool
 /// opens the type layer menu (#7324). The Type Mask tools are left out: to them existing type is
 /// just pixels.
-pub fn type_layer_at(app: &mut PhotocraftApp, tool: Tool, doc: [f64; 2]) -> Option<photocraft_doc::LayerId> {
+pub fn type_layer_at(app: &mut MagicpicApp, tool: Tool, doc: [f64; 2]) -> Option<magicpic_doc::LayerId> {
     if !tool.is_type() || tool.is_type_mask() || app.ui.text_edit.is_some() || !doc.iter().all(|v| v.is_finite()) {
         return None;
     }
@@ -867,13 +867,13 @@ pub fn type_layer_at(app: &mut PhotocraftApp, tool: Tool, doc: [f64; 2]) -> Opti
 /// Type, Convert to Shape…) act on and the checks show. Inside a multiselection the selection stays,
 /// so the formatting rows still act on every selected type layer, as the Type menu's do; outside it
 /// the type replaces the selection, as a click with the Type tool does.
-fn target_type_layer(app: &mut PhotocraftApp, id: photocraft_doc::LayerId) -> bool {
+fn target_type_layer(app: &mut MagicpicApp, id: magicpic_doc::LayerId) -> bool {
     let Some(st) = app.session.active() else { return false };
     let selected = st.selected_layers();
     if st.active_layer == Some(id) {
         true
     } else if selected.contains(&id) {
-        photocraft_engine::layer_multi_cmds::set_selection(&mut app.session, selected, Some(id), Some(id)).is_ok()
+        magicpic_engine::layer_multi_cmds::set_selection(&mut app.session, selected, Some(id), Some(id)).is_ok()
     } else {
         app.session.select_layer(id).is_ok()
     }
@@ -883,22 +883,22 @@ fn target_type_layer(app: &mut PhotocraftApp, id: photocraft_doc::LayerId) -> bo
 /// layers, so they are offered exactly when that command takes them (#12043 review): at least
 /// one selected type layer, and none of them under Lock All - `check_text_unlocked`'s one
 /// rejection. A position lock styles fine, as the command does.
-fn faux_rows_enabled(app: &PhotocraftApp) -> bool {
+fn faux_rows_enabled(app: &MagicpicApp) -> bool {
     let Some(st) = app.session.active() else { return false };
-    let targets: Vec<photocraft_doc::LayerId> =
+    let targets: Vec<magicpic_doc::LayerId> =
         st.selected_layers().into_iter().filter(|id| st.doc.layer(*id).is_some_and(|l| matches!(l.content, LayerContent::Text(_)))).collect();
     !targets.is_empty() && targets.iter().all(|id| !st.doc.effective_locks(*id).all)
 }
 
 /// The text shape of the menu's target layer, which is active after [`target_type_layer`]:
 /// point or paragraph text get their single Convert row, anything else the pair (#12043).
-fn active_type_shape(app: &PhotocraftApp) -> TypeShape {
+fn active_type_shape(app: &MagicpicApp) -> TypeShape {
     let Some(st) = app.session.active() else { return TypeShape::Other };
     match st.active_layer.and_then(|id| st.doc.layer(id)) {
         Some(l) => match &l.content {
             LayerContent::Text(t) => match t.shape {
-                photocraft_doc::text::TextShape::Point => TypeShape::Point,
-                photocraft_doc::text::TextShape::Box { .. } => TypeShape::Paragraph,
+                magicpic_doc::text::TextShape::Point => TypeShape::Point,
+                magicpic_doc::text::TextShape::Box { .. } => TypeShape::Paragraph,
                 _ => TypeShape::Other,
             },
             _ => TypeShape::Other,
@@ -908,12 +908,12 @@ fn active_type_shape(app: &PhotocraftApp) -> TypeShape {
 }
 
 /// The misspelled word of the edited text under document point `doc`, with its suggestions.
-fn spelling_at(app: &mut PhotocraftApp, doc: [f64; 2]) -> Option<Spelling> {
+fn spelling_at(app: &mut MagicpicApp, doc: [f64; 2]) -> Option<Spelling> {
     let layer = app.ui.text_edit.as_ref()?.layer;
     if !doc.iter().all(|v| v.is_finite()) {
         return None;
     }
-    let at = crate::type_tool::offset_at(app, photocraft_doc::LayerId(layer), doc[0], doc[1]);
+    let at = crate::type_tool::offset_at(app, magicpic_doc::LayerId(layer), doc[0], doc[1]);
     let found = app.session.execute("edit.checkSpelling", json!({"action": "list", "layer": layer, "suggestions": MAX_SUGGESTIONS})).ok()?;
     let hit = found["misspellings"].as_array()?.iter().find(|m| {
         let (a, b) = (m["start"].as_u64().unwrap_or(u64::MAX) as usize, m["end"].as_u64().unwrap_or(0) as usize);
@@ -951,7 +951,7 @@ pub fn spelling_label_is_ui(id: &str) -> bool {
 }
 
 /// Right-click over a Free Transform box: its modes.
-pub fn open_transform(app: &mut PhotocraftApp, ctx: &Context, pos: [f32; 2]) -> bool {
+pub fn open_transform(app: &mut MagicpicApp, ctx: &Context, pos: [f32; 2]) -> bool {
     if !pos.iter().all(|v| v.is_finite()) {
         return false;
     }
@@ -990,7 +990,7 @@ fn pasteboard_choice(command: &str) -> Option<CanvasColor> {
 
 /// The engine command (and params) a pasteboard row runs, for the automation policy: every row
 /// changes a preference.
-pub fn engine_call(app: &PhotocraftApp, menu: &CanvasToolMenu, command: &str) -> (String, Value) {
+pub fn engine_call(app: &MagicpicApp, menu: &CanvasToolMenu, command: &str) -> (String, Value) {
     if menu.crop.is_some() && command == CROP_COMMIT {
         return ("image.crop".into(), json!({}));
     }
@@ -1030,7 +1030,7 @@ fn spelling_call(menu: &CanvasToolMenu, command: &str) -> (String, Value) {
 /// Does a right-click with `tool` at document point `doc` open the pasteboard menu? Outside the
 /// image, for the tools whose right-click has no job there: not the painting tools (their Brush
 /// Preset picker or right-button erase), the Pen (its path menu) or text being edited.
-pub fn pasteboard_at(app: &PhotocraftApp, tool: Tool, doc: [f64; 2]) -> bool {
+pub fn pasteboard_at(app: &MagicpicApp, tool: Tool, doc: [f64; 2]) -> bool {
     let Some(st) = app.session.active() else { return false };
     let (w, h) = (f64::from(st.doc.size.width), f64::from(st.doc.size.height));
     let outside = doc.iter().all(|v| v.is_finite()) && (doc[0] < 0.0 || doc[1] < 0.0 || doc[0] >= w || doc[1] >= h);
@@ -1038,7 +1038,7 @@ pub fn pasteboard_at(app: &PhotocraftApp, tool: Tool, doc: [f64; 2]) -> bool {
 }
 
 /// Right-click on the pasteboard: its colour menu at screen point `pos`.
-pub fn open_pasteboard(app: &mut PhotocraftApp, ctx: &Context, tool: Tool, pos: [f32; 2]) -> bool {
+pub fn open_pasteboard(app: &mut MagicpicApp, ctx: &Context, tool: Tool, pos: [f32; 2]) -> bool {
     if !pos.iter().all(|v| v.is_finite()) {
         return false;
     }
@@ -1072,7 +1072,7 @@ pub fn open_pasteboard(app: &mut PhotocraftApp, ctx: &Context, tool: Tool, pos: 
 /// Right-click at document point `doc` on a guide that `tool` could drag (the Move tool, or ⌘ with
 /// a tool on which ⌘ moves guides, `canvas::command_guide_at`): select the guide and open the guide
 /// menu at screen point `pos`.
-pub fn open_guide(app: &mut PhotocraftApp, ctx: &Context, tool: Tool, mods: egui::Modifiers, pos: [f32; 2], doc: [f64; 2]) -> bool {
+pub fn open_guide(app: &mut MagicpicApp, ctx: &Context, tool: Tool, mods: egui::Modifiers, pos: [f32; 2], doc: [f64; 2]) -> bool {
     if !pos.iter().all(|v| v.is_finite()) || !doc.iter().all(|v| v.is_finite()) {
         return false;
     }
@@ -1107,12 +1107,12 @@ pub fn open_guide(app: &mut PhotocraftApp, ctx: &Context, tool: Tool, mods: egui
 }
 
 /// A guide row: every row is a View › Guides command, the two Selected Guides ones included.
-fn choose_guide(app: &mut PhotocraftApp, ctx: &Context, command: &str) -> Result<(), String> {
+fn choose_guide(app: &mut MagicpicApp, ctx: &Context, command: &str) -> Result<(), String> {
     crate::menus::invoke(app, ctx, command, json!({})).map(|_| ())
 }
 
 /// A pasteboard row: set the colour, or open the Color Picker on the custom one.
-fn choose_pasteboard(app: &mut PhotocraftApp, menu: &CanvasToolMenu, command: &str) -> Result<(), String> {
+fn choose_pasteboard(app: &mut MagicpicApp, menu: &CanvasToolMenu, command: &str) -> Result<(), String> {
     if command == PASTEBOARD_PICK {
         let rgb = prefs::parse_hex(&app.session.prefs().interface.canvas_custom_color).map_or([0.5; 3], |c| c.map(|v| f32::from(v) / 255.0));
         crate::color_picker_ui::open_for_target(app, "pasteboard", "Color Picker (Custom Canvas Color)", rgb);
@@ -1122,7 +1122,7 @@ fn choose_pasteboard(app: &mut PhotocraftApp, menu: &CanvasToolMenu, command: &s
     app.run(&command, params).map(|_| ())
 }
 
-pub fn entry_enabled(app: &PhotocraftApp, menu: &CanvasToolMenu, command: &str) -> bool {
+pub fn entry_enabled(app: &MagicpicApp, menu: &CanvasToolMenu, command: &str) -> bool {
     if menu.crop.is_some() {
         return crop_enabled(app, menu, command);
     }
@@ -1209,14 +1209,14 @@ pub fn entry_enabled(app: &PhotocraftApp, menu: &CanvasToolMenu, command: &str) 
     }
 }
 
-pub fn open(app: &mut PhotocraftApp, ctx: &Context, tool: Tool, pos: [f32; 2]) -> bool {
+pub fn open(app: &mut MagicpicApp, ctx: &Context, tool: Tool, pos: [f32; 2]) -> bool {
     open_at(app, ctx, tool, pos, None)
 }
 
 /// [`open`] for a right-click at document point `doc`: over a misspelled word of the text being
 /// edited, the menu starts with its spelling suggestions; over committed type with a Type tool, the
 /// type layer menu.
-pub fn open_at(app: &mut PhotocraftApp, ctx: &Context, tool: Tool, pos: [f32; 2], doc: Option<[f64; 2]>) -> bool {
+pub fn open_at(app: &mut MagicpicApp, ctx: &Context, tool: Tool, pos: [f32; 2], doc: Option<[f64; 2]>) -> bool {
     let text = editing_text(app, tool);
     if !pos.iter().all(|v| v.is_finite()) {
         return false;
@@ -1283,7 +1283,7 @@ pub fn open_at(app: &mut PhotocraftApp, ctx: &Context, tool: Tool, pos: [f32; 2]
 /// Right-click with the Zoom or Hand tool at screen point `pos`, over document point `doc`: the
 /// view menu. With the Hand held by Space over another tool, it closes when that tool changes
 /// (#11271).
-pub fn open_view(app: &mut PhotocraftApp, ctx: &Context, tool: Tool, pos: [f32; 2], doc: [f64; 2]) -> bool {
+pub fn open_view(app: &mut MagicpicApp, ctx: &Context, tool: Tool, pos: [f32; 2], doc: [f64; 2]) -> bool {
     if !is_view_tool(tool) || !pos.iter().all(|v| v.is_finite()) || !doc.iter().all(|v| v.is_finite()) {
         return false;
     }
@@ -1316,7 +1316,7 @@ pub fn open_view(app: &mut PhotocraftApp, ctx: &Context, tool: Tool, pos: [f32; 
 
 /// A view menu row. The non-temporary Zoom tool's steps keep the view centre unless clicked-point
 /// centring is enabled. Other view-tool cases retain their pressed-point anchoring.
-fn choose_view(app: &mut PhotocraftApp, ctx: &Context, menu: &CanvasToolMenu, command: &str) -> Result<(), String> {
+fn choose_view(app: &mut MagicpicApp, ctx: &Context, menu: &CanvasToolMenu, command: &str) -> Result<(), String> {
     let i = app.session.active_index().ok_or("no document")?;
     if command == FILL_SCREEN {
         let v = app.ui.views.get_mut(i).ok_or("no document view")?;
@@ -1346,7 +1346,7 @@ fn choose_view(app: &mut PhotocraftApp, ctx: &Context, menu: &CanvasToolMenu, co
     Ok(())
 }
 
-pub fn choose(app: &mut PhotocraftApp, ctx: &Context, command: &str) {
+pub fn choose(app: &mut MagicpicApp, ctx: &Context, command: &str) {
     let Some(menu) = app.ui.canvas_tool_menu.take() else { return };
     if !available(app, &menu, command) {
         return;
@@ -1386,7 +1386,7 @@ pub fn choose(app: &mut PhotocraftApp, ctx: &Context, command: &str) {
 /// An Eyedropper row (#11747): a size sets the Sample Size (shared with the options bar); a Copy
 /// Color row puts the colour read at the right-click on the clipboard, as the Color panel's menu
 /// does. Neither touches the foreground colour or the history.
-fn choose_eyedropper(app: &mut PhotocraftApp, ctx: &Context, menu: &CanvasToolMenu, command: &str) -> Result<(), String> {
+fn choose_eyedropper(app: &mut MagicpicApp, ctx: &Context, menu: &CanvasToolMenu, command: &str) -> Result<(), String> {
     if let Some(size) = eyedropper_size(command) {
         app.ui.tool_options.eyedropper_size = size;
         return Ok(());
@@ -1399,7 +1399,7 @@ fn choose_eyedropper(app: &mut PhotocraftApp, ctx: &Context, menu: &CanvasToolMe
 
 /// A spelling row: replace the word under the pointer (the caret lands after the replacement), or
 /// add it to the user dictionary.
-fn choose_spelling(app: &mut PhotocraftApp, menu: &CanvasToolMenu, command: &str) -> Result<(), String> {
+fn choose_spelling(app: &mut MagicpicApp, menu: &CanvasToolMenu, command: &str) -> Result<(), String> {
     let (id, params) = engine_call(app, menu, command);
     let result = app.run(&id, params)?;
     if let Some(end) = result["end"].as_u64().map(|e| e as usize)
@@ -1412,7 +1412,7 @@ fn choose_spelling(app: &mut PhotocraftApp, menu: &CanvasToolMenu, command: &str
 
 /// A type edit row. Undo, Cut, Copy, Paste and Select All run as their Edit and Select menu items,
 /// which act on the text while it is being edited (Paste asks the window for the clipboard text).
-fn choose_type(app: &mut PhotocraftApp, ctx: &Context, command: &str) -> Result<(), String> {
+fn choose_type(app: &mut MagicpicApp, ctx: &Context, command: &str) -> Result<(), String> {
     match command {
         FAUX_BOLD | FAUX_ITALIC => {
             let bold = command == FAUX_BOLD;
@@ -1435,7 +1435,7 @@ fn choose_type(app: &mut PhotocraftApp, ctx: &Context, command: &str) -> Result<
 }
 
 /// A parameter dialog for `command` following `spec` (registry notation), prefilled with `fields`.
-fn spec_dialog(app: &mut PhotocraftApp, command: &str, label: &str, spec: &str, mut fields: serde_json::Map<String, serde_json::Value>) {
+fn spec_dialog(app: &mut MagicpicApp, command: &str, label: &str, spec: &str, mut fields: serde_json::Map<String, serde_json::Value>) {
     fields.insert("__command".into(), json!(command));
     fields.insert("__label".into(), json!(label));
     fields.insert("__filter".into(), json!(true));
@@ -1454,7 +1454,7 @@ const STROKE_PATH_REMEMBERED: &str = "path.stroke";
 /// The choice the next Stroke Path dialog opens with: what the last OK applied, else off. Saved data
 /// is never trusted — anything but an object holding a real bool (a hand-edited preferences file,
 /// an agent that wrote something else) falls back to Photoshop's default, off.
-fn remembered_simulate_pressure(app: &PhotocraftApp) -> bool {
+fn remembered_simulate_pressure(app: &MagicpicApp) -> bool {
     app.session
         .prefs()
         .dialogs
@@ -1469,17 +1469,17 @@ fn remembered_simulate_pressure(app: &PhotocraftApp) -> bool {
 /// next time (#10527). Cancel never reaches here, so cancelling changes nothing, and a stroke run
 /// without the dialog (the Paths panel's Stroke button) writes nothing either. A stroke whose params
 /// said nothing about pressure applied the engine's default, off.
-pub(crate) fn remember_simulate_pressure(app: &mut PhotocraftApp, params: &Value) {
+pub(crate) fn remember_simulate_pressure(app: &mut MagicpicApp, params: &Value) {
     let on = params.get("simulatePressure").and_then(Value::as_bool).unwrap_or(false);
     app.session.prefs.edit(|p| p.dialogs.insert(STROKE_PATH_REMEMBERED.into(), json!({ "simulatePressure": on })));
 }
 
 /// The Stroke Path dialog for the path `name` (Paths panel menu, Alt-click on its Stroke button).
-pub(crate) fn stroke_path_dialog(app: &mut PhotocraftApp, name: &str) {
+pub(crate) fn stroke_path_dialog(app: &mut MagicpicApp, name: &str) {
     pen_dialog(app, "path.stroke", "Stroke Path…", name);
 }
 
-fn pen_dialog(app: &mut PhotocraftApp, command: &str, label: &str, name: &str) {
+fn pen_dialog(app: &mut MagicpicApp, command: &str, label: &str, name: &str) {
     let spec = match command {
         "edit.defineCustomShape" => r##"{"name":text}"##,
         "path.toSelection" => r##"{"feather":0..250=0,"antiAlias":bool=true,"mode":"replace|add|subtract|intersect"="replace"}"##,
@@ -1535,7 +1535,7 @@ pub(crate) fn owns_make_selection(fields: &serde_json::Map<String, Value>) -> bo
 
 /// Photoshop's Make Selection dialog: Rendering (Feather Radius, Anti-aliased) and Operation.
 /// Without a selection there is nothing to combine with, so only New Selection is available.
-pub(crate) fn make_selection_body(app: &PhotocraftApp, ui: &mut egui::Ui, f: &mut serde_json::Map<String, Value>) {
+pub(crate) fn make_selection_body(app: &MagicpicApp, ui: &mut egui::Ui, f: &mut serde_json::Map<String, Value>) {
     let has_selection = app.session.active().is_some_and(|st| st.doc.selection.is_some());
     ui.spacing_mut().item_spacing.y = 6.0;
     crate::widgets::section_label(ui, tl!("Rendering"));
@@ -1568,7 +1568,7 @@ pub(crate) fn make_selection_body(app: &PhotocraftApp, ui: &mut egui::Ui, f: &mu
 /// OK in the Make Selection dialog: a new selection is the History step Selection Change, as in
 /// Photoshop (#12917). ⌘↩, the Paths panel and the combining operations keep the engine's Make
 /// Selection (not measured). Only a step this run added is renamed: `revision` is from before it.
-pub(crate) fn name_make_selection_step(app: &mut PhotocraftApp, fields: &serde_json::Map<String, Value>, params: &Value, revision: Option<u64>) {
+pub(crate) fn name_make_selection_step(app: &mut MagicpicApp, fields: &serde_json::Map<String, Value>, params: &Value, revision: Option<u64>) {
     if !owns_make_selection(fields) || params.get("mode").and_then(Value::as_str).is_some_and(|m| m != "replace") {
         return;
     }
@@ -1579,7 +1579,7 @@ pub(crate) fn name_make_selection_step(app: &mut PhotocraftApp, fields: &serde_j
 
 /// The Pen options bar's Make Selection (Path mode, #5703): the canvas menu's Make Selection…
 /// dialog for the path being drawn (committed first, as the menu does) or the active path.
-pub(crate) fn make_selection(app: &mut PhotocraftApp) -> Result<(), String> {
+pub(crate) fn make_selection(app: &mut MagicpicApp) -> Result<(), String> {
     let pending = app.ui.pen.as_ref().is_some_and(|p| p.knots.len() >= 2);
     // Where `pen_commit` puts the path being drawn: a shape layer or the targeted vector mask,
     // else the Paths panel path it adds to (a selected saved path, or the Work Path), which it
@@ -1594,7 +1594,7 @@ pub(crate) fn make_selection(app: &mut PhotocraftApp) -> Result<(), String> {
     Ok(())
 }
 
-fn choose_pen(app: &mut PhotocraftApp, ctx: &Context, menu: &CanvasToolMenu, command: &str) -> Result<(), String> {
+fn choose_pen(app: &mut MagicpicApp, ctx: &Context, menu: &CanvasToolMenu, command: &str) -> Result<(), String> {
     if command == "select.isolateLayers" {
         crate::menus::invoke(app, ctx, command, json!({}))?;
         return Ok(());
@@ -1626,7 +1626,7 @@ fn menu_id() -> egui::Id {
     egui::Id::unique("canvas-selection-menu")
 }
 
-pub fn show(app: &mut PhotocraftApp, ctx: &Context) {
+pub fn show(app: &mut MagicpicApp, ctx: &Context) {
     let Some(mut menu) = app.ui.canvas_tool_menu.clone() else { return };
     if ctx.input(|i| i.key_pressed(egui::Key::Escape))
         || app.ui.tool != menu.under.unwrap_or(menu.tool)
@@ -1731,7 +1731,7 @@ pub fn show(app: &mut PhotocraftApp, ctx: &Context) {
 
 /// Returns the menu rect if the canvas tool menu is currently open, for hit-testing
 /// outside-click dismissal in the click handler.
-pub fn menu_rect_if_open(app: &PhotocraftApp, ctx: &Context) -> Option<egui::Rect> {
+pub fn menu_rect_if_open(app: &MagicpicApp, ctx: &Context) -> Option<egui::Rect> {
     let menu = app.ui.canvas_tool_menu.as_ref()?;
     let id = menu_id();
     let screen = ctx.content_rect();

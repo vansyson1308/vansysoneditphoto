@@ -1,10 +1,10 @@
 //! #7366: a background Remove on a Red-only target keeps G/B/alpha intact when a Type click
 //! selects another layer while the job is pending.
 
-use photocraft_doc::LayerId;
-use photocraft_engine::Session;
-use photocraft_engine::jobs::Started;
-use photocraft_ui_egui::{PhotocraftApp, Services, control, type_tool};
+use magicpic_doc::LayerId;
+use magicpic_engine::Session;
+use magicpic_engine::jobs::Started;
+use magicpic_ui_egui::{MagicpicApp, Services, control, type_tool};
 
 const REMOVE: &str = r#"{"points":[[12,10],[16,12]],"size":6}"#;
 
@@ -25,7 +25,7 @@ enum Input {
 }
 
 fn probe(input: Input) {
-    let mut a = PhotocraftApp::new(Session::new(), Services::default());
+    let mut a = MagicpicApp::new(Session::new(), Services::default());
     run(&mut a.session, "file.new", r#"{"name":"A","width":32,"height":24,"background":"transparent"}"#);
     run(&mut a.session, "type.create", r#"{"text":"X","x":2,"y":18,"size":14}"#);
     let text = a.session.active().unwrap().active_layer.unwrap();

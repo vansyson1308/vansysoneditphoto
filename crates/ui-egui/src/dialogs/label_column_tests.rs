@@ -4,17 +4,17 @@
 
 use serde_json::{Map, Value, json};
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::state::Tool;
 
 /// The widest these dialogs are laid out (`default_max_width` in dialogs.rs).
 const ROOM_W: f32 = 440.0;
 
-type Body = fn(&PhotocraftApp, &mut egui::Ui, &mut Map<String, Value>);
+type Body = fn(&MagicpicApp, &mut egui::Ui, &mut Map<String, Value>);
 
 /// An app with a small document and a saved selection, so every dialog in [`cases`] can open.
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app() -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 64, "height": 48, "background": "white"})).unwrap();
     app.run("select.rect", json!({"x": 2, "y": 2, "width": 8, "height": 8})).unwrap();
     app.run("select.saveSelection", json!({})).unwrap();
@@ -22,12 +22,12 @@ fn app() -> PhotocraftApp {
 }
 
 /// The fields of the dialog `id` that an `open` just returned.
-fn dialog_fields(app: &mut PhotocraftApp, id: Option<u64>) -> Map<String, Value> {
+fn dialog_fields(app: &mut MagicpicApp, id: Option<u64>) -> Map<String, Value> {
     app.ui.dialog_mut(id.unwrap()).unwrap().fields.clone()
 }
 
 /// Each dialog body with the fields it opens with, and the variants that show other labels.
-fn cases(app: &mut PhotocraftApp) -> Vec<(String, Map<String, Value>, Body)> {
+fn cases(app: &mut MagicpicApp) -> Vec<(String, Map<String, Value>, Body)> {
     let mut cases: Vec<(String, Map<String, Value>, Body)> = Vec::new();
     for tool in [Tool::Rectangle, Tool::Polygon] {
         let id = crate::shape_dialog::open(app, tool, [10.0, 20.0]);

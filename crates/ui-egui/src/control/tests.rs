@@ -1,6 +1,6 @@
 use super::*;
 
-fn call(app: &mut PhotocraftApp, ctx: &egui::Context, method: &str, params: Value) -> Value {
+fn call(app: &mut MagicpicApp, ctx: &egui::Context, method: &str, params: Value) -> Value {
     let (req, _rx) = ControlRequest::new(method, params);
     match handle(app, ctx, &req) {
         Outcome::Done(v) => v,
@@ -12,7 +12,7 @@ fn call(app: &mut PhotocraftApp, ctx: &egui::Context, method: &str, params: Valu
 /// method listed for those hints is served.
 #[test]
 fn unknown_names_suggest_the_right_method_or_command() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     let mut error = |method: &str, params: Value| {
         let reply = call(&mut app, &ctx, method, params);
@@ -39,7 +39,7 @@ fn unknown_names_suggest_the_right_method_or_command() {
 
 #[test]
 fn shift_right_brush_does_not_open_presets_or_paint() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 64, "height": 64})).unwrap();
     app.ui.tool = crate::state::Tool::Brush;
     let ctx = egui::Context::default();
@@ -70,7 +70,7 @@ fn brush_mode_control_routes_modifiers_and_reports_choices_without_history() {
         ("eraser", json!({"shift": true}), "mode"),
         ("spotHealing", json!({"shift": true}), "preset"),
     ] {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
         app.run("file.new", json!({"width": 64, "height": 64, "background": "white"})).unwrap();
         app.run("prefs.set", json!({"path": "tools.rightClickWithPaintingTools", "value": "erase"})).unwrap();
         let history = app.session.active().unwrap().history.past_len();
@@ -113,7 +113,7 @@ fn brush_mode_control_routes_modifiers_and_reports_choices_without_history() {
 
 #[test]
 fn ui_set_turns_the_stroke_trace_on_and_off_at_runtime() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     assert!(!app.stroke_trace.enabled());
     assert_eq!(call(&mut app, &ctx, "ui.set", json!({"strokeTrace": true}))["ok"], true);
@@ -124,7 +124,7 @@ fn ui_set_turns_the_stroke_trace_on_and_off_at_runtime() {
     assert_eq!(bad["ok"], false);
     // A file path isn't accepted over the channel (it would write outside the automation
     // write root); nothing is created.
-    let path = std::env::temp_dir().join(format!("photocraft-trace-{}.csv", std::process::id()));
+    let path = std::env::temp_dir().join(format!("magicpic-trace-{}.csv", std::process::id()));
     let bad = call(&mut app, &ctx, "ui.set", json!({"strokeTrace": path.to_str().unwrap(), "tool": "Pencil"}));
     assert_eq!(bad["ok"], false);
     assert!(!path.exists());
@@ -133,7 +133,7 @@ fn ui_set_turns_the_stroke_trace_on_and_off_at_runtime() {
 
 #[test]
 fn perf_output_includes_slow_frames() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     assert_eq!(call(&mut app, &ctx, "ui.inspect", json!({}))["result"]["perf"]["slowFrames"], json!([]));
     app.slow_frames.set_threshold_ms(0.0);
@@ -147,7 +147,7 @@ fn perf_output_includes_slow_frames() {
     }
     // A nested run (`actions.play` → its view steps through `App::run`) is inside the outer
     // call's time: the frame counts the outer command once, not the steps again.
-    app.session.actions.list.push(photocraft_engine::actions_cmds::Action {
+    app.session.actions.list.push(magicpic_engine::actions_cmds::Action {
         name: "Zoom".into(),
         steps: vec![("view.zoomIn".into(), json!({})), ("view.zoomOut".into(), json!({}))],
         disabled: Default::default(),
@@ -166,7 +166,7 @@ fn perf_output_includes_slow_frames() {
 
 #[test]
 fn camera_raw_control_updates_and_commits_or_cancels_an_open_raw() {
-    use photocraft_raw::testgen::{DngSpec, mosaic, scene};
+    use magicpic_raw::testgen::{DngSpec, mosaic, scene};
     let (w, h) = (48, 32);
     let mut spec = DngSpec::cfa(w, h, mosaic(&scene(w, h), w, [0, 1, 1, 2], 0, 30000));
     spec.as_shot_neutral = Some([0.5, 1.0, 0.7]);
@@ -174,13 +174,13 @@ fn camera_raw_control_updates_and_commits_or_cancels_an_open_raw() {
     for finish in ["commit", "cancel"] {
         let services = crate::Services {
             import: Some(Box::new(|name, bytes, opts| {
-                photocraft_io::import_with_options(name, bytes, opts).map(|r| (r.document, r.warnings)).map_err(|e| e.to_string())
+                magicpic_io::import_with_options(name, bytes, opts).map(|r| (r.document, r.warnings)).map_err(|e| e.to_string())
             })),
             ..Default::default()
         };
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+        let mut app = MagicpicApp::new(magicpic_engine::Session::new(), services);
         let ctx = egui::Context::default();
-        PhotocraftApp::setup_context(&ctx, Default::default());
+        MagicpicApp::setup_context(&ctx, Default::default());
         app.open_bytes("control.dng", &dng).unwrap();
         ctx.run_ui(Default::default(), |ui| crate::camera_raw_ui::show(&mut app, ui.ctx())).textures_delta.clear();
         assert!(app.camera_raw.is_some());
@@ -206,7 +206,7 @@ fn camera_raw_control_updates_and_commits_or_cancels_an_open_raw() {
             assert_eq!(app.session.documents().len(), 1);
             let st = app.session.active().unwrap();
             assert_ne!(st.doc.id, original.id);
-            assert_eq!(st.doc.depth, photocraft_color::SampleType::U16);
+            assert_eq!(st.doc.depth, magicpic_color::SampleType::U16);
             assert_eq!(st.saved_revision, st.revision);
         } else {
             assert_eq!(finished["result"]["cancelled"], true);
@@ -217,7 +217,7 @@ fn camera_raw_control_updates_and_commits_or_cancels_an_open_raw() {
 
 #[test]
 fn camera_raw_control_continuation_does_not_bypass_other_modal_or_command_gates() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width":16,"height":16})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
@@ -263,7 +263,7 @@ fn camera_raw_control_continuation_does_not_bypass_other_modal_or_command_gates(
 
 #[test]
 fn full_window_workspaces_are_modal_for_menu_invocations() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width":32,"height":32})).unwrap();
     app.run("file.new", json!({"width":32,"height":32})).unwrap();
@@ -321,7 +321,7 @@ fn full_window_workspaces_are_modal_for_menu_invocations() {
 
 #[test]
 fn layer_style_picker_control_binds_previews_confirms_and_cancels() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width":16,"height":16})).unwrap();
     let parent = call(&mut app, &ctx, "ui.dialog.open", json!({"kind":"layerStyle","effect":"gradientOverlay"}))["result"]["dialog"].as_u64();
@@ -351,7 +351,7 @@ fn layer_style_picker_control_binds_previews_confirms_and_cancels() {
 
 #[test]
 fn text_style_picker_control_uses_bound_target_and_rejects_invalid_requests_atomically() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width":32,"height":32})).unwrap();
     let id = app.run("type.characterStyle.new", json!({"fromSelection":false,"attrs":{"color":"#123456"}})).unwrap()["id"].as_u64().unwrap();
@@ -386,7 +386,7 @@ fn text_style_picker_control_uses_bound_target_and_rejects_invalid_requests_atom
 
 #[test]
 fn layer_style_picker_control_rejects_bad_targets_without_opening_tool_picker() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width":16,"height":16})).unwrap();
     let parent = crate::layer_style::open(&mut app, Some("colorOverlay")).unwrap();
@@ -407,7 +407,7 @@ fn layer_style_picker_control_rejects_bad_targets_without_opening_tool_picker() 
 
 #[test]
 fn shape_stroke_defaults_are_drivable_and_validate_atomically() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     let result =
         call(&mut app, &ctx, "ui.set", json!({"tool":"Triangle", "shapeStroke":{"width":5,"cap":"round","join":"bevel","dashes":[0,2,4,1],"dashOffset":-0.5}}));
@@ -427,13 +427,13 @@ fn shape_stroke_defaults_are_drivable_and_validate_atomically() {
 fn the_unsaved_changes_prompt_is_listed_and_answered_through_ui_dialog() {
     // #4920: the prompt shown on quit or close with unsaved changes wasn't in ui.inspect, and a
     // control client couldn't answer it.
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     for _ in 0..2 {
         app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
         app.run("layer.new.layer", json!({})).unwrap();
     }
-    let prompt = |app: &mut PhotocraftApp| {
+    let prompt = |app: &mut MagicpicApp| {
         let v = call(app, &ctx, "ui.inspect", json!({}));
         v["result"]["dialogs"].as_array().unwrap().iter().find(|d| d["id"] == "discard").cloned()
     };
@@ -468,9 +468,9 @@ fn the_unsaved_changes_prompt_is_listed_and_answered_through_ui_dialog() {
 fn shell_dialogs_are_listed_and_driven_through_ui_dialog() {
     // #1004: Window › Workspace and View dialogs live in `ui.shell.dialog`, and ui.inspect and
     // ui.dialog.* only knew `ui.dialogs`.
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
-    let shell = |app: &mut PhotocraftApp| {
+    let shell = |app: &mut MagicpicApp| {
         let v = call(app, &ctx, "ui.inspect", json!({}));
         v["result"]["dialogs"].as_array().unwrap().iter().find(|d| d["id"] == "shell").cloned()
     };
@@ -506,8 +506,8 @@ fn opening_new_document_through_control_matches_clipboard_image_size() {
     // #2034: every way of opening New Document uses the clipboard-aware initial fields.
     let clipboard = std::sync::Arc::new(std::sync::Mutex::new(Some((100, 200, vec![255; 100 * 200 * 4]))));
     let image = clipboard.clone();
-    let mut app = PhotocraftApp::new(
-        photocraft_engine::Session::new(),
+    let mut app = MagicpicApp::new(
+        magicpic_engine::Session::new(),
         crate::Services { clipboard_get_image: Some(Box::new(move || Ok(image.lock().unwrap().clone()))), ..Default::default() },
     );
     let ctx = egui::Context::default();
@@ -522,7 +522,7 @@ fn opening_new_document_through_control_matches_clipboard_image_size() {
 #[test]
 fn expired_queued_edit_does_not_run_and_a_live_retry_runs_once() {
     use std::time::{Duration, Instant};
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     let before = app.session.active().unwrap();
     let layers = before.doc.layers.len();
@@ -555,7 +555,7 @@ fn a_transport_that_gives_up_learns_whether_the_command_can_still_run() {
     // #3662: the transport's clock runs out no later than the UI thread's, so it is the
     // one that answers; it must still tell a request that will never run from one that may.
     use std::time::{Duration, Instant};
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     let layers = app.session.active().unwrap().doc.layers.len();
     let (tx, rx) = std::sync::mpsc::channel();
@@ -600,7 +600,7 @@ fn timeout_errors_name_the_likely_causes() {
 
 #[test]
 fn deadline_free_requests_run_even_after_the_receiver_is_dropped() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     let layers = app.session.active().unwrap().doc.layers.len();
     let (tx, rx) = std::sync::mpsc::channel();
@@ -615,7 +615,7 @@ fn deadline_free_requests_run_even_after_the_receiver_is_dropped() {
 
 #[test]
 fn right_pointer_opens_agent_visible_selection_menu() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
     app.run("select.rect", json!({"x": 1, "y": 1, "width": 8, "height": 8})).unwrap();
@@ -637,7 +637,7 @@ fn right_pointer_opens_agent_visible_selection_menu() {
 
 #[test]
 fn agent_right_click_with_the_zoom_tool_opens_and_runs_the_view_menu() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
     app.sync_views();
@@ -660,7 +660,7 @@ fn agent_right_click_with_the_zoom_tool_opens_and_runs_the_view_menu() {
 #[test]
 fn agent_space_right_click_opens_the_hand_view_menu() {
     for tool in [crate::state::Tool::Move, crate::state::Tool::Brush, crate::state::Tool::RectMarquee, crate::state::Tool::Pen] {
-        let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+        let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
         let ctx = egui::Context::default();
         app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
         app.sync_views();
@@ -695,7 +695,7 @@ fn agent_space_right_click_opens_the_hand_view_menu() {
 /// edit menu, not the Hand's view menu.
 #[test]
 fn agent_space_right_click_while_typing_keeps_the_type_menu() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
     app.sync_views();
@@ -714,7 +714,7 @@ fn agent_space_right_click_while_typing_keeps_the_type_menu() {
 /// the app.
 #[test]
 fn agent_space_right_click_with_a_text_field_focused_keeps_the_tool() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
     app.sync_views();
@@ -732,7 +732,7 @@ fn agent_space_right_click_with_a_text_field_focused_keeps_the_tool() {
 /// #6561: an agent's right-click on a pending crop opens the crop menu, as on the canvas.
 #[test]
 fn agent_right_click_on_a_pending_crop_opens_and_runs_the_crop_menu() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
     app.sync_views();
@@ -766,7 +766,7 @@ fn agent_right_click_on_a_pending_crop_opens_and_runs_the_crop_menu() {
 /// after the drag's release it does.
 #[test]
 fn agent_right_click_during_its_crop_drag_opens_no_menu() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
     app.sync_views();
@@ -774,7 +774,7 @@ fn agent_right_click_during_its_crop_drag_opens_no_menu() {
     app.ui.tool_options.crop_shield.classic_mode = true;
     app.ui.extras.snap = false;
     crate::crop_ui::ensure_frame(&mut app);
-    let pointer = |app: &mut PhotocraftApp, button: &str, events: Value| {
+    let pointer = |app: &mut MagicpicApp, button: &str, events: Value| {
         assert_eq!(call(app, &ctx, "ui.pointer", json!({"tool": "Crop", "button": button, "events": events}))["ok"], true);
     };
     // The first drag on the default frame (nothing pending yet): no pasteboard menu outside the image.
@@ -807,7 +807,7 @@ fn agent_right_click_during_its_crop_drag_opens_no_menu() {
 
 #[test]
 fn agent_can_inspect_and_choose_pen_make_selection_from_full_context_menu() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
     app.run("path.set", json!({"name":"work","path":{"subpaths":[{"closed":true,"knots":[[2,2],[20,2],[20,20]]}]}})).unwrap();
@@ -836,7 +836,7 @@ fn agent_can_inspect_and_choose_pen_make_selection_from_full_context_menu() {
 
 #[test]
 fn ui_inspect_reports_the_view_preferences() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     let before = call(&mut app, &ctx, "ui.inspect", json!({}));
     assert_eq!(before.pointer("/result/view/show/selection_edges"), Some(&json!(true)));
@@ -849,7 +849,7 @@ fn ui_inspect_reports_the_view_preferences() {
 
 #[test]
 fn engine_execute_runs_with_defaults_but_menu_invoke_opens_the_dialog() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
     app.run("edit.fill", json!({"color": "#808080"})).unwrap();
@@ -865,7 +865,7 @@ fn engine_execute_runs_with_defaults_but_menu_invoke_opens_the_dialog() {
 
 #[test]
 fn menu_invoke_cannot_edit_document_behind_an_open_dialog() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": 400, "height": 300})).unwrap();
 
@@ -897,7 +897,7 @@ fn menu_invoke_cannot_edit_document_behind_an_open_dialog() {
 
 #[test]
 fn engine_execute_cannot_change_document_behind_adjustment_dialog() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": 60, "height": 40, "background": "#3366cc"})).unwrap();
     let opened = call(&mut app, &ctx, "ui.menu.invoke", json!({"id": "image.adjustments.hueSaturation"}));
@@ -923,7 +923,7 @@ fn engine_execute_cannot_change_document_behind_adjustment_dialog() {
 #[test]
 fn ui_set_rejects_unknown_fields_before_changing_anything() {
     use crate::theme::ThemeKind;
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     app.set_theme(&ctx, ThemeKind::StudioLight);
     // Not the default tool, so a rejected `"tool": "move"` that still applied would show.
@@ -946,11 +946,11 @@ fn ui_set_rejects_unknown_fields_before_changing_anything() {
 
 #[test]
 fn ui_set_gradient_blend_mode_validates_and_updates_options() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     let good = call(&mut app, &ctx, "ui.set", json!({"tool": "gradient", "gradientBlendMode": "Difference", "gradientClassic": true}));
     assert_eq!(good["ok"], true, "{good}");
-    assert_eq!(app.ui.tool_options.gradient_blend_mode, photocraft_color::BlendMode::Difference);
+    assert_eq!(app.ui.tool_options.gradient_blend_mode, magicpic_color::BlendMode::Difference);
     assert!(app.ui.tool_options.gradient_classic);
     let bad = call(&mut app, &ctx, "ui.set", json!({"gradientBlendMode": "nonsense", "gradientClassic": false}));
     assert_eq!(bad["ok"], false, "{bad}");
@@ -961,7 +961,7 @@ fn ui_set_gradient_blend_mode_validates_and_updates_options() {
 #[test]
 fn ui_set_drives_the_layers_panel_artboard_filter() {
     use crate::layer_filter_ui::FilterBy;
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     let ok = call(&mut app, &ctx, "ui.set", json!({"layerFilter": {"by": "artboard"}}));
     assert_eq!(ok["ok"], true, "{ok}");
@@ -976,7 +976,7 @@ fn ui_set_drives_the_layers_panel_artboard_filter() {
 #[test]
 fn ui_set_drives_the_layers_panel_smart_object_filter() {
     use crate::layer_filter_ui::FilterBy;
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     let ok = call(&mut app, &ctx, "ui.set", json!({"layerFilter": {"by": "smartObject", "smart": ["missing", "embedded", "missing"]}}));
     assert_eq!(ok["ok"], true, "{ok}");
@@ -1001,14 +1001,14 @@ fn ui_set_drives_the_layers_panel_smart_object_filter() {
 #[test]
 fn ui_set_drives_the_layers_panel_filter() {
     use crate::layer_filter_ui::FilterBy;
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     let ok = call(&mut app, &ctx, "ui.set", json!({"layerFilter": {"by": "name", "name": "ink"}}));
     assert_eq!(ok["ok"], true, "{ok}");
     assert_eq!((app.ui.layer_filter_by, app.ui.layer_filter_name.as_str()), (FilterBy::Name, "ink"));
     let ok = call(&mut app, &ctx, "ui.set", json!({"layerFilter": {"by": "mode", "mode": "Multiply", "kinds": ["type", "pixel", "type"]}}));
     assert_eq!(ok["ok"], true, "{ok}");
-    assert_eq!((app.ui.layer_filter_by, app.ui.layer_filter_mode), (FilterBy::Mode, photocraft_color::BlendMode::Multiply));
+    assert_eq!((app.ui.layer_filter_by, app.ui.layer_filter_mode), (FilterBy::Mode, magicpic_color::BlendMode::Multiply));
     assert_eq!(app.ui.layer_filter, ["type", "pixel"], "kinds are kept once each");
     assert_eq!(app.ui.layer_filter_name, "ink", "fields left out keep their value");
     for bad in [
@@ -1027,17 +1027,17 @@ fn ui_set_drives_the_layers_panel_filter() {
         let r = call(&mut app, &ctx, "ui.set", bad.clone());
         assert_eq!(r["ok"], false, "{bad} → {r}");
         assert_eq!(app.ui.layer_filter_by, FilterBy::Mode, "{bad} changed nothing");
-        assert_eq!(app.ui.layer_filter_mode, photocraft_color::BlendMode::Multiply, "{bad} left the mode alone");
+        assert_eq!(app.ui.layer_filter_mode, magicpic_color::BlendMode::Multiply, "{bad} left the mode alone");
     }
     // #5898: the Color filter through the same path.
     let ok = call(&mut app, &ctx, "ui.set", json!({"layerFilter": {"by": "color", "color": "red"}}));
     assert_eq!(ok["ok"], true, "{ok}");
-    assert_eq!((app.ui.layer_filter_by, app.ui.layer_filter_color), (FilterBy::Color, photocraft_doc::LabelColor::Red));
+    assert_eq!((app.ui.layer_filter_by, app.ui.layer_filter_color), (FilterBy::Color, magicpic_doc::LabelColor::Red));
 }
 
 #[test]
 fn ui_set_toggles_the_developer_tile_grid() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     assert!(!app.ui.view.tile_grid, "off by default");
     assert_eq!(call(&mut app, &ctx, "ui.set", json!({"tileGrid": true}))["ok"], true);
@@ -1056,7 +1056,7 @@ fn ui_set_toggles_the_developer_tile_grid() {
 
 #[test]
 fn ui_set_drives_the_eyedropper_options() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     let good = call(
         &mut app,
@@ -1088,7 +1088,7 @@ fn ui_set_drives_the_eyedropper_options() {
 /// #1046: the Color Sampler tool is selectable over the control channel and reported as active.
 #[test]
 fn ui_set_selects_the_color_sampler_tool() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     assert_eq!(call(&mut app, &ctx, "ui.set", json!({"tool": "colorSampler"}))["ok"], true);
     assert_eq!(app.ui.tool, Tool::ColorSampler);
@@ -1100,7 +1100,7 @@ fn ui_set_selects_the_color_sampler_tool() {
 /// #3823: the Crop tool's Fill over the control channel, reported by `ui.inspect`.
 #[test]
 fn ui_set_drives_the_crop_fill() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     assert_eq!(call(&mut app, &ctx, "ui.set", json!({"tool": "crop", "cropFill": "contentAware"}))["ok"], true);
     assert!(app.ui.tool_options.crop_content_aware);
@@ -1116,7 +1116,7 @@ fn ui_set_drives_the_crop_fill() {
 /// #1397: the Pen's mode and Path Operation over the control channel, reported by `ui.inspect`.
 #[test]
 fn ui_set_drives_the_pen_path_operation() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     assert_eq!(call(&mut app, &ctx, "ui.set", json!({"tool": "pen", "penMode": "shape", "penPathOp": "subtract"}))["ok"], true);
     let o = &call(&mut app, &ctx, "ui.inspect", json!({}))["result"]["toolOptions"];
@@ -1131,7 +1131,7 @@ fn ui_set_drives_the_pen_path_operation() {
 #[test]
 fn ui_set_drives_the_crop_overlay_options() {
     use crate::crop_overlay::{CropOverlay, OverlayShow};
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     let good = call(&mut app, &ctx, "ui.set", json!({"tool": "crop", "cropOverlay": "goldenSpiral", "cropOverlayShow": "always", "cropOverlayOrientation": 2}));
     assert_eq!(good["ok"], true, "{good}");
@@ -1162,7 +1162,7 @@ fn ui_set_drives_the_crop_overlay_options() {
 #[test]
 fn ui_set_drives_the_crop_shield_options() {
     use crate::crop_shield::{CropShield, ShieldColor};
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     let good = call(&mut app, &ctx, "ui.set", json!({"cropShield": {"color": "custom", "custom_color": [255, 0, 0], "opacity": 40}}));
     assert_eq!(good["ok"], true, "{good}");
@@ -1191,7 +1191,7 @@ fn ui_set_drives_the_crop_shield_options() {
 
 #[test]
 fn ui_set_opens_the_brush_preset_picker_and_sets_its_cards() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     let list = &app.ui.brush_picker_list;
     assert!(list.show_name && list.show_stroke && !list.show_tip, "the cards show the name and the stroke by default");
@@ -1215,7 +1215,7 @@ fn ui_set_opens_the_brush_preset_picker_and_sets_its_cards() {
 
 #[test]
 fn ui_inspect_tracks_brush_picker_open_and_closed() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": 128, "height": 128})).unwrap();
 
@@ -1251,7 +1251,7 @@ fn ui_inspect_tracks_brush_picker_open_and_closed() {
 
 #[test]
 fn ui_set_applies_all_fields_or_none() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     let before = app.ui.tool;
     let panels_before = serde_json::to_value(&app.ui.panels).unwrap_or_default();
@@ -1285,7 +1285,7 @@ fn ui_set_applies_all_fields_or_none() {
 
 #[test]
 fn ui_set_rejects_view_numbers_beyond_f32_range() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
     app.sync_views();
@@ -1309,7 +1309,7 @@ fn ui_set_rejects_view_numbers_beyond_f32_range() {
 
 #[test]
 fn ui_set_theme_keeps_explicit_dock_tab_indices() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     for theme in ["adwaitaDark", "pro"] {
         let r = call(&mut app, &ctx, "ui.set", json!({"theme": theme, "dockTabs": {"color": 0}}));
@@ -1320,7 +1320,7 @@ fn ui_set_theme_keeps_explicit_dock_tab_indices() {
 
 #[test]
 fn ui_set_color_panel_picks_the_edited_chip() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     assert_eq!(call(&mut app, &ctx, "ui.set", json!({"colorPanel": {"background": true}}))["ok"], true);
     assert!(app.ui.color_panel.background);
@@ -1331,7 +1331,7 @@ fn ui_set_color_panel_picks_the_edited_chip() {
 #[test]
 fn ui_set_color_panel_mode() {
     use crate::state::ColorPanelMode;
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     assert_eq!(app.ui.color_panel.mode, ColorPanelMode::HueCube);
     assert_eq!(call(&mut app, &ctx, "ui.set", json!({"colorPanel": {"mode": "rgbSliders"}}))["ok"], true);
@@ -1345,7 +1345,7 @@ fn ui_set_color_panel_mode() {
 #[test]
 fn ui_set_unknown_theme_error_names_every_theme_and_each_name_works() {
     use crate::theme::ThemeKind;
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     let r = call(&mut app, &ctx, "ui.set", json!({"theme": "nope"}));
     assert_eq!(r["ok"], false);
@@ -1360,7 +1360,7 @@ fn ui_set_unknown_theme_error_names_every_theme_and_each_name_works() {
 
 #[test]
 fn ui_window_open_rejects_an_unknown_document_index() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     // An out-of-range index must error instead of silently switching the active document
@@ -1376,7 +1376,7 @@ fn ui_window_open_rejects_an_unknown_document_index() {
 
 #[test]
 fn ui_set_brush_size_dispatches_a_journaled_brush_command() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
 
     let r = call(&mut app, &ctx, "ui.set", json!({"brushSize": 42.5}));
@@ -1417,7 +1417,7 @@ fn ui_set_brush_size_dispatches_a_journaled_brush_command() {
 
 #[test]
 fn preferences_apply_is_available_over_control_without_closing() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     let r = call(&mut app, &ctx, "ui.menu.invoke", json!({"id": "edit.preferences.interface"}));
     let id = r["result"]["dialog"].as_u64().unwrap();
@@ -1425,10 +1425,10 @@ fn preferences_apply_is_available_over_control_without_closing() {
     values["interface"]["uiScale"] = json!("200");
     assert_eq!(call(&mut app, &ctx, "ui.dialog.set", json!({"dialog": id, "field": "values", "value": values}))["ok"], true);
     assert_eq!(call(&mut app, &ctx, "ui.dialog.apply", json!({"dialog": id}))["ok"], true);
-    assert_eq!(app.session.prefs().interface.ui_scale, photocraft_engine::prefs::UiScale::P200);
+    assert_eq!(app.session.prefs().interface.ui_scale, magicpic_engine::prefs::UiScale::P200);
     assert!(app.ui.dialog_mut(id).is_some());
     assert_eq!(call(&mut app, &ctx, "ui.dialog.cancel", json!({"dialog": id}))["ok"], true);
-    assert_eq!(app.session.prefs().interface.ui_scale, photocraft_engine::prefs::UiScale::P200);
+    assert_eq!(app.session.prefs().interface.ui_scale, magicpic_engine::prefs::UiScale::P200);
     for params in [json!({}), json!({"dialog": "invalid"}), json!({"dialog": u64::MAX})] {
         assert_eq!(call(&mut app, &ctx, "ui.dialog.apply", params)["ok"], false);
     }
@@ -1440,7 +1440,7 @@ fn preferences_apply_respects_the_automation_command_policy() {
         automation_command: Some(Box::new(|id, _| if id == "prefs.set" { Err("preference changes denied".into()) } else { Ok(()) })),
         ..Default::default()
     };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), services);
     let ctx = egui::Context::default();
     let before = app.session.prefs().to_json();
     let id = crate::prefs_ui::open_preferences(&mut app, "interface");
@@ -1458,7 +1458,7 @@ fn synthetic_shortcuts_use_the_automation_command_policy() {
         automation_command: Some(Box::new(|id, _| if id.starts_with("file.") { Err("filesystem command denied".into()) } else { Ok(()) })),
         ..Default::default()
     };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), services);
     let ctx = egui::Context::default();
     app.automation_input = true;
     let error = crate::menus::invoke(&mut app, &ctx, "file.open", json!({})).unwrap_err();
@@ -1475,8 +1475,8 @@ fn automation_save_passes_targa_bits_without_asking() {
     let written: Rc<RefCell<Vec<String>>> = Rc::default();
     let (a, w) = (asked.clone(), written.clone());
     let services = crate::Services {
-        export: Some(Box::new(move |_d: &photocraft_doc::Document, _p: &str, s: &crate::ExportSettings| {
-            a.borrow_mut().push(s.tga_bits.map(photocraft_io::TgaBits::bits));
+        export: Some(Box::new(move |_d: &magicpic_doc::Document, _p: &str, s: &crate::ExportSettings| {
+            a.borrow_mut().push(s.tga_bits.map(magicpic_io::TgaBits::bits));
             Ok((b"out".to_vec(), Vec::new()))
         })),
         automation_write: Some(Box::new(move |path: &str, _b: &[u8]| {
@@ -1485,7 +1485,7 @@ fn automation_save_passes_targa_bits_without_asking() {
         })),
         ..Default::default()
     };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), services);
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     for params in [json!({"path": "a.tga"}), json!({"path": "b.tga", "tgaBits": 24}), json!({"path": "c.tga", "tgaBits": 32})] {
@@ -1510,7 +1510,7 @@ fn app_save_takes_maximize_compatibility() {
     let written: Rc<RefCell<Vec<String>>> = Rc::default();
     let (a, w) = (asked.clone(), written.clone());
     let services = crate::Services {
-        export: Some(Box::new(move |_d: &photocraft_doc::Document, _p: &str, s: &crate::ExportSettings| {
+        export: Some(Box::new(move |_d: &magicpic_doc::Document, _p: &str, s: &crate::ExportSettings| {
             a.borrow_mut().push(s.psd_maximize_compatibility);
             Ok((b"out".to_vec(), Vec::new()))
         })),
@@ -1520,7 +1520,7 @@ fn app_save_takes_maximize_compatibility() {
         })),
         ..Default::default()
     };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), services);
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     let saves = [
@@ -1533,7 +1533,7 @@ fn app_save_takes_maximize_compatibility() {
         let r = call(&mut app, &ctx, "app.save", params.clone());
         assert_eq!(r["result"]["path"], params["path"], "{r}");
     }
-    app.session.edit_prefs(|p| p.file_handling.maximize_psd_compatibility = photocraft_engine::prefs::Ask::Never);
+    app.session.edit_prefs(|p| p.file_handling.maximize_psd_compatibility = magicpic_engine::prefs::Ask::Never);
     for params in [json!({"path": "e.psd"}), json!({"path": "f.psd", "maximizeCompatibility": true})] {
         let r = call(&mut app, &ctx, "app.save", params.clone());
         assert_eq!(r["result"]["path"], params["path"], "{r}");
@@ -1548,7 +1548,7 @@ fn app_save_takes_maximize_compatibility() {
 /// a value it can't read is an error that writes nothing.
 #[test]
 fn automation_save_passes_jpeg_options_without_asking() {
-    use photocraft_codecs::JpegFormat;
+    use magicpic_codecs::JpegFormat;
     use std::cell::RefCell;
     use std::rc::Rc;
     // The JPEG quality (1–100) and format each export was asked for.
@@ -1557,7 +1557,7 @@ fn automation_save_passes_jpeg_options_without_asking() {
     let written: Rc<RefCell<Vec<String>>> = Rc::default();
     let (a, w) = (asked.clone(), written.clone());
     let services = crate::Services {
-        export: Some(Box::new(move |_d: &photocraft_doc::Document, _p: &str, s: &crate::ExportSettings| {
+        export: Some(Box::new(move |_d: &magicpic_doc::Document, _p: &str, s: &crate::ExportSettings| {
             a.borrow_mut().push((s.jpeg_quality, s.jpeg_format));
             Ok((b"out".to_vec(), Vec::new()))
         })),
@@ -1567,7 +1567,7 @@ fn automation_save_passes_jpeg_options_without_asking() {
         })),
         ..Default::default()
     };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), services);
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     for params in
@@ -1594,20 +1594,20 @@ fn automation_save_passes_jpeg_options_without_asking() {
 /// Options.
 #[test]
 fn automation_save_passes_dds_options_without_asking() {
-    use photocraft_io::{DdsCompression, DdsOptions};
+    use magicpic_io::{DdsCompression, DdsOptions};
     use std::cell::RefCell;
     use std::rc::Rc;
     let asked: Rc<RefCell<Vec<DdsOptions>>> = Rc::default();
     let a = asked.clone();
     let services = crate::Services {
-        export: Some(Box::new(move |_d: &photocraft_doc::Document, _p: &str, s: &crate::ExportSettings| {
+        export: Some(Box::new(move |_d: &magicpic_doc::Document, _p: &str, s: &crate::ExportSettings| {
             a.borrow_mut().push(s.dds);
             Ok((b"out".to_vec(), Vec::new()))
         })),
         automation_write: Some(Box::new(|_: &str, _: &[u8]| Ok(()))),
         ..Default::default()
     };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), services);
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     for params in [json!({"path": "a.dds"}), json!({"path": "b.dds", "ddsCompression": "bc1", "ddsMipmaps": true})] {
@@ -1623,9 +1623,9 @@ fn automation_save_passes_dds_options_without_asking() {
 
 #[test]
 fn automation_open_and_save_use_the_roots_and_reply_with_warnings() {
-    use photocraft_color::{ColorMode, SampleType};
-    use photocraft_doc::Document;
-    use photocraft_geom::Size;
+    use magicpic_color::{ColorMode, SampleType};
+    use magicpic_doc::Document;
+    use magicpic_geom::Size;
     use std::cell::RefCell;
     use std::rc::Rc;
 
@@ -1635,7 +1635,7 @@ fn automation_open_and_save_use_the_roots_and_reply_with_warnings() {
         write: Some(Box::new(|_p: &str, _b: &[u8]| Err("ambient writer used".into()))),
         ..Default::default()
     };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), services);
     let ctx = egui::Context::default();
     let r = call(&mut app, &ctx, "app.open", json!({"path": "in/warn.psd"}));
     assert!(r.to_string().contains("automation read authority is not configured"), "{r}");
@@ -1646,7 +1646,7 @@ fn automation_open_and_save_use_the_roots_and_reply_with_warnings() {
     let written: Rc<RefCell<Vec<String>>> = Rc::default();
     let w = written.clone();
     let services = crate::Services {
-        import: Some(Box::new(|name: &str, _b: &[u8], _opts: &photocraft_io::ImportOptions| {
+        import: Some(Box::new(|name: &str, _b: &[u8], _opts: &magicpic_io::ImportOptions| {
             Ok((Document::new(name, Size::new(4, 4), ColorMode::Rgb, SampleType::U8), vec!["Adjustment layer flattened".to_string()]))
         })),
         export: Some(Box::new(|_d: &Document, _p: &str, _s: &crate::ExportSettings| Ok((b"out".to_vec(), vec!["Layers were flattened".to_string()])))),
@@ -1663,7 +1663,7 @@ fn automation_open_and_save_use_the_roots_and_reply_with_warnings() {
         })),
         ..Default::default()
     };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), services);
     let r = call(&mut app, &ctx, "app.open", json!({"path": "in/warn.psd"}));
     assert_eq!(r["result"]["warnings"], json!(["Adjustment layer flattened"]), "{r}");
     assert_eq!(r["result"]["name"], "warn.psd");
@@ -1692,9 +1692,9 @@ fn automation_open_and_save_use_the_roots_and_reply_with_warnings() {
     assert!(r["error"].as_str().unwrap().contains("pass `path`"), "{r}");
 }
 
-fn deny_ambient_file(id: &str, _: &serde_json::Value) -> photocraft_engine::Result<()> {
+fn deny_ambient_file(id: &str, _: &serde_json::Value) -> magicpic_engine::Result<()> {
     if id.starts_with("file.") && id != "file.new" {
-        Err(photocraft_engine::EngineError::Other(format!("automation command `{id}` is disabled")))
+        Err(magicpic_engine::EngineError::Other(format!("automation command `{id}` is disabled")))
     } else {
         Ok(())
     }
@@ -1702,20 +1702,20 @@ fn deny_ambient_file(id: &str, _: &serde_json::Value) -> photocraft_engine::Resu
 
 /// An app whose automation gates refuse file commands, with a document open, and the paths
 /// its writer was asked to write.
-fn gated_app_recording_writes() -> (PhotocraftApp, egui::Context, std::rc::Rc<std::cell::RefCell<Vec<String>>>, u64) {
+fn gated_app_recording_writes() -> (MagicpicApp, egui::Context, std::rc::Rc<std::cell::RefCell<Vec<String>>>, u64) {
     let written: std::rc::Rc<std::cell::RefCell<Vec<String>>> = std::rc::Rc::default();
     let w = written.clone();
     let services = crate::Services {
         automation_authorize: Some(deny_ambient_file),
         automation_command: Some(Box::new(|id, params| deny_ambient_file(id, params).map_err(|e| e.to_string()))),
-        export: Some(Box::new(|_: &photocraft_doc::Document, _: &str, _: &crate::ExportSettings| Ok((b"out".to_vec(), Vec::new())))),
+        export: Some(Box::new(|_: &magicpic_doc::Document, _: &str, _: &crate::ExportSettings| Ok((b"out".to_vec(), Vec::new())))),
         write: Some(Box::new(move |path: &str, _: &[u8]| {
             w.borrow_mut().push(path.to_string());
             Ok(())
         })),
         ..Default::default()
     };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), services);
     app.background_jobs = false;
     app.session.execute("file.new", json!({"width": 4, "height": 4})).unwrap();
     let doc = app.session.active().unwrap().doc.id.0;
@@ -1774,9 +1774,9 @@ fn automation_confirming_a_file_writing_dialog_is_judged_as_its_file_command() {
 /// The desktop policy's verdict on file commands (crates/automation/src/workspace.rs): automation
 /// may close documents, but every file command that reads or writes a file, File › Save
 /// included, is refused.
-fn desktop_file_policy(id: &str, _: &Value) -> photocraft_engine::Result<()> {
+fn desktop_file_policy(id: &str, _: &Value) -> magicpic_engine::Result<()> {
     if id.starts_with("file.") && !matches!(id, "file.new" | "file.close" | "file.closeAll" | "file.closeOthers") {
-        Err(photocraft_engine::EngineError::Other(format!("automation command `{id}` is disabled")))
+        Err(magicpic_engine::EngineError::Other(format!("automation command `{id}` is disabled")))
     } else {
         Ok(())
     }
@@ -1785,7 +1785,7 @@ fn desktop_file_policy(id: &str, _: &Value) -> photocraft_engine::Result<()> {
 /// An app under the desktop file policy whose dirty document (its own file outside any
 /// automation root) a control request asked to close: the unsaved-changes prompt is up.
 /// Returns the app, its context, the paths written so far and the document's own file.
-fn dirty_close_prompted() -> (PhotocraftApp, egui::Context, std::rc::Rc<std::cell::RefCell<Vec<String>>>, String) {
+fn dirty_close_prompted() -> (MagicpicApp, egui::Context, std::rc::Rc<std::cell::RefCell<Vec<String>>>, String) {
     let (mut app, ctx, written, _) = gated_app_recording_writes();
     app.services.automation_authorize = Some(desktop_file_policy);
     app.services.automation_command = Some(Box::new(|id, params| desktop_file_policy(id, params).map_err(|e| e.to_string())));
@@ -1800,7 +1800,7 @@ fn dirty_close_prompted() -> (PhotocraftApp, egui::Context, std::rc::Rc<std::cel
 /// Answers the open unsaved-changes prompt with Save, as synthetic input (the drawn prompt's
 /// answer with `automation_input` set) or as a control client's `ui.dialog.confirm`. Returns
 /// the refusal, if any.
-fn answer_save(app: &mut PhotocraftApp, ctx: &egui::Context, synthetic: bool) -> Result<(), String> {
+fn answer_save(app: &mut MagicpicApp, ctx: &egui::Context, synthetic: bool) -> Result<(), String> {
     if synthetic {
         app.automation_input = true;
         let r = crate::discard_ui::answer_choice(app, ctx, "save", false);
@@ -1831,7 +1831,7 @@ fn automation_saving_from_the_unsaved_changes_prompt_is_judged_as_file_save() {
     }
     // A policy that allows `file.save` lets the automation Save write the document and close it.
     /// A policy that allows every command.
-    fn allow(_: &str, _: &Value) -> photocraft_engine::Result<()> {
+    fn allow(_: &str, _: &Value) -> magicpic_engine::Result<()> {
         Ok(())
     }
     for synthetic in [false, true] {
@@ -1878,13 +1878,13 @@ fn automation_saving_from_the_unsaved_changes_prompt_needs_a_policy_to_judge_it(
 
 #[test]
 fn app_open_opens_a_directory_pcraft_and_falls_back_for_the_zip_form() {
-    use photocraft_doc::Document;
+    use magicpic_doc::Document;
     use serde_json::json;
     let services = crate::Services {
         automation_open_pcraft: Some(Box::new(|path: &str| {
             if path == "native.pcraft" {
                 let name = path.rsplit('/').next().unwrap_or(path).to_string();
-                let doc = Document::new("Native", photocraft_doc::Size::new(16, 12), photocraft_doc::ColorMode::Rgb, photocraft_doc::SampleType::U8);
+                let doc = Document::new("Native", magicpic_doc::Size::new(16, 12), magicpic_doc::ColorMode::Rgb, magicpic_doc::SampleType::U8);
                 Ok(Some((name, doc)))
             } else if path == "zipped.pcraft" {
                 Ok(None) // a regular file: the bytes path reads the zip form
@@ -1892,8 +1892,8 @@ fn app_open_opens_a_directory_pcraft_and_falls_back_for_the_zip_form() {
                 Err(format!("corrupt bundle: {path}"))
             }
         })),
-        import: Some(Box::new(|name: &str, _b: &[u8], _opts: &photocraft_io::ImportOptions| {
-            Ok((Document::new(name, photocraft_doc::Size::new(4, 4), photocraft_doc::ColorMode::Rgb, photocraft_doc::SampleType::U8), Vec::new()))
+        import: Some(Box::new(|name: &str, _b: &[u8], _opts: &magicpic_io::ImportOptions| {
+            Ok((Document::new(name, magicpic_doc::Size::new(4, 4), magicpic_doc::ColorMode::Rgb, magicpic_doc::SampleType::U8), Vec::new()))
         })),
         automation_read: Some(Box::new(|path: &str| {
             if path == "zipped.pcraft" {
@@ -1904,7 +1904,7 @@ fn app_open_opens_a_directory_pcraft_and_falls_back_for_the_zip_form() {
         })),
         ..Default::default()
     };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), services);
     let ctx = egui::Context::default();
 
     let r = call(&mut app, &ctx, "app.open", json!({"path": "native.pcraft"}));
@@ -1927,7 +1927,7 @@ fn app_open_opens_a_directory_pcraft_and_falls_back_for_the_zip_form() {
 
 #[test]
 fn app_save_runs_as_a_background_job_and_the_final_reply_carries_the_path() {
-    use photocraft_engine::automate_cmds::ScriptBinding;
+    use magicpic_engine::automate_cmds::ScriptBinding;
     use serde_json::json;
     let saved: std::sync::Arc<std::sync::Mutex<Vec<String>>> = Default::default();
     let record = saved.clone();
@@ -1938,7 +1938,7 @@ fn app_save_runs_as_a_background_job_and_the_final_reply_carries_the_path() {
         })),
         ..Default::default()
     };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), services);
     app.background_jobs = true;
     app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     // A "Save Document" binding that would leave a trace: automation saves never fire it.
@@ -1978,7 +1978,7 @@ fn app_save_runs_as_a_background_job_and_the_final_reply_carries_the_path() {
     assert_eq!(r["result"], json!({"path": "out.psd", "warnings": ["Layers were flattened"]}), "{r}");
 
     // An interactive save (File › Save's worker) still fires the binding.
-    let save = std::sync::Arc::new(|_doc: &photocraft_doc::Document, path: &str, _settings: &crate::ExportSettings, _ctl: &crate::jobs_ui::SaveCtl| {
+    let save = std::sync::Arc::new(|_doc: &magicpic_doc::Document, path: &str, _settings: &crate::ExportSettings, _ctl: &crate::jobs_ui::SaveCtl| {
         let _ = path;
         Ok(Vec::new())
     }) as crate::SaveFileFn;
@@ -2013,7 +2013,7 @@ fn ui_inspect_replies_while_a_save_job_encodes() {
         })),
         ..Default::default()
     };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), services);
     app.background_jobs = true;
     app.run("file.new", json!({"width": 8, "height": 8})).unwrap();
     let ctx = egui::Context::default();
@@ -2049,34 +2049,34 @@ fn ui_inspect_replies_while_a_save_job_encodes() {
     assert_eq!(*saved.lock().unwrap(), vec!["out.png".to_string()], "the save completed after the gate opened");
 }
 
-fn deny_smart_object_paths(id: &str, params: &Value) -> photocraft_engine::Result<()> {
+fn deny_smart_object_paths(id: &str, params: &Value) -> magicpic_engine::Result<()> {
     // The production policy lives in the automation crate. This gate exercises the control
     // session's state-derived path check without adding that dependency to the UI crate.
     if matches!(id, "layer.smartObjects.editContents" | "layer.smartObjects.convertToLayers" | "layer.smartObjects.saveContents")
         && params.get("path").and_then(Value::as_str).is_some()
     {
-        Err(photocraft_engine::EngineError::Other("ambient smart-object path denied".into()))
+        Err(magicpic_engine::EngineError::Other("ambient smart-object path denied".into()))
     } else {
         Ok(())
     }
 }
 
-fn smart_control_app() -> (PhotocraftApp, egui::Context, photocraft_doc::LayerId) {
+fn smart_control_app() -> (MagicpicApp, egui::Context, magicpic_doc::LayerId) {
     let services = crate::Services {
         automation_authorize: Some(deny_smart_object_paths),
         automation_command: Some(Box::new(|id, params| deny_smart_object_paths(id, params).map_err(|e| e.to_string()))),
         ..Default::default()
     };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), services);
     app.run("file.new", json!({"width": 8, "height": 6, "background": "transparent"})).unwrap();
     app.run("edit.fill", json!({"color": "#ff0000"})).unwrap();
     let id = app.run("layer.smartObjects.convertToSmartObject", json!({})).unwrap()["layer"].as_u64().unwrap();
-    (app, egui::Context::default(), photocraft_doc::LayerId(id))
+    (app, egui::Context::default(), magicpic_doc::LayerId(id))
 }
 
 #[test]
 fn control_edits_nested_embedded_smart_objects_and_converts_an_explicit_target() {
-    use photocraft_doc::{LayerContent, SmartSource};
+    use magicpic_doc::{LayerContent, SmartSource};
     use std::cell::RefCell;
     use std::rc::Rc;
     use std::sync::Arc;
@@ -2084,7 +2084,7 @@ fn control_edits_nested_embedded_smart_objects_and_converts_an_explicit_target()
     let (mut app, ctx, smart) = smart_control_app();
     // Embed this one-smart-layer document inside the outer object: two Edit Contents
     // requests must reach the raster layer, as in a nested product-photo template.
-    let nested = photocraft_engine::smart_cmds::encode_source(&app.session.active().unwrap().doc).unwrap();
+    let nested = magicpic_engine::smart_cmds::encode_source(&app.session.active().unwrap().doc).unwrap();
     app.session
         .edit("Nested fixture", |doc, _| {
             let LayerContent::Smart(sm) = &mut doc.layer_mut(smart).unwrap().content else { panic!("smart fixture") };
@@ -2110,17 +2110,17 @@ fn control_edits_nested_embedded_smart_objects_and_converts_an_explicit_target()
         assert_eq!(r["ok"], true, "{r}");
         assert_eq!(app.session.documents().len(), expected_documents);
     }
-    assert_eq!(app.session.active().unwrap().active_layer, Some(photocraft_doc::LayerId(other)));
-    assert_eq!(photocraft_compose::flatten(&app.session.active().unwrap().doc).px[0], [0.0, 0.0, 1.0, 1.0]);
+    assert_eq!(app.session.active().unwrap().active_layer, Some(magicpic_doc::LayerId(other)));
+    assert_eq!(magicpic_compose::flatten(&app.session.active().unwrap().doc).px[0], [0.0, 0.0, 1.0, 1.0]);
     let r = call(&mut app, &ctx, "engine.execute", json!({"command": "layer.smartObjects.convertToLayers", "params": {"layer": smart.0}}));
     assert_eq!(r["ok"], true, "{r}");
-    assert!(app.session.active().unwrap().doc.layer(photocraft_doc::LayerId(other)).is_some(), "the unrelated active layer remains");
+    assert!(app.session.active().unwrap().doc.layer(magicpic_doc::LayerId(other)).is_some(), "the unrelated active layer remains");
     assert!(app.session.authorize.is_none());
 
     let written = Rc::new(RefCell::new(Vec::new()));
     let output = written.clone();
     app.services.export =
-        Some(Box::new(|doc, _, _| photocraft_engine::smart_cmds::encode_source(doc).map(|bytes| (bytes, Vec::new())).map_err(|e| e.to_string())));
+        Some(Box::new(|doc, _, _| magicpic_engine::smart_cmds::encode_source(doc).map(|bytes| (bytes, Vec::new())).map_err(|e| e.to_string())));
     app.services.automation_write = Some(Box::new(move |path, bytes| {
         output.borrow_mut().push((path.to_string(), bytes.to_vec()));
         Ok(())
@@ -2131,13 +2131,13 @@ fn control_edits_nested_embedded_smart_objects_and_converts_an_explicit_target()
     let written = written.borrow();
     assert_eq!(written.len(), 1);
     assert_eq!(written[0].0, "out/template.pcraft");
-    let saved = photocraft_engine::smart_cmds::decode_source(&written[0].0, &written[0].1).unwrap();
-    assert_eq!(photocraft_compose::flatten(&saved).px[0], [0.0, 0.0, 1.0, 1.0]);
+    let saved = magicpic_engine::smart_cmds::decode_source(&written[0].0, &written[0].1).unwrap();
+    assert_eq!(magicpic_compose::flatten(&saved).px[0], [0.0, 0.0, 1.0, 1.0]);
 }
 
 #[test]
 fn control_refuses_linked_smart_objects_in_commands_and_actions_but_local_editing_still_works() {
-    use photocraft_doc::{LayerContent, SmartSource};
+    use magicpic_doc::{LayerContent, SmartSource};
     use std::sync::Arc;
 
     let (mut app, ctx, smart) = smart_control_app();
@@ -2160,7 +2160,7 @@ fn control_refuses_linked_smart_objects_in_commands_and_actions_but_local_editin
         let r = call(&mut app, &ctx, "engine.execute", json!({"command": command, "params": {"layer": smart.0}}));
         assert_eq!(r["ok"], false, "{r}");
         assert!(r["error"].as_str().unwrap().contains("ambient smart-object path denied"), "{r}");
-        app.session.actions.list = vec![photocraft_engine::actions_cmds::Action {
+        app.session.actions.list = vec![magicpic_engine::actions_cmds::Action {
             name: "Linked contents".into(),
             steps: vec![(command.into(), json!({"layer": smart.0}))],
             disabled: Default::default(),
@@ -2183,15 +2183,15 @@ fn control_refuses_linked_smart_objects_in_commands_and_actions_but_local_editin
     app.automation_input = false;
     app.run("layer.smartObjects.editContents", json!({"layer": smart.0})).unwrap();
     assert_eq!(app.session.documents().len(), 2, "a human can still open the existing linked file");
-    assert_eq!(photocraft_compose::flatten(&app.session.active().unwrap().doc).px[0], [1.0, 0.0, 0.0, 1.0]);
+    assert_eq!(magicpic_compose::flatten(&app.session.active().unwrap().doc).px[0], [1.0, 0.0, 0.0, 1.0]);
     std::fs::remove_file(path).unwrap();
 }
 
 #[test]
 fn actions_play_checks_each_step_over_control() {
     let services = crate::Services { automation_authorize: Some(deny_ambient_file), ..Default::default() };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
-    app.session.actions.list.push(photocraft_engine::actions_cmds::Action {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), services);
+    app.session.actions.list.push(magicpic_engine::actions_cmds::Action {
         name: "Open".into(),
         steps: vec![("file.open".into(), json!({"path": "/etc/passwd"})), ("layer.new.layer".into(), json!({}))],
         disabled: Default::default(),
@@ -2210,8 +2210,8 @@ fn actions_play_checks_each_step_over_control() {
 #[test]
 fn actions_play_checks_each_step_for_synthetic_input() {
     let services = crate::Services { automation_authorize: Some(deny_ambient_file), ..Default::default() };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
-    app.session.actions.list.push(photocraft_engine::actions_cmds::Action {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), services);
+    app.session.actions.list.push(magicpic_engine::actions_cmds::Action {
         name: "Open".into(),
         steps: vec![("file.open".into(), json!({"path": "/etc/passwd"})), ("layer.new.layer".into(), json!({}))],
         disabled: Default::default(),
@@ -2233,7 +2233,7 @@ fn actions_play_checks_each_step_for_synthetic_input() {
 
 #[test]
 fn huge_click_count_is_rejected() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     // #982: a huge count used to queue a press and a release per click before replying.
     for count in [json!(MAX_CLICKS + 1), json!(1_000_000_000u64), json!(u64::MAX)] {
@@ -2259,7 +2259,7 @@ fn huge_click_count_is_rejected() {
 /// delta `inf - inf` panicked outside the dispatch guard, closing the app.
 #[test]
 fn huge_click_coordinate_is_rejected() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     for method in ["ui.click", "ui.move"] {
         for (field, v) in [("x", 1e308), ("y", -1e308), ("x", 3.5e38), ("y", 1e7), ("x", -1.5e6)] {
@@ -2285,7 +2285,7 @@ fn huge_click_coordinate_is_rejected() {
 }
 
 /// #2449: the error of a rejected synthetic input call, after checking it changed nothing.
-fn rejected(app: &mut PhotocraftApp, ctx: &egui::Context, method: &str, params: Value, names: &str) -> String {
+fn rejected(app: &mut MagicpicApp, ctx: &egui::Context, method: &str, params: Value, names: &str) -> String {
     let (tool, revision) = (app.ui.tool, app.session.active().map(|d| d.revision));
     let r = call(app, ctx, method, params.clone());
     assert_eq!(r["ok"], false, "{method} {params}: {r}");
@@ -2299,7 +2299,7 @@ fn rejected(app: &mut PhotocraftApp, ctx: &egui::Context, method: &str, params: 
 
 #[test]
 fn ui_pointer_rejects_bad_params_before_acting() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": 64, "height": 64})).unwrap();
     let stroke = json!([{"kind": "down", "x": 5, "y": 5}, {"kind": "move", "x": 30, "y": 30}, {"kind": "up", "x": 30, "y": 30}]);
@@ -2373,7 +2373,7 @@ fn ui_pointer_rejects_bad_params_before_acting() {
 
 #[test]
 fn ui_click_and_move_reject_bad_params_before_queueing_input() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     let cases = [
         ("ui.click", json!({"x": 10, "y": 10, "buton": "right"}), "buton"),
@@ -2413,7 +2413,7 @@ fn ui_click_and_move_reject_bad_params_before_queueing_input() {
 
 #[test]
 fn ui_key_rejects_bad_params_before_queueing_input() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     let cases = [
         (json!({"key": "N", "ctl": true}), "ctl"),
@@ -2438,7 +2438,7 @@ fn ui_key_rejects_bad_params_before_queueing_input() {
 
 #[test]
 fn ui_screenshot_rejects_bad_params_before_capturing() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     for (params, names) in [(json!({"focus": "yes"}), "focus"), (json!({"path": 5}), "path"), (json!({"pth": "shot.png"}), "pth")] {
         rejected(&mut app, &ctx, "ui.screenshot", params, names);
@@ -2451,7 +2451,7 @@ fn ui_screenshot_rejects_bad_params_before_capturing() {
 }
 
 /// A key event's modifiers, as `ui.key` queued them.
-fn key_modifiers(app: &mut PhotocraftApp, ctx: &egui::Context, params: Value) -> egui::Modifiers {
+fn key_modifiers(app: &mut MagicpicApp, ctx: &egui::Context, params: Value) -> egui::Modifiers {
     app.synthetic.clear();
     let (req, _rx) = ControlRequest::new("ui.key", params.clone());
     assert!(matches!(handle(app, ctx, &req), Outcome::AfterInput), "{params}");
@@ -2463,7 +2463,7 @@ fn key_modifiers(app: &mut PhotocraftApp, ctx: &egui::Context, params: Value) ->
 
 #[test]
 fn ui_key_ctrl_reaches_shortcuts_like_a_real_ctrl_press() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     let ctrl = key_modifiers(&mut app, &ctx, json!({"key":"N","ctrl":true}));
     let command = key_modifiers(&mut app, &ctx, json!({"key":"N","command":true}));
@@ -2489,7 +2489,7 @@ fn ui_key_ctrl_reaches_shortcuts_like_a_real_ctrl_press() {
 /// changes, so the layer mask stays targeted.
 #[test]
 fn ui_set_filter_mask_target_needs_a_smart_object_with_filters() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
@@ -2504,9 +2504,9 @@ fn ui_set_filter_mask_target_needs_a_smart_object_with_filters() {
     app.run("layer.smartObjects.convertToSmartObject", json!({})).unwrap();
     app.run("filter.blur.gaussianBlur", json!({"radius": 2})).unwrap();
     // Not while a single colour channel is targeted: nothing would end up targeted.
-    app.session.active_mut().unwrap().channel_view.target = photocraft_engine::channel_cmds::ChannelTarget::Color(0);
+    app.session.active_mut().unwrap().channel_view.target = magicpic_engine::channel_cmds::ChannelTarget::Color(0);
     assert_eq!(call(&mut app, &ctx, "ui.set", json!({"filterMaskTarget": true}))["ok"], false);
-    app.session.active_mut().unwrap().channel_view.target = photocraft_engine::channel_cmds::ChannelTarget::Composite;
+    app.session.active_mut().unwrap().channel_view.target = magicpic_engine::channel_cmds::ChannelTarget::Composite;
     assert_eq!(call(&mut app, &ctx, "ui.set", json!({"filterMaskTarget": true}))["ok"], true);
     assert!(app.filter_mask_targeted());
     // Untargeting it ends its view, which would otherwise keep it targeted.
@@ -2514,7 +2514,7 @@ fn ui_set_filter_mask_target_needs_a_smart_object_with_filters() {
     app.run("view.layerMask", json!({"mode": "gray", "mask": "filter"})).unwrap();
     assert_eq!(call(&mut app, &ctx, "ui.set", json!({"filterMaskTarget": false}))["ok"], true);
     assert!(!app.filter_mask_targeted());
-    assert!(photocraft_engine::mask_view_cmds::current(app.session.active().unwrap()).is_none());
+    assert!(magicpic_engine::mask_view_cmds::current(app.session.active().unwrap()).is_none());
     // Targeting the pixels untargets it too.
     assert_eq!(call(&mut app, &ctx, "ui.set", json!({"filterMaskTarget": true}))["ok"], true);
     assert_eq!(call(&mut app, &ctx, "ui.set", json!({"maskTarget": false}))["ok"], true);
@@ -2526,7 +2526,7 @@ fn ui_set_filter_mask_target_needs_a_smart_object_with_filters() {
 /// ends that view, and the brush paints the layer mask.
 #[test]
 fn ui_set_mask_target_ends_a_filter_mask_view() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     let ctx = egui::Context::default();
     app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
     app.run("layer.new.layer", json!({})).unwrap();
@@ -2539,7 +2539,7 @@ fn ui_set_mask_target_ends_a_filter_mask_view() {
     app.sync_mask_targets();
     assert!(app.filter_mask_targeted());
     assert_eq!(call(&mut app, &ctx, "ui.set", json!({"maskTarget": true}))["ok"], true);
-    assert!(photocraft_engine::mask_view_cmds::current(app.session.active().unwrap()).is_none(), "the filter mask view ends");
+    assert!(magicpic_engine::mask_view_cmds::current(app.session.active().unwrap()).is_none(), "the filter mask view ends");
     assert!(app.layer_mask_targeted());
     assert!(!app.filter_mask_targeted());
     assert_eq!(crate::canvas::paint_target(&app), json!("mask"));
@@ -2548,22 +2548,22 @@ fn ui_set_mask_target_ends_a_filter_mask_view() {
     let st = app.session.active().unwrap();
     let l = st.doc.layer(st.active_layer.unwrap()).unwrap();
     assert_eq!(l.mask.as_ref().unwrap().value(20, 20), 0.0, "the stroke went into the layer mask");
-    let photocraft_doc::LayerContent::Smart(sm) = &l.content else { panic!("smart object") };
+    let magicpic_doc::LayerContent::Smart(sm) = &l.content else { panic!("smart object") };
     assert_eq!(sm.filter_mask.as_ref().unwrap().value(20, 20), 1.0, "not into the filter mask");
 }
 
 #[test]
 fn automation_library_open_requires_explicit_save_as_before_implicit_save() {
-    use photocraft_color::{ColorMode, SampleType};
-    use photocraft_doc::Document;
-    use photocraft_geom::Size;
+    use magicpic_color::{ColorMode, SampleType};
+    use magicpic_doc::Document;
+    use magicpic_geom::Size;
     use std::cell::RefCell;
     use std::rc::Rc;
 
     let written: Rc<RefCell<Vec<String>>> = Rc::default();
     let writes = written.clone();
     let services = crate::Services {
-        import: Some(Box::new(|name: &str, _: &[u8], _: &photocraft_io::ImportOptions| {
+        import: Some(Box::new(|name: &str, _: &[u8], _: &magicpic_io::ImportOptions| {
             Ok((Document::new(name, Size::new(4, 4), ColorMode::Rgb, SampleType::U8), Vec::new()))
         })),
         export: Some(Box::new(|_: &Document, _: &str, _: &crate::ExportSettings| Ok((b"saved".to_vec(), Vec::new())))),
@@ -2584,7 +2584,7 @@ fn automation_library_open_requires_explicit_save_as_before_implicit_save() {
         write: Some(Box::new(|_, _| Err("ambient writer used".into()))),
         ..Default::default()
     };
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), services);
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), services);
     let ctx = egui::Context::default();
     let opened = call(&mut app, &ctx, "app.open", json!({"path": "library/same.psd"}));
     assert_eq!(opened["ok"], true, "{opened}");
@@ -2617,7 +2617,7 @@ fn automation_library_open_requires_explicit_save_as_before_implicit_save() {
     assert_eq!(saved["result"]["path"], "work/same.psd", "{saved}");
 }
 
-fn shift_right(app: &mut PhotocraftApp, ctx: &egui::Context, tool: &str) {
+fn shift_right(app: &mut MagicpicApp, ctx: &egui::Context, tool: &str) {
     call(
         app,
         ctx,
@@ -2632,7 +2632,7 @@ fn shift_right(app: &mut PhotocraftApp, ctx: &egui::Context, tool: &str) {
 #[test]
 fn shift_right_menu_choose_rejects_bad_choices_and_sets_the_tool() {
     let ctx = egui::Context::default();
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 64, "height": 64, "background": "white"})).unwrap();
     // Nothing open yet.
     assert_eq!(call(&mut app, &ctx, "ui.context.choose", json!({"id": "Multiply"}))["ok"], false);
@@ -2654,7 +2654,7 @@ fn shift_right_menu_choose_rejects_bad_choices_and_sets_the_tool() {
     assert!(!app.ui.tool_options.brush_clear && !app.session.tools.brush.behind);
     assert_eq!(call(&mut app, &ctx, "ui.context.choose", json!({"id": "Multiply"}))["ok"], true);
     assert!(app.ui.brush_mode_menu.is_none());
-    assert_eq!(app.session.tools.brush.mode, photocraft_doc::BlendMode::Multiply);
+    assert_eq!(app.session.tools.brush.mode, magicpic_doc::BlendMode::Multiply);
     assert_eq!(app.session.journal.last().unwrap(), &("tools.setBrush".into(), json!({"brush": {"mode": "Multiply", "behind": false}})));
     // Another tool's rows.
     shift_right(&mut app, &ctx, "eraser");

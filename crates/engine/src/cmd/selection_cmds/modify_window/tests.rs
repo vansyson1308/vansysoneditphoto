@@ -1,10 +1,10 @@
 use super::*;
 use crate::Session;
 use crate::selection_cmds::{crop_mask, pad_mask, touches_edge};
-use photocraft_algo::selection::{self as sel, SelectionMode};
-use photocraft_color::{ColorMode, PixelFormat, SampleType};
-use photocraft_geom::Size;
-use photocraft_raster::Surface;
+use magicpic_algo::selection::{self as sel, SelectionMode};
+use magicpic_color::{ColorMode, PixelFormat, SampleType};
+use magicpic_geom::Size;
+use magicpic_raster::Surface;
 use serde_json::json;
 
 fn document(w: u32, h: u32, selection: Surface) -> Document {
@@ -227,7 +227,7 @@ fn sparse_modify_release_comparison() {
 
 #[test]
 fn corrupt_tile_coordinates_do_not_panic_while_finding_the_window() {
-    use photocraft_geom::TileCoord;
+    use magicpic_geom::TileCoord;
     use std::sync::Arc;
     let mut selection = Surface::new(PixelFormat::GRAY8);
     let tile = selection.solid_tile(&[1.0]);

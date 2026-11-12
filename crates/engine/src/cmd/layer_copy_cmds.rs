@@ -10,10 +10,10 @@
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 
-use photocraft_color::ColorMode;
-use photocraft_doc::text_styles::{CharacterStyleDef, ParagraphStyleDef};
-use photocraft_doc::{Document, Layer, LayerContent, LayerId, SmartContentsId, TextStyles};
-use photocraft_geom::Rect;
+use magicpic_color::ColorMode;
+use magicpic_doc::text_styles::{CharacterStyleDef, ParagraphStyleDef};
+use magicpic_doc::{Document, Layer, LayerContent, LayerId, SmartContentsId, TextStyles};
+use magicpic_geom::Rect;
 use serde_json::{Value, json};
 
 use crate::commands::CommandSpec;

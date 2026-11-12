@@ -17,19 +17,19 @@
 //! Each quad is one plane of `layer.smartObjects.perspectiveWarp`: `src` = the quad's
 //! `vertices`, `dst` = its `warpedVertices`, in the stored corner order. Quads that share a vertex
 //! share the corner, which the engine links. The item is kept as a template ([`TEMPLATE_KEY`]) so
-//! the keys PhotoCraft does not model go back unchanged, with only the vertices and quads
+//! the keys MagicPic does not model go back unchanged, with only the vertices and quads
 //! rewritten from the edited planes. Anything inconsistent (an index out of range, mismatched
 //! vertex counts, a non-finite or degenerate quad) stays an opaque [`super::UNSUPPORTED_FILTER`].
 
-use photocraft_algo::perspective::{PerspectiveMap, Plane, Straighten, straighten};
-use photocraft_doc::SmartFilter;
-use photocraft_psd::descriptor::{Class, Descriptor, Id, ReferenceItem, UnicodeString, Value};
+use magicpic_algo::perspective::{PerspectiveMap, Plane, Straighten, straighten};
+use magicpic_doc::SmartFilter;
+use magicpic_psd::descriptor::{Class, Descriptor, Id, ReferenceItem, UnicodeString, Value};
 use serde_json::{Value as J, json};
 
 use super::{blend_options, from_hex, get_desc, rgbc, set, to_hex, unit};
 
 pub(super) const CLASS: &str = "perspectiveWarpTransform";
-/// The command this filter maps to (`photocraft_engine::distort_cmds::PERSPECTIVE_SMART`).
+/// The command this filter maps to (`magicpic_engine::distort_cmds::PERSPECTIVE_SMART`).
 pub(super) const COMMAND: &str = "layer.smartObjects.perspectiveWarp";
 /// Edit › Perspective Warp on a smart object stores its own id; it renders the same.
 const EDIT_COMMAND: &str = "edit.perspectiveWarp";
@@ -108,7 +108,7 @@ pub(super) fn import_params(item: &Descriptor) -> Option<J> {
     let planes = planes_of(f)?;
     // Neutral blending in the template: the model's own fields replace it on export.
     let mut template = item.clone();
-    let neutral = SmartFilter { command: String::new(), params: J::Null, blend: photocraft_color::BlendMode::Normal, opacity: 1.0, visible: true };
+    let neutral = SmartFilter { command: String::new(), params: J::Null, blend: magicpic_color::BlendMode::Normal, opacity: 1.0, visible: true };
     set(&mut template, "blendOptions", blend_options(&neutral));
     set(&mut template, "enab", Value::Boolean(true));
     // Export refuses a larger template; such an item stays opaque, so it is still written back.
@@ -274,13 +274,7 @@ mod tests {
             .with("Nm  ", Value::Text(UnicodeString::new_nul("Perspektivische Verformung...")))
             .with(
                 "blendOptions",
-                blend_options(&SmartFilter {
-                    command: String::new(),
-                    params: J::Null,
-                    blend: photocraft_color::BlendMode::Normal,
-                    opacity: 1.0,
-                    visible: true,
-                }),
+                blend_options(&SmartFilter { command: String::new(), params: J::Null, blend: magicpic_color::BlendMode::Normal, opacity: 1.0, visible: true }),
             )
             .with("enab", Value::Boolean(true))
             .with("hasoptions", Value::Boolean(true))
@@ -353,7 +347,7 @@ mod tests {
         let f = SmartFilter {
             command: COMMAND.into(),
             params: json!({"planes": planes}),
-            blend: photocraft_color::BlendMode::Multiply,
+            blend: magicpic_color::BlendMode::Multiply,
             opacity: 0.25,
             visible: true,
         };
@@ -369,7 +363,7 @@ mod tests {
         assert_eq!(rect.get("Rght"), Some(&unit(b"#Pxl", 160.0)));
         let back = filter_from_item(&Descriptor::from_bytes(&item.to_bytes()).unwrap());
         assert_eq!((back.command.as_str(), &back.params["planes"]), (COMMAND, &json!(planes)));
-        assert_eq!((back.blend, back.opacity), (photocraft_color::BlendMode::Multiply, 0.25));
+        assert_eq!((back.blend, back.opacity), (magicpic_color::BlendMode::Multiply, 0.25));
 
         // Edit › Perspective Warp on a smart object stores its own id; it is written too, with a
         // straighten baked in.
@@ -449,7 +443,7 @@ mod tests {
             with(TEMPLATE_KEY, json!(to_hex(&Descriptor::new("filterFX").to_bytes()))),
             with(TEMPLATE_KEY, json!("0".repeat(MAX_TEMPLATE_BYTES * 2 + 2))),
         ] {
-            let f = SmartFilter { command: COMMAND.into(), params: p.clone(), blend: photocraft_color::BlendMode::Normal, opacity: 1.0, visible: true };
+            let f = SmartFilter { command: COMMAND.into(), params: p.clone(), blend: magicpic_color::BlendMode::Normal, opacity: 1.0, visible: true };
             assert!(export_item(&f).is_err(), "{p}");
         }
     }

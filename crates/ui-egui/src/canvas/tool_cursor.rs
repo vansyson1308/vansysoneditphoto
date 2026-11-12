@@ -81,7 +81,7 @@ pub(crate) struct CursorLifecycle;
 
 impl egui::plugin::Plugin for CursorLifecycle {
     fn debug_name(&self) -> &'static str {
-        "PhotoCraft tool cursor"
+        "MagicPic tool cursor"
     }
 
     fn on_begin_pass(&mut self, ui: &mut egui::Ui) {
@@ -134,7 +134,7 @@ impl CountCursor {
 }
 
 /// Draw the Count cursor `kind` at `at`: the OS arrow (hotspot at its tip) with its badge below right
-/// of it, dark digits on a light halo so they read on any pixel. PhotoCraft's own artwork.
+/// of it, dark digits on a light halo so they read on any pixel. MagicPic's own artwork.
 pub(crate) fn count(ctx: &egui::Context, at: Pos2, kind: CountCursor) -> CursorIcon {
     let pos = at + vec2(12.0, 16.0);
     // Painted straight onto a tooltip-order layer, above the canvas and its overlays: an Area
@@ -305,12 +305,12 @@ fn elsewhere(before: bool, here: bool, there: bool) -> bool {
 
 /// Mark this window as a Wayland surface (or not), for [`native`]; the shell calls it every pass.
 pub(crate) fn set_wayland(ctx: &egui::Context, wayland: bool) {
-    ctx.data_mut(|d| d.insert_temp(egui::Id::unique("photocraft-cursor-wayland"), wayland));
+    ctx.data_mut(|d| d.insert_temp(egui::Id::unique("magicpic-cursor-wayland"), wayland));
 }
 
 /// A Wayland window whose scale is not 1, where winit's cursor bitmaps are unreliable.
 fn scaled_wayland(ctx: &egui::Context) -> bool {
-    let wayland = cfg!(target_os = "linux") && ctx.data(|d| d.get_temp::<bool>(egui::Id::unique("photocraft-cursor-wayland"))).unwrap_or(false);
+    let wayland = cfg!(target_os = "linux") && ctx.data(|d| d.get_temp::<bool>(egui::Id::unique("magicpic-cursor-wayland"))).unwrap_or(false);
     wayland && ctx.native_pixels_per_point().unwrap_or_else(|| ctx.pixels_per_point() / ctx.zoom_factor()) != 1.0
 }
 
@@ -421,7 +421,7 @@ pub fn pen(ctx: &egui::Context, tool: Tool) -> Option<CursorIcon> {
 
 /// Reuse the latest bitmap per Pen variant and replace only the entry whose scale changed.
 fn cached_pen_image(ctx: &egui::Context, variant: PenVariant, scale: f32) -> Option<CustomCursorImage> {
-    let id = egui::Id::unique("photocraft-pen-cursor-cache");
+    let id = egui::Id::unique("magicpic-pen-cursor-cache");
     let idx = variant as usize;
     if let Some(image) = ctx.data_mut(|d| {
         d.get_temp_mut_or_default::<PenCache>(id)
@@ -468,7 +468,7 @@ fn cached_image(ctx: &egui::Context, shape: &Shape, scale: f32) -> Option<Custom
     if matches!(shape, Shape::Pipette) {
         return cached_pipette(ctx, scale, false).image;
     }
-    let id = egui::Id::unique("photocraft-tool-cursor");
+    let id = egui::Id::unique("magicpic-tool-cursor");
     if let Some(cached) = ctx.data(|d| d.get_temp::<Cached>(id))
         && cached.shape == *shape
         && cached.scale == scale
@@ -484,7 +484,7 @@ fn cached_image(ctx: &egui::Context, shape: &Shape, scale: f32) -> Option<Custom
 /// `insert_temp` stores runtime data across frames, not just for the duration of one pass.
 fn cached_pipette(ctx: &egui::Context, scale: f32, painted: bool) -> CachedPipette {
     let scale = if painted && scale.is_finite() && scale > 0.0 { scale.clamp(0.5, PAINTED_PIPETTE_MAX_SCALE) } else { scale };
-    let id = egui::Id::unique("photocraft-pipette-cache");
+    let id = egui::Id::unique("magicpic-pipette-cache");
     let mut entries = ctx.data(|d| d.get_temp::<Vec<CachedPipette>>(id)).unwrap_or_default();
     // A rejected native bitmap must not poison a valid texture at the same density, nor may
     // a cached GPU texture bypass the native size check when the pointer returns to the root.

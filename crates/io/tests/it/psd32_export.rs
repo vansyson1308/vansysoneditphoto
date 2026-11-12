@@ -9,11 +9,11 @@
 use crate::common;
 
 use common::Features;
-use photocraft_color::{ColorMode, SampleType};
-use photocraft_doc::Document;
-use photocraft_geom::Size;
-use photocraft_io::*;
-use photocraft_psd::{Compression, LayerInfoPlacement, PsdFile, hdr};
+use magicpic_color::{ColorMode, SampleType};
+use magicpic_doc::Document;
+use magicpic_geom::Size;
+use magicpic_io::*;
+use magicpic_psd::{Compression, LayerInfoPlacement, PsdFile, hdr};
 
 fn be32(b: &[u8], at: usize) -> u32 {
     u32::from_be_bytes(b[at..at + 4].try_into().unwrap())
@@ -89,10 +89,10 @@ fn export_psd(doc: &Document) -> Vec<u8> {
 #[test]
 /// Verify raw unmasked HDR planes and independently authored masked Smart caches across PSD and PSB round trips.
 fn masked_hdr_smart_filter_cache_survives_psd_and_psb_export() {
-    use photocraft_color::{BlendMode, PixelFormat};
-    use photocraft_doc::{Layer, LayerContent, LayerMask, SmartFilter, SmartObject, SmartSource};
-    use photocraft_geom::Affine;
-    use photocraft_raster::Surface;
+    use magicpic_color::{BlendMode, PixelFormat};
+    use magicpic_doc::{Layer, LayerContent, LayerMask, SmartFilter, SmartObject, SmartSource};
+    use magicpic_geom::Affine;
+    use magicpic_raster::Surface;
     use std::sync::Arc;
 
     // Public document export reconstructs embedded sources in document.pixel_format()
@@ -111,7 +111,7 @@ fn masked_hdr_smart_filter_cache_survives_psd_and_psb_export() {
             }
         }
         let bounds = source.bounds();
-        let filtered = photocraft_algo::apply_in(&pixels, &photocraft_algo::FilterParams::GaussianBlur { radius: 1. }, bounds, bounds, None, bounds);
+        let filtered = magicpic_algo::apply_in(&pixels, &magicpic_algo::FilterParams::GaussianBlur { radius: 1. }, bounds, bounds, None, bounds);
         let base_samples = pixels.read_region(bounds);
         let filtered_samples = filtered.read_region(bounds);
         assert!(base_samples.iter().zip(&filtered_samples).any(|(base, filtered)| (base - filtered).abs() > 0.1), "the actual blur must change the fixture");
@@ -222,7 +222,7 @@ fn layered_32bit_export_reimports_render_equal() {
     for mode in [ColorMode::Rgb, ColorMode::Grayscale] {
         let doc = common::gen_doc(mode, SampleType::F32, Features::ALL);
         let back = import("t.psd", &export_psd(&doc)).unwrap().document;
-        let (a, b) = (photocraft_compose::flatten(&doc).into_px(), photocraft_compose::flatten(&back).into_px());
+        let (a, b) = (magicpic_compose::flatten(&doc).into_px(), magicpic_compose::flatten(&back).into_px());
         assert_eq!(a.len(), b.len());
         let d = common::max_diff(&a, &b);
         assert!(d <= 1e-4, "{mode:?}: render differs by {d}");
@@ -258,7 +258,7 @@ fn photoshop_32bit_corpus_round_trip() {
         assert_32bit_layout(&name, &out);
         let back = import(&name, &out).unwrap().document;
         assert_eq!(doc.layer_count(), back.layer_count(), "{name}: layer count");
-        let (a, b) = (photocraft_compose::flatten(&doc).into_px(), photocraft_compose::flatten(&back).into_px());
+        let (a, b) = (magicpic_compose::flatten(&doc).into_px(), magicpic_compose::flatten(&back).into_px());
         assert_eq!(a.len(), b.len(), "{name}");
         let d = common::max_diff(&a, &b);
         assert!(d <= 1e-4, "{name}: render differs by {d}");
@@ -300,7 +300,7 @@ fn merged_oracle_does_not_treat_extra_channels_as_transparency() {
         let mut file = PsdFile::from_bytes(&export_psd(&doc)).unwrap();
         let color_channels = if mode == ColorMode::Rgb { 3 } else { 1 };
         file.header.channels = color_channels + 1;
-        file.layer_info = Some(photocraft_psd::LayerInfo { merged_alpha: false, layers: Vec::new(), padding: None });
+        file.layer_info = Some(magicpic_psd::LayerInfo { merged_alpha: false, layers: Vec::new(), padding: None });
         file.image_data.compression = Compression::Raw;
         file.image_data.data = (0..color_channels).flat_map(|_| 2.0_f32.to_be_bytes()).chain(0.0_f32.to_be_bytes()).collect();
         assert!(!file.merged_has_alpha());
@@ -316,9 +316,9 @@ fn merged_oracle_does_not_treat_extra_channels_as_transparency() {
 fn mt32_marks_the_merged_transparency() {
     let mut doc = Document::new("transparent", Size::new(2, 1), ColorMode::Rgb, SampleType::F32);
     let fmt = doc.pixel_format();
-    let mut layer = photocraft_doc::Layer::raster("shape", fmt);
+    let mut layer = magicpic_doc::Layer::raster("shape", fmt);
     if let Some(s) = layer.surface_mut() {
-        s.fill_rect(photocraft_geom::Rect::new(0, 0, 1, 1), &[0.0, 0.0, 0.0, 1.0]);
+        s.fill_rect(magicpic_geom::Rect::new(0, 0, 1, 1), &[0.0, 0.0, 0.0, 1.0]);
     }
     doc.layers.push(layer);
     let mut file = PsdFile::from_bytes(&export_psd(&doc)).unwrap();
@@ -332,9 +332,9 @@ fn mt32_marks_the_merged_transparency() {
     let name: Vec<u8> = [0u8, 0, 0, 13].into_iter().chain("Transparency\0".encode_utf16().flat_map(u16::to_be_bytes)).collect();
     file.resources.retain(|r| !matches!(r.id, 1006 | 1045));
     assert!(!file.merged_has_alpha(), "a positive layer count alone");
-    file.global_blocks.push(photocraft_psd::TaggedBlock::new(*b"Mt32", Vec::new()));
+    file.global_blocks.push(magicpic_psd::TaggedBlock::new(*b"Mt32", Vec::new()));
     assert!(file.merged_has_alpha());
-    file.resources.push(photocraft_psd::ImageResource::new(1045, name));
+    file.resources.push(magicpic_psd::ImageResource::new(1045, name));
     let merged = merged_composite(&file).unwrap();
     assert_eq!(merged.iter().map(|p| p[3]).collect::<Vec<_>>(), vec![1.0, 0.0]);
     let opened = import("transparent.psd", &file.to_bytes().unwrap()).unwrap();

@@ -4,20 +4,20 @@
 //! tolerance. Direct Selection, the Pen's ⌥ and the tool's shown handles keep their 6 points.
 
 use egui::{Modifiers, Pos2, Rect, vec2};
-use photocraft_doc::Knot;
-use photocraft_doc::vector::Path;
+use magicpic_doc::Knot;
+use magicpic_doc::vector::Path;
 use serde_json::json;
 
 use super::convert_point_history_tests::drag;
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::anchor_tools::delete_anchor_targeted_path_tests::{group_shape, setup, shape_path, steps};
 use crate::canvas::ViewXform;
 use crate::state::Tool;
 
 /// The measured document: 800 × 600 px with a closed corner square as the Work Path, shown at
 /// `zoom` (device pixels per document pixel) on a display of `ppp` device pixels per point.
-fn app(tool: Tool, zoom: f32, ppp: f32) -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app(tool: Tool, zoom: f32, ppp: f32) -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.session.execute("file.new", json!({"width": 800, "height": 600})).unwrap();
     app.sync_views();
     app.ui.views[0].zoom = zoom;
@@ -28,13 +28,13 @@ fn app(tool: Tool, zoom: f32, ppp: f32) -> PhotocraftApp {
     app
 }
 
-fn work(app: &PhotocraftApp) -> Path {
+fn work(app: &MagicpicApp) -> Path {
     app.session.active().unwrap().doc.work_path.clone().unwrap()
 }
 
 /// Does a drag that starts `dx` document px left of the corner (100, 300) pull out its handles,
 /// in one History step?
-fn converts_from(app: &mut PhotocraftApp, dx: f64) -> bool {
+fn converts_from(app: &mut MagicpicApp, dx: f64) -> bool {
     let n = steps(app);
     drag(app, [100.0 - dx, 300.0], [100.0 - dx, 340.0], Modifiers::NONE);
     let corner = work(app).subpaths[0].knots[0];
@@ -137,7 +137,7 @@ fn the_pens_alt_keeps_its_6_points() {
     }
 }
 
-fn converts_from_with_alt(app: &mut PhotocraftApp, dx: f64) -> bool {
+fn converts_from_with_alt(app: &mut MagicpicApp, dx: f64) -> bool {
     drag(app, [100.0 - dx, 300.0], [100.0 - dx, 340.0], Modifiers::ALT);
     app.ui.pen.is_none() && work(app).subpaths[0].knots[0] != Knot::corner(100.0, 300.0)
 }

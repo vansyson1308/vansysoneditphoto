@@ -3,9 +3,9 @@
 //! through the production callback and shader on a real device, with synthetic pixels.
 
 use super::*;
-use photocraft_compose::Buffer;
-use photocraft_doc::SampleType;
-use photocraft_geom::Rect;
+use magicpic_compose::Buffer;
+use magicpic_doc::SampleType;
+use magicpic_geom::Rect;
 
 /// Texels per side of the test texture.
 const TEXELS: usize = 4;
@@ -61,7 +61,7 @@ impl Case {
 
 #[test]
 fn sharp_edges_match_at_every_page_reduction() {
-    let _gpu = photocraft_testkit::gpu_lock();
+    let _gpu = magicpic_testkit::gpu_lock();
     let rs = std::panic::catch_unwind(|| egui_kittest::wgpu::create_render_state(wgpu_setup(), Default::default()));
     let Ok(rs) = rs else {
         eprintln!("skipping sharp filter readback: no GPU adapter");

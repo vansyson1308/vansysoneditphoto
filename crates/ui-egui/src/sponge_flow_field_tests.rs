@@ -8,27 +8,27 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
 use serde_json::json;
 
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::canvas::{ToolEvent, tool_event};
 use crate::eraser_ui::TOLERANCE_RANGE_ALERT;
 use crate::state::{DialogKind, Tool, ToolOptions};
 
-fn bar() -> Harness<'static, PhotocraftApp> {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn bar() -> Harness<'static, MagicpicApp> {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 80, "height": 80})).unwrap();
     app.ui.tool = Tool::Sponge;
     let mut h = Harness::builder().with_size(vec2(1800.0, 300.0)).build_ui_state(|ui, app| crate::panels::options_bar(app, ui), app);
-    PhotocraftApp::setup_context(&h.ctx, Default::default());
+    MagicpicApp::setup_context(&h.ctx, Default::default());
     h.run_steps(4);
     h
 }
 
-fn flow_field<'a>(h: &'a Harness<'static, PhotocraftApp>) -> egui_kittest::Node<'a> {
+fn flow_field<'a>(h: &'a Harness<'static, MagicpicApp>) -> egui_kittest::Node<'a> {
     h.query_all_by_role(Role::SpinButton).find(|n| n.accesskit_node().label().as_deref() == Some("Flow:")).expect("the Flow field")
 }
 
 /// Types `text` into Flow, then Tabs out of it.
-fn type_flow(h: &mut Harness<'static, PhotocraftApp>, text: &str) {
+fn type_flow(h: &mut Harness<'static, MagicpicApp>, text: &str) {
     flow_field(h).click();
     h.run_steps(1);
     h.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::A);
@@ -38,15 +38,15 @@ fn type_flow(h: &mut Harness<'static, PhotocraftApp>, text: &str) {
     h.run_steps(3);
 }
 
-fn flow(h: &Harness<'static, PhotocraftApp>) -> f32 {
+fn flow(h: &Harness<'static, MagicpicApp>) -> f32 {
     h.state().ui.tool_options.sponge_flow
 }
 
-fn alerts(h: &Harness<'static, PhotocraftApp>) -> Vec<String> {
+fn alerts(h: &Harness<'static, MagicpicApp>) -> Vec<String> {
     h.state().ui.dialogs.iter().filter(|d| d.kind == DialogKind::Error).filter_map(|d| d.fields.get("message")?.as_str().map(str::to_owned)).collect()
 }
 
-fn click_at(h: &mut Harness<'static, PhotocraftApp>, p: egui::Pos2) {
+fn click_at(h: &mut Harness<'static, MagicpicApp>, p: egui::Pos2) {
     h.hover_at(p);
     h.run_steps(1);
     h.event(egui::Event::PointerButton { pos: p, button: egui::PointerButton::Primary, pressed: true, modifiers: Default::default() });
@@ -135,15 +135,15 @@ fn the_arrow_opens_a_slider_from_1_to_100() {
 }
 
 /// An 80 px document filled with red 200,40,40 and a 40 px hard tip.
-fn red_app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn red_app() -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 80, "height": 80})).unwrap();
     app.run("paint.pencil", json!({"points": [[40, 40]], "size": 400, "color": "#c82828"})).unwrap();
     app.run("tools.setBrush", json!({"brush": {"size": 40, "hardness": 1.0}})).unwrap();
     app
 }
 
-fn pixel(app: &PhotocraftApp) -> [f32; 4] {
+fn pixel(app: &MagicpicApp) -> [f32; 4] {
     let st = app.session.active().unwrap();
     st.active_layer.and_then(|id| st.doc.layer(id)).unwrap().surface().unwrap().rgba(40, 40)
 }

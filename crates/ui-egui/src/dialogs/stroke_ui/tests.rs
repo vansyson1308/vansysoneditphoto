@@ -2,14 +2,14 @@ use serde_json::json;
 
 use super::*;
 
-fn app() -> PhotocraftApp {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+fn app() -> MagicpicApp {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), Default::default());
     app.run("file.new", json!({"width": 40, "height": 30, "background": "transparent"})).unwrap();
     app.run("tools.setColors", json!({"foreground": "#ff0000", "background": "#0000ff"})).unwrap();
     app
 }
 
-fn pixel(app: &PhotocraftApp, x: i32, y: i32) -> [f32; 4] {
+fn pixel(app: &MagicpicApp, x: i32, y: i32) -> [f32; 4] {
     let st = app.session.active().unwrap();
     st.doc.layer(st.active_layer.unwrap()).unwrap().surface().unwrap().rgba(x, y)
 }
@@ -34,7 +34,7 @@ fn menu_and_canvas_invocations_open_options_but_explicit_params_run_directly() {
     assert!(app.ui.dialogs.is_empty(), "explicit params must not show a modal dialog");
     assert!(pixel(&app, 10, 15)[1] > 0.98);
 
-    let mut empty = PhotocraftApp::new(photocraft_engine::Session::new(), Default::default());
+    let mut empty = MagicpicApp::new(magicpic_engine::Session::new(), Default::default());
     assert!(crate::menus::invoke(&mut empty, &ctx, COMMAND, json!({})).is_err());
     assert!(empty.ui.dialogs.is_empty());
     app.run("layer.newAdjustmentLayer.curves", json!({})).unwrap();
@@ -56,9 +56,9 @@ fn menu_stroke_edits_the_targeted_filter_mask_and_undoes() {
     app.run("select.rect", json!({"x": 10, "y": 10, "width": 10, "height": 10})).unwrap();
     assert!(app.filter_mask_targeted());
     assert!(crate::menus::is_enabled(&app, COMMAND));
-    let sample = |app: &PhotocraftApp, x, y| {
+    let sample = |app: &MagicpicApp, x, y| {
         let st = app.session.active().unwrap();
-        photocraft_engine::channel_cmds::read_target_surface(&st.doc, st.active_layer, &json!({"target": "filterMask"})).unwrap().sample_channel(x, y, 0)
+        magicpic_engine::channel_cmds::read_target_surface(&st.doc, st.active_layer, &json!({"target": "filterMask"})).unwrap().sample_channel(x, y, 0)
     };
     let history = app.session.active().unwrap().history.past_len();
     assert_eq!(sample(&app, 10, 15), 1.0, "the real filter mask starts white");
@@ -95,7 +95,7 @@ fn menu_stroke_edits_the_targeted_filter_mask_and_undoes() {
 #[test]
 fn implicit_filter_mask_dialog_retains_its_target_when_ui_set_changes_it() {
     use crate::control::{ControlRequest, Outcome, handle};
-    use photocraft_doc::LayerContent;
+    use magicpic_doc::LayerContent;
     let mut app = app();
     app.run("edit.fill", json!({"contents": "white"})).unwrap();
     app.run("layer.smartObjects.convertToSmartObject", json!({})).unwrap();
@@ -115,7 +115,7 @@ fn implicit_filter_mask_dialog_retains_its_target_when_ui_set_changes_it() {
     let history = app.session.active().unwrap().history.past_len();
     crate::dialogs::confirm(&mut app, id).unwrap();
     let st = app.session.active().unwrap();
-    let surface = photocraft_engine::channel_cmds::read_target_surface(&st.doc, st.active_layer, &json!({"target": "filterMask"})).unwrap();
+    let surface = magicpic_engine::channel_cmds::read_target_surface(&st.doc, st.active_layer, &json!({"target": "filterMask"})).unwrap();
     assert_eq!(surface.sample_channel(0, 15, 0), 0.0);
     assert_eq!(surface.sample_channel(15, 15, 0), 1.0);
     assert_eq!(st.history.past_len(), history + 1);
@@ -142,9 +142,9 @@ fn stroke_dialog_keeps_layer_editing_in_channel_views() {
             app.run("channel.target", json!({"channel": 0})).unwrap();
             json!({"channel": 0})
         };
-        let samples = |app: &PhotocraftApp| {
+        let samples = |app: &MagicpicApp| {
             let st = app.session.active().unwrap();
-            photocraft_engine::channel_cmds::read_target_surface(&st.doc, st.active_layer, &json!({"target": target})).unwrap().clone()
+            magicpic_engine::channel_cmds::read_target_surface(&st.doc, st.active_layer, &json!({"target": target})).unwrap().clone()
         };
         let before = samples(&app);
         let history = app.session.active().unwrap().history.past_len();
@@ -216,9 +216,9 @@ fn preferences_remember_all_choices_and_reject_corrupt_values() {
     }
     crate::dialogs::confirm(&mut app, id).unwrap();
     let saved = app.session.prefs_to_json();
-    let mut restored = photocraft_engine::Session::new();
+    let mut restored = magicpic_engine::Session::new();
     restored.load_prefs_json(&saved).unwrap();
-    let mut again = PhotocraftApp::new(restored, Default::default());
+    let mut again = MagicpicApp::new(restored, Default::default());
     again.run("file.new", json!({"width": 40, "height": 30, "background": "transparent"})).unwrap();
     again.run("tools.setColors", json!({"foreground": "#ff0000"})).unwrap();
     let remembered = fields(&again);
@@ -263,7 +263,7 @@ fn command_params_do_not_leak_private_dialog_fields() {
     assert_eq!(out["color"], "#ff0000");
 }
 
-/// The Stroke dialog's colour swatch opens PhotoCraft's Color Picker on the stroke colour (as in
+/// The Stroke dialog's colour swatch opens MagicPic's Color Picker on the stroke colour (as in
 /// Photoshop), not egui's compact popup; OK sets the stroke colour, not the foreground, and the
 /// stroke is drawn in it.
 #[test]
@@ -271,7 +271,7 @@ fn the_color_swatch_opens_the_color_picker() {
     use egui_kittest::Harness;
     use egui_kittest::kittest::Queryable;
     let mut h = Harness::builder().with_size(egui::vec2(1280.0, 800.0)).with_max_steps(64).build_eframe(|cc| {
-        PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
+        MagicpicApp::setup_context(&cc.egui_ctx, Default::default());
         app()
     });
     h.run_steps(6);
@@ -284,7 +284,7 @@ fn the_color_swatch_opens_the_color_picker() {
     h.get_by_label("Stroke color").click();
     h.run_steps(4);
     let picker = crate::color_picker_ui::top(h.state()).expect("the swatch opens the Color Picker");
-    let field = |h: &Harness<'_, PhotocraftApp>, d: u64, k: &str| h.state().ui.dialogs.iter().find(|x| x.id == d).and_then(|x| x.fields.get(k).cloned());
+    let field = |h: &Harness<'_, MagicpicApp>, d: u64, k: &str| h.state().ui.dialogs.iter().find(|x| x.id == d).and_then(|x| x.fields.get(k).cloned());
     assert_eq!(field(&h, picker, "color"), Some(json!("#20a040")));
     assert_eq!(field(&h, picker, "__label"), Some(json!("Color Picker (Stroke Color)")));
     assert!(!egui::Popup::is_any_open(&h.ctx), "no egui colour popup");

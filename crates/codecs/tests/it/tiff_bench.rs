@@ -2,12 +2,12 @@
 //! release:
 //!
 //! ```sh
-//! cargo test --release -p photocraft-codecs --test it -- tiff_bench:: --ignored --nocapture
+//! cargo test --release -p magicpic-codecs --test it -- tiff_bench:: --ignored --nocapture
 //! ```
 
 use crate::common;
 use common::tiffgen::*;
-use photocraft_codecs::*;
+use magicpic_codecs::*;
 use std::time::Instant;
 
 const W: u32 = 6336;

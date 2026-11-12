@@ -8,8 +8,8 @@ use egui::{Context, Modifiers, PointerButton, Pos2, vec2};
 use egui_kittest::Harness;
 
 /// A committed type layer reading "Hello" over the middle of a 32 px canvas, no edit running.
-fn app_with_type() -> (PhotocraftApp, u64) {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+fn app_with_type() -> (MagicpicApp, u64) {
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 32, "height": 32})).unwrap();
     app.ui.tool = Tool::Type;
     let id = app.run("type.create", json!({"text": "Hello", "size": 14, "x": 1, "y": 22})).unwrap()["layer"].as_u64().unwrap();
@@ -18,7 +18,7 @@ fn app_with_type() -> (PhotocraftApp, u64) {
 }
 
 /// Right-click over the type: the menu opens as a type layer menu.
-fn open_over_type(app: &mut PhotocraftApp) -> CanvasToolMenu {
+fn open_over_type(app: &mut MagicpicApp) -> CanvasToolMenu {
     assert!(open_at(app, &Context::default(), Tool::Type, [10.0, 100.0], Some([16.0, 16.0])), "the canvas centre is on the type");
     let menu = app.ui.canvas_tool_menu.clone().unwrap();
     assert!(menu.type_layer && !menu.text);
@@ -29,14 +29,14 @@ fn row_ids(menu: &CanvasToolMenu) -> Vec<Option<&'static str>> {
     rows(menu).iter().map(|r| r.map(|(_, id)| id)).collect()
 }
 
-fn text_of(app: &PhotocraftApp, id: u64) -> photocraft_doc::TextLayer {
-    match &app.session.active().unwrap().doc.layer(photocraft_doc::LayerId(id)).unwrap().content {
+fn text_of(app: &MagicpicApp, id: u64) -> magicpic_doc::TextLayer {
+    match &app.session.active().unwrap().doc.layer(magicpic_doc::LayerId(id)).unwrap().content {
         LayerContent::Text(t) => t.clone(),
         other => panic!("layer {id} is no longer text: {other:?}"),
     }
 }
 
-fn history_len(app: &PhotocraftApp) -> usize {
+fn history_len(app: &MagicpicApp) -> usize {
     app.session.active().unwrap().history.entries().len()
 }
 
@@ -118,7 +118,7 @@ fn faux_rows_toggle_the_whole_layer_in_one_history_state() {
 /// Edit Type… starts editing the layer that was right-clicked, even inside a multiselection.
 #[test]
 fn edit_type_starts_editing_the_right_clicked_layer() {
-    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 200, "height": 100})).unwrap();
     app.ui.tool = Tool::Type;
     let top = app.run("type.create", json!({"text": "Top", "size": 30, "x": 10, "y": 40})).unwrap()["layer"].as_u64().unwrap();
@@ -157,10 +157,10 @@ fn the_type_edit_menu_is_unchanged() {
 }
 
 /// A drawn harness over the committed type, as in the canvas gesture tests.
-fn menu_harness(mut app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
+fn menu_harness(mut app: MagicpicApp) -> Harness<'static, MagicpicApp> {
     app.sync_views();
     let mut h = Harness::builder().with_size(vec2(1000.0, 700.0)).build_ui_state(
-        |ui, app: &mut PhotocraftApp| {
+        |ui, app: &mut MagicpicApp| {
             let ctx = ui.ctx().clone();
             if !ctx.fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {
                 return;
@@ -169,12 +169,12 @@ fn menu_harness(mut app: PhotocraftApp) -> Harness<'static, PhotocraftApp> {
         },
         app,
     );
-    PhotocraftApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
+    MagicpicApp::setup_context(&h.ctx, crate::theme::ThemeKind::default());
     h.run_steps(4);
     h
 }
 
-fn right_click(h: &mut Harness<'static, PhotocraftApp>, p: Pos2) {
+fn right_click(h: &mut Harness<'static, MagicpicApp>, p: Pos2) {
     h.event(egui::Event::ModifiersChanged(Modifiers::NONE));
     h.event(egui::Event::PointerMoved(p));
     h.run_steps(1);
@@ -184,7 +184,7 @@ fn right_click(h: &mut Harness<'static, PhotocraftApp>, p: Pos2) {
     h.run_steps(2);
 }
 
-fn listed(h: &Harness<'static, PhotocraftApp>) -> Vec<String> {
+fn listed(h: &Harness<'static, MagicpicApp>) -> Vec<String> {
     let menu = h.state().ui.canvas_tool_menu.clone().expect("the menu stays open over the type");
     rows(&menu).iter().flatten().map(|(_, id)| id.to_string()).collect()
 }

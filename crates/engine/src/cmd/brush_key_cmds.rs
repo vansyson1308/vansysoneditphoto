@@ -52,11 +52,11 @@ pub const UNGROUPED: &str = "My Brushes";
 /// (as `brushes_tab` draws them). A preset its name can't select (an earlier one has the same name
 /// up to case, and `tools.setBrush` picks that one) is left out afterwards, so stepping never
 /// gets stuck.
-fn panel_order(presets: &[photocraft_paint::BrushPreset]) -> Vec<usize> {
-    fn path(p: &photocraft_paint::BrushPreset) -> &[String] {
+fn panel_order(presets: &[magicpic_paint::BrushPreset]) -> Vec<usize> {
+    fn path(p: &magicpic_paint::BrushPreset) -> &[String] {
         p.folder.get(..p.folder.len().min(crate::brush_preset_cmds::MAX_FOLDER_DEPTH)).unwrap_or_default()
     }
-    fn flatten(presets: &[photocraft_paint::BrushPreset], items: &[usize], depth: usize, out: &mut Vec<usize>) {
+    fn flatten(presets: &[magicpic_paint::BrushPreset], items: &[usize], depth: usize, out: &mut Vec<usize>) {
         let mut seen: Vec<&str> = Vec::new();
         for &i in items {
             let Some(p) = presets.get(i) else { continue };
@@ -85,7 +85,7 @@ fn panel_order(presets: &[photocraft_paint::BrushPreset]) -> Vec<usize> {
     }
     // Groups and folders are placed by every preset, as the panel places them; only then are the
     // presets their names can't select left out.
-    out.retain(|&i| presets.get(i).is_some_and(|p| photocraft_paint::presets::find(presets, &p.name).is_some_and(|q| std::ptr::eq(q, p))));
+    out.retain(|&i| presets.get(i).is_some_and(|p| magicpic_paint::presets::find(presets, &p.name).is_some_and(|q| std::ptr::eq(q, p))));
     out
 }
 
@@ -213,10 +213,10 @@ mod tests {
         assert_eq!(s.tools.brush.angle, -15.0);
     }
 
-    fn preset(name: &str, group: &str, folder: &[&str], size: f32) -> photocraft_paint::BrushPreset {
-        photocraft_paint::BrushPreset {
+    fn preset(name: &str, group: &str, folder: &[&str], size: f32) -> magicpic_paint::BrushPreset {
+        magicpic_paint::BrushPreset {
             name: name.into(),
-            brush: photocraft_paint::BrushSettings { size, ..Default::default() },
+            brush: magicpic_paint::BrushSettings { size, ..Default::default() },
             builtin: false,
             group: group.into(),
             folder: folder.iter().map(|f| f.to_string()).collect(),

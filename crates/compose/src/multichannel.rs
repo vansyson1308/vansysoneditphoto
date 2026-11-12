@@ -23,11 +23,11 @@
 
 use std::sync::Arc;
 
-use photocraft_cms::{Builtin, ColorSpace, Profile, Transform, TransformOptions};
-use photocraft_color::convert::CmykSpace;
-use photocraft_color::{Color, ColorMode};
-use photocraft_doc::{AlphaChannel, Document};
-use photocraft_geom::Rect;
+use magicpic_cms::{Builtin, ColorSpace, Profile, Transform, TransformOptions};
+use magicpic_color::convert::CmykSpace;
+use magicpic_color::{Color, ColorMode};
+use magicpic_doc::{AlphaChannel, Document};
+use magicpic_geom::Rect;
 
 use crate::Buffer;
 
@@ -124,7 +124,7 @@ impl InkSpace {
                 .as_ref()
                 .and_then(|b| Profile::parse(b).ok())
                 .filter(|p| p.color_space == ColorSpace::Rgb && !p.same_colors(Builtin::Srgb.profile()))
-                .and_then(|own| photocraft_cms::transform::cached(Builtin::Srgb.profile(), &own, TransformOptions::default()).ok())
+                .and_then(|own| magicpic_cms::transform::cached(Builtin::Srgb.profile(), &own, TransformOptions::default()).ok())
         } else {
             None
         };
@@ -148,7 +148,7 @@ impl InkSpace {
         if matches!(color.mode, ColorMode::Indexed | ColorMode::Multichannel) {
             return color.to_rgb();
         }
-        let mut rgb = photocraft_color::convert::with_cmyk_space(self.cmyk.as_ref(), || color.to_rgb());
+        let mut rgb = magicpic_color::convert::with_cmyk_space(self.cmyk.as_ref(), || color.to_rgb());
         if let Some(t) = &self.to_own {
             t.apply(&mut rgb, 3);
         }
@@ -232,7 +232,7 @@ const REDUCE_SAMPLES: i32 = 4;
 /// The first channel of `s` over `area`, averaged down to `w`×`h`, one output row at a time.
 /// A box up to [`REDUCE_SAMPLES`] pixels a side is averaged whole; a bigger one at that many
 /// evenly spaced rows and columns, so a huge document costs about `h × 4` row reads, not a scan.
-fn reduce(s: &photocraft_raster::Surface, area: Rect, w: u32, h: u32) -> Vec<f32> {
+fn reduce(s: &magicpic_raster::Surface, area: Rect, w: u32, h: u32) -> Vec<f32> {
     let (sw, sh) = (u64::from(area.width()), u64::from(area.height()));
     let n = s.channels().max(1);
     let edge = |i: u32, out: u32, len: u64| (u64::from(i) * len / u64::from(out.max(1))) as i32;
@@ -266,9 +266,9 @@ fn reduce(s: &photocraft_raster::Surface, area: Rect, w: u32, h: u32) -> Vec<f32
 
 #[cfg(test)]
 mod tests {
-    use photocraft_color::{Color, ColorMode, PixelFormat, SampleType};
-    use photocraft_doc::{AlphaChannel, Document, Size};
-    use photocraft_raster::Surface;
+    use magicpic_color::{Color, ColorMode, PixelFormat, SampleType};
+    use magicpic_doc::{AlphaChannel, Document, Size};
+    use magicpic_raster::Surface;
 
     use super::*;
 
@@ -438,7 +438,7 @@ mod tests {
         let doc = Document::new("c", Size::new(1, 1), ColorMode::Cmyk, SampleType::U8);
         let cyan = Color { mode: ColorMode::Cmyk, c: [1.0, 0.0, 0.0, 0.0], alpha: 1.0 };
         let space = crate::cmyk_space(&doc);
-        let want = photocraft_color::convert::with_cmyk_space(space.as_ref(), || cyan.to_rgb());
+        let want = magicpic_color::convert::with_cmyk_space(space.as_ref(), || cyan.to_rgb());
         assert_eq!(InkSpace::of(&doc).rgb(cyan), want.map(|v| v.clamp(0.0, 1.0)));
         // RGB inks are taken as stored.
         assert_eq!(InkSpace::of(&doc).rgb(Color::rgb(0.1, 0.2, 0.3)), [0.1, 0.2, 0.3]);
@@ -453,7 +453,7 @@ mod tests {
         assert_eq!(InkSpace::of(&doc).rgb(teal), [0.0, 0.6, 0.65]);
         doc.icc_profile = Some(Builtin::LinearSrgb.profile().to_bytes());
         let got = InkSpace::of(&doc).rgb(teal);
-        let want = [0.0, 0.6, 0.65].map(photocraft_color::convert::srgb_to_linear);
+        let want = [0.0, 0.6, 0.65].map(magicpic_color::convert::srgb_to_linear);
         assert!(got.iter().zip(&want).all(|(g, w)| (g - w).abs() <= 0.005), "{got:?} vs {want:?}");
     }
 

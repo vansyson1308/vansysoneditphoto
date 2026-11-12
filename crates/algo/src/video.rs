@@ -1,7 +1,7 @@
 //! Filter › Video: De-Interlace and NTSC Colors.
 
-use photocraft_color::ColorMode;
-use photocraft_geom::Rect;
+use magicpic_color::ColorMode;
+use magicpic_geom::Rect;
 
 use crate::Ctx;
 use crate::fxutil::{MAXC, rgba, set_rgba, xy};
@@ -93,8 +93,8 @@ pub(crate) fn ntsc(src: &Image, out: Rect, ctx: &Ctx) -> Vec<f32> {
 mod tests {
     use super::*;
     use crate::{FilterParams, apply};
-    use photocraft_color::{PixelFormat, SampleType};
-    use photocraft_raster::Surface;
+    use magicpic_color::{PixelFormat, SampleType};
+    use magicpic_raster::Surface;
 
     const DEPTHS: [SampleType; 3] = [SampleType::U8, SampleType::U16, SampleType::F32];
 

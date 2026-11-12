@@ -4,15 +4,15 @@
 
 use egui::accesskit::Role;
 use egui_kittest::kittest::Queryable;
-use photocraft_doc::{LayerId, text::TextAlign};
+use magicpic_doc::{LayerId, text::TextAlign};
 
 use super::super::pointer_up;
 use super::super::vertical_align_buttons_tests::{HORIZONTAL, VERTICAL, align_of, bar, lit, new_app, shown};
-use crate::PhotocraftApp;
+use crate::MagicpicApp;
 use crate::state::Tool;
 
 /// The Vertical Type Mask tool typing a new mask; returns its hidden working layer.
-fn typing_a_mask(app: &mut PhotocraftApp) -> LayerId {
+fn typing_a_mask(app: &mut MagicpicApp) -> LayerId {
     pointer_up(app, [400.0, 100.0], [400.0, 100.0]);
     let ed = app.ui.text_edit.as_ref().filter(|ed| ed.mask).expect("typing a mask");
     LayerId(ed.layer)

@@ -12,30 +12,30 @@ use crate::state::DialogKind;
 
 const MESSAGE: &str = "Could not set the clone source because it does not work with Indexed Color images (convert image to RGB Color mode to edit).";
 
-fn to_indexed(app: &mut PhotocraftApp) {
+fn to_indexed(app: &mut MagicpicApp) {
     app.run("image.mode.indexedColor", json!({"palette": "exact", "forced": "none", "dither": "none"})).unwrap();
 }
 
-fn click(app: &mut PhotocraftApp, x: f64, mods: Modifiers) {
+fn click(app: &mut MagicpicApp, x: f64, mods: Modifiers) {
     tool_event(app, ToolEvent::Down { x, y: 30.0, pressure: 1.0 }, mods);
     tool_event(app, ToolEvent::Up { x, y: 30.0 }, mods);
 }
 
-fn alerts(app: &PhotocraftApp) -> Vec<String> {
+fn alerts(app: &MagicpicApp) -> Vec<String> {
     app.ui.dialogs.iter().filter(|d| d.kind == DialogKind::Error).filter_map(|d| d.fields.get("message").and_then(Value::as_str).map(str::to_string)).collect()
 }
 
 /// The clone source (the options bar's and the engine's), the layer's pixels and the History length.
 type State = (Option<[f64; 2]>, Option<[f64; 2]>, Vec<f32>, usize);
 
-fn state(app: &PhotocraftApp) -> State {
+fn state(app: &MagicpicApp) -> State {
     let st = app.session.active().unwrap();
     let pixels = st.doc.layer(st.active_layer.unwrap()).unwrap().surface().unwrap().read_region(st.doc.bounds());
     (app.ui.clone_source, app.session.presets.clone.active().source, pixels, st.history.past_len())
 }
 
 /// The alert is up once; OK closes it and leaves `before` as it was.
-fn alerted_once(app: &mut PhotocraftApp, before: &State) {
+fn alerted_once(app: &mut MagicpicApp, before: &State) {
     assert_eq!(alerts(app), [MESSAGE]);
     assert!(state(app) == *before, "the source, the pixels and the History are unchanged");
     let id = app.ui.dialogs.iter().find(|d| d.kind == DialogKind::Error).map(|d| d.id).unwrap();
@@ -45,7 +45,7 @@ fn alerted_once(app: &mut PhotocraftApp, before: &State) {
 }
 
 /// An Indexed Color document with stripes to heal, the Healing Brush active.
-fn indexed() -> PhotocraftApp {
+fn indexed() -> MagicpicApp {
     let mut app = app();
     stripes(&mut app, 4, "pixels");
     to_indexed(&mut app);
