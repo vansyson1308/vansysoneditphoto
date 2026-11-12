@@ -8,10 +8,9 @@ maintainer publishes it.
 > **Status for MagicPic: inherited and not yet run.** This pipeline came with the fork from
 > PhotoCraft. No MagicPic release has been cut with it, and it needs its own pass first:
 >
-> - The workflows in `.github/workflows/` are upstream's, unchanged: they call
->   `storytold/craft-common-actions` with upstream's inputs, secrets and the old package names,
->   and GitHub Actions is not enabled on this repository. Making CI MagicPic's own is a separate
->   task (`AGENTS.md`, house rule 11).
+> - The workflows in `.github/workflows/` are upstream's with only the names changed: they call
+>   `storytold/craft-common-actions` with inputs written for upstream and expect secrets this
+>   repository does not have. The release workflow has never run here.
 > - In-app updates look for releases of `vansyson1308/vansysoneditphoto`, so nothing is offered
 >   until one is published. The `craft-update` library that installs an update still assumes
 >   upstream's identity (bundle ids of the form `ai.storyteller.<id>`, upstream's Apple signer):

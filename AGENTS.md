@@ -1,7 +1,7 @@
 <!-- craft-house-rules:start core source=dde09ea31e2e457f5b4653a6e76f7cdf55944bdf sha256=540e6cea75d12d0710c3dca89658328e81e508ecef102446ca5bb95b7c0b92bb -->
 ## House rules
 
-MagicPic inherited these rules from the Craft house rules (`standards/house-rules-core.md` in `storytold/craft-contrib`) when it forked from PhotoCraft, and keeps its own copy here. A later rule may be stricter, not weaker.
+These apply in every Craft repository. A later rule may be stricter, not weaker. The source is `standards/house-rules-core.md` in `storytold/craft-contrib`. Propose changes there, not in a copy.
 
 1. **A person is accountable.** Whoever runs an agent answers for what it opens and for its review comments.
 2. **Check, then claim.** Before writing code, read the issue comments, search pull requests for `#N` and the keywords, and check recent commits on `main`. Comment on the issue first. Release a claim you will not finish.
@@ -13,7 +13,7 @@ MagicPic inherited these rules from the Craft house rules (`standards/house-rule
 8. **`main` changes through a pull request.** Do not push to it. Branch protection enforces this. There is no exception.
 9. **Stop and ask only about** licensing outside the allowlist, publishing, releases, a new remote, secrets, spending money, destructive git, and anything else hard to undo. Otherwise keep working. `plan/` is a gitignored notebook, not rules. Without it, do not ask for it and do not stop.
 10. **Keep secrets and personal details out** of the repository, logs and requests.
-11. **CI changes stand alone.** The workflows are inherited from upstream and still call `storytold/craft-common-actions`; they are not enabled on this fork. Do not change CI in a feature or fix pull request: making CI MagicPic's own is its own task.
+11. **CI stays shared.** Workflows call `storytold/craft-common-actions`. Do not change CI in a feature or fix pull request. If CI cannot cover a change, open an issue there.
 12. **Guards say why.** A check that looks removable says what it prevents. Read that before changing it.
 13. **Instructions must be readable by everyone.** No notes about one machine, and no links to files a reader cannot open. `craftrules` is retired. Do not link to it.
 14. **Keep pull requests moving.** Concurrent pull requests are fine; unanswered actionable feedback is not. Respond in 7 days, a reminder at 14, closure eligible at 30, from when an actionable request waits on the author. Suggestions and unconfirmed bot findings do not start the clock. A fix, explanation or agreed plan resets it; unrelated activity does not. Waiting on a reviewer or maintainer pauses it and does not count against the author. A maintainer decides closure; it is never automatic. Reuse search results, do not poll, and stop at a rate limit.
@@ -209,6 +209,6 @@ If the field has a PSD equivalent, map it in `crates/io` too, and keep unknown P
   GitHub profiles). Never hand-edit `contributors.json`.
 
 ## CI workflows
-- Workflows in `.github/workflows/` are inherited from upstream: they call the shared workflows in [`storytold/craft-common-actions`](https://github.com/storytold/craft-common-actions) at `@main` with upstream's inputs and secrets, and GitHub Actions is not enabled on this fork. Until MagicPic has its own CI, run the gate locally (§5).
+- Workflows in `.github/workflows/` are inherited from upstream: they call the shared workflows in [`storytold/craft-common-actions`](https://github.com/storytold/craft-common-actions) at `@main`, with inputs written for upstream and secrets this repository does not have. They run on pull requests here. The rename to MagicPic changed only the names in them (packages, paths, variables).
 - Don't add or change CI in a feature or fix PR. If the existing workflows can't build or test a change, link an existing craft-common-actions issue or PR, or open a new issue, or a PR only for a small fix that is safe for every app and does not increase CI time.
 - Some workflow files here still run their own jobs. Don't add to them. Moving a job into craft-common-actions is its own task, never part of another PR, and the job stays here until a shared workflow runs it.
