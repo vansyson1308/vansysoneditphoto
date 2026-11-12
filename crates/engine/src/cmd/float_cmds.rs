@@ -359,6 +359,13 @@ fn keeps_floating(id: &str) -> bool {
             | "brush.mixer.sample"
             | "brush.mixer.load"
             | "brush.mixer.clean"
+            // Looking at a document must not edit it, and a transaction's own steps drop the
+            // piece inside it, where a rollback brings it back.
+            | "seeing.view"
+            | "seeing.frames"
+            | "seeing.experiments"
+            | "seeing.recipe"
+            | "document.transaction"
     ) || ["view.", "window.", "help.", "prefs."].iter().any(|p| id.starts_with(p))
 }
 

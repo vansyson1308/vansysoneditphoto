@@ -18,4 +18,5 @@ mod openraster;
 mod raw_defaults;
 mod read_roots;
 mod renderer_save;
+mod seeing;
 mod smart_filter_authorization;

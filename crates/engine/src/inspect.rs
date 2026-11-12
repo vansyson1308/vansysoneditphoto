@@ -12,6 +12,8 @@ pub fn session(s: &Session) -> Value {
         "active": s.active_index(),
         "documents": s.documents().iter().enumerate().map(|(i, d)| json!({
             "index": i,
+            // Stays the same while the document is open, whatever its tab position.
+            "id": d.doc.id.0,
             "name": d.doc.name,
             "path": d.path,
             "width": d.doc.size.width,
@@ -41,6 +43,7 @@ fn document_with(d: &DocState, detail: bool) -> Value {
     let selected = d.selected_layers();
     let instances = smart_instances(&doc.layers);
     json!({
+        "id": doc.id.0,
         "name": doc.name,
         "path": &d.path,
         "width": doc.size.width,

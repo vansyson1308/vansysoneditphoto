@@ -373,6 +373,7 @@ impl Headless {
             }
         };
         let target_text = target.to_str().ok_or_else(|| AutomationError::BadRequest("automation paths must be valid UTF-8".into()))?;
+        let mut verified: Option<(PathBuf, u64)> = None;
         let mut warnings = match &self.filesystem {
             Filesystem::Denied => return Err(AutomationError::BadRequest("automation filesystem access is not granted: write authority is absent".into())),
             Filesystem::TrustedLocal => {
@@ -407,6 +408,17 @@ impl Headless {
                     self.pending_diagnostics.extend(warnings);
                     return Err(error);
                 }
+                // Success is what is on disk, not what was handed to the writer: look the file
+                // up again and compare its size before telling the caller it was saved.
+                let (absolute, on_disk) = workspace.written(target_text)?;
+                if on_disk != bytes.len() as u64 {
+                    self.pending_diagnostics.extend(warnings);
+                    return Err(AutomationError::Io(format!(
+                        "automation write `{target_text}` could not be verified: {} bytes were written but the file holds {on_disk}",
+                        bytes.len()
+                    )));
+                }
+                verified = Some((absolute, on_disk));
                 warnings
             }
         };
@@ -429,7 +441,40 @@ impl Headless {
                 Ok(())
             })?;
         }
-        Ok(json!({ "path": target.to_string_lossy(), "warnings": warnings }))
+        let mut reply = json!({ "path": target.to_string_lossy(), "warnings": warnings });
+        if let (Some((absolute, bytes)), Some(obj)) = (verified, reply.as_object_mut()) {
+            obj.insert("absolutePath".into(), json!(absolute.to_string_lossy()));
+            obj.insert("bytes".into(), json!(bytes));
+            obj.insert("verified".into(), json!(true));
+        }
+        Ok(reply)
+    }
+
+    /// The files and folders in `dir` of the read roots (the roots themselves when `None`),
+    /// newest first: how a client finds the picture a person just dropped into the folder.
+    pub fn list_files(&self, dir: Option<&str>, limit: usize) -> Result<Value, AutomationError> {
+        match &self.filesystem {
+            Filesystem::Workspace(workspace) => {
+                let (entries, truncated) = workspace.list(dir, limit)?;
+                Ok(json!({"dir": dir.unwrap_or(""), "entries": entries, "truncated": truncated}))
+            }
+            Filesystem::Denied => Err(AutomationError::BadRequest("automation filesystem access is not granted: read authority is absent".into())),
+            Filesystem::TrustedLocal => Err(AutomationError::BadRequest("listing files needs read roots (`--automation-read-root`)".into())),
+        }
+    }
+
+    /// `seeing.view` of the document at `index`, within the automation preview budget.
+    pub fn seeing_view(&mut self, index: Option<usize>, mut params: Value) -> Result<Value, AutomationError> {
+        let i = self.doc_index(index)?;
+        let doc = &self.session.documents()[i].doc;
+        if !matches!(&self.filesystem, Filesystem::TrustedLocal) && params.get("region").is_none() {
+            // A region is bounded by the command itself; a whole document by the preview budget.
+            crate::budgets::check_preview(doc.size.width, doc.size.height, crate::budgets::MAX_PREVIEW_SIDE)?;
+        }
+        if let Some(obj) = params.as_object_mut() {
+            obj.insert("document".into(), json!(i));
+        }
+        self.command_run("seeing.view", params)
     }
 
     /// Write rendered bytes through the configured write authority.

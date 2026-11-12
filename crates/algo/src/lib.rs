@@ -77,6 +77,7 @@ pub mod resample;
 pub mod retouch;
 pub mod scancrop;
 pub mod seam;
+pub mod seeing;
 pub mod segment;
 pub mod selection;
 mod selection_blur;

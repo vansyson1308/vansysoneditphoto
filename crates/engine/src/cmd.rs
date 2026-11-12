@@ -141,6 +141,7 @@ pub mod sample_cmds;
 #[cfg(test)]
 mod sample_zoom_box_tests;
 pub mod sampler_cmds;
+pub mod seeing_cmds;
 pub mod select_extra_cmds;
 pub mod selection_cmds;
 pub mod slice_cmds;
@@ -153,6 +154,7 @@ pub mod style_asl_cmds;
 pub mod swatch_cmds;
 pub mod symmetry_cmds;
 pub(super) mod timeline_cmds;
+pub mod transaction_cmds;
 pub mod transform_cmds;
 pub(super) mod trap_cmds;
 pub mod type_area_cmds;
@@ -1421,6 +1423,8 @@ fn build() -> Vec<CommandSpec> {
     v.extend(crate::distort_cmds::specs());
     v.extend(crate::analysis_cmds::specs());
     v.extend(crate::notes_cmds::specs());
+    v.extend(crate::seeing_cmds::specs());
+    v.extend(crate::transaction_cmds::specs());
     v.extend(crate::font_library_cmds::specs());
     v.extend(crate::history_cmds::specs());
     v.extend(crate::history_options_cmds::specs());

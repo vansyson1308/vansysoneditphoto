@@ -407,6 +407,10 @@ How each MCP tool maps onto control methods in bridge mode:
 | `doc_import_data_sets {path, …}` | `engine.execute {command: "file.import.variableDataSets", params}` |
 | `doc_save {path?, tgaBits?, ddsCompression?, ddsMipmaps?, maximizeCompatibility?}` / `doc_export {path, tgaBits?, ddsCompression?, ddsMipmaps?, maximizeCompatibility?}` | `app.save {path?, tgaBits?, ddsCompression?, ddsMipmaps?, maximizeCompatibility?}` |
 | `doc_render_preview {max_side?}` | `ui.screenshot`, returned directly as PNG image content |
+| `doc_render_preview` / `render_preview` with any of `{view, region, index, strength, levels, format, quality}` | `engine.execute {command: "seeing.view", params}` (a read, retried once on a fresh connection): the document itself, not the window, as image content with a JSON note beside it |
+| `command_run {id, params, expect_revision?, expect_document?}` (either guard) | `engine.execute {command: "document.transaction", params: {steps: [{id, params}], expectRevision?, expectDocument?}}`; the reply is the one step's own result |
+| `command_batch {steps, atomic: true, expect_revision?, expect_document?}` | one `engine.execute {command: "document.transaction", params: {steps, expectRevision?, expectDocument?}}`, so the app runs every step, or rolls all of them back, inside one command |
+| `files_list` | none: headless only (the desktop owns its folders) |
 | `session_list`, `ui_inspect` | `ui.inspect` |
 | `ui_screenshot {max_side?}` | `ui.screenshot`, returned as PNG image content |
 | `ui_pointer {events, modifiers?, button?}` | `ui.pointer` (other arguments are an error) |
@@ -414,7 +418,7 @@ How each MCP tool maps onto control methods in bridge mode:
 | `ui_set {fields}` | `ui.set` |
 | `control_call {method, params}` | any method, passed through unchanged |
 
-Bridge previews capture the app window; passing `index` is an error. Headless `doc_render_preview` supports `index` without changing the active document.
+A bridge preview with no arguments but `max_side` captures the app window. With `view` (`normal` included), `region`, `index` or `format` it renders the document through `seeing.view` instead, which is what an agent should look at to judge an edit; `ui_screenshot` remains the way to see the window. Headless `doc_render_preview` supports `index` without changing the active document.
 
 `doc_select` and `doc_close` work only in headless mode. The `ui_*` tools and `control_call` work only in bridge mode; in headless mode they return a tool error that explains how to start bridge mode.
 
