@@ -314,6 +314,7 @@ fn lens_flare(p: &Value) -> FilterParams {
         center_x: f(p, "centerX", 0.5),
         center_y: f(p, "centerY", 0.5),
         lens: choice(p, "lens", "zoom", LENS_TYPES, LensType::Zoom),
+        ghosts: p.get("ghosts").and_then(Value::as_bool).unwrap_or(true),
     }
 }
 
@@ -776,7 +777,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "filter.render.lensFlare",
             "Lens Flare…",
             ["Filter", "Render"],
-            r##"{"brightness":10..300=100,"centerX":0..1=0.5,"centerY":0..1=0.5,"lens":"zoom|prime35|prime105|moviePrime"} (normalized centre: 0..1 is the canvas; agents and actions may pass values outside it, which place the flare off the canvas unclamped)"##
+            r##"{"brightness":10..300=100,"centerX":0..1=0.5,"centerY":0..1=0.5,"lens":"zoom|prime35|prime105|moviePrime","ghosts":bool=true} (normalized centre: 0..1 is the canvas; agents and actions may pass values outside it, which place the flare off the canvas unclamped; ghosts false draws the core, its glow, streaks and rays only, without the reflection rings and discs across the frame)"##
         ),
         cmd!(
             "filter.render.lightingEffects",

@@ -1348,6 +1348,15 @@ impl MagicpicMcp {
         self.batch(p, Waiter::new(Some(context))).await
     }
 
+    #[tool(description = "Apply one recipe to several open documents in one call: a saved Action (`action`, its name) or inline \
+        `steps` as in command_batch, on each of `documents` (index or {id}) in turn, each brought to the front first. `overrides` \
+        change a step's params for one document ([{document, step, params}], top-level keys replace), e.g. a different star position \
+        per photo. With `atomic` (default true) each document is all or nothing; other documents still run unless stop_on_error. \
+        Returns {completed, failed, documents:[{document, index, name, revision, ok, result|error}]}.")]
+    async fn actions_play(&self, Parameters(p): Parameters<recipes::PlayParams>, context: RequestContext<RoleServer>) -> Result<CallToolResult, McpError> {
+        Ok(self.play(p, Waiter::new(Some(context))).await)
+    }
+
     // ----- live-GUI tools (bridge mode) -----
 
     #[tool(
@@ -1858,6 +1867,7 @@ impl MagicpicMcp {
 mod agent_tests;
 mod conventions;
 mod progress;
+mod recipes;
 mod targets;
 mod transport;
 

@@ -253,3 +253,58 @@ async fn bridge_mode_targets_documents_and_takes_export_options() {
     assert!(methods(&log).iter().all(|m| !m.starts_with("app.save")), "a refused export saves nothing");
     c.ok("doc_export", json!({"path": "out/b.jpeg", "format": "jpg"})).await;
 }
+
+/// `actions_play` (agent report P2.17): one recipe on several documents, each with its own
+/// star position, in one call.
+#[tokio::test(flavor = "multi_thread")]
+async fn one_recipe_runs_on_several_documents_with_overrides() {
+    let mut c = Client::start(MagicpicMcp::headless()).await;
+    for name in ["one", "two"] {
+        c.ok("doc_new", json!({"width": 64, "height": 48, "name": name, "background": "black"})).await;
+    }
+    let session = c.ok("session_list", json!({})).await.remove(0);
+    let (a, b) = (session["documents"][0]["id"].as_u64().unwrap(), session["documents"][1]["id"].as_u64().unwrap());
+    let steps = json!([
+        {"id": "filter.render.starburst", "params": {"points": [{"x": 10, "y": 10, "size": 2}], "rays": 4}},
+        {"id": "layer.new.layer", "params": {"name": "Notes"}},
+    ]);
+    let reply = c
+        .ok("actions_play", json!({"steps": steps, "documents": [{"id": a}, 1], "overrides": [{"document": {"id": b}, "step": 0, "params": {"points": [{"x": 50, "y": 38, "size": 2}]}}]}))
+        .await
+        .remove(0);
+    assert_eq!((reply["completed"].as_u64(), reply["failed"].as_u64()), (Some(2), Some(0)), "{reply}");
+    assert_eq!(reply["documents"][0]["document"], a);
+    assert_eq!(reply["documents"][1]["document"], b);
+    let bounds = |r: &Value, i: usize| r["documents"][i]["result"]["results"][0]["bounds"].clone();
+    assert!(bounds(&reply, 0)[0].as_i64().unwrap() < 20, "{reply}");
+    assert!(bounds(&reply, 1)[0].as_i64().unwrap() > 30, "the override moved the second document's star: {reply}");
+    for i in [0, 1] {
+        let doc = c.ok("doc_inspect", json!({"document": i})).await.remove(0);
+        let names = doc["layers"].to_string();
+        assert!(names.contains("Starburst") && names.contains("Notes"), "document {i}: {names}");
+    }
+
+    // A document that fails is rolled back; the other still runs.
+    let reply = c
+        .ok("actions_play", json!({"steps": [{"id": "layer.new.layer", "params": {"name": "X"}}, {"id": "no.such.command"}], "documents": [0, 1]}))
+        .await
+        .remove(0);
+    assert_eq!((reply["completed"].as_u64(), reply["failed"].as_u64()), (Some(0), Some(2)), "{reply}");
+    assert!(!c.ok("doc_inspect", json!({"document": 0})).await[0]["layers"].to_string().contains("\"X\""), "rolled back");
+    // A saved Action that does not exist fails per document, not the call.
+    let reply = c.ok("actions_play", json!({"action": "Nope", "documents": [0]})).await.remove(0);
+    assert_eq!(reply["failed"], 1, "{reply}");
+
+    for bad in [
+        json!({"documents": [0]}),
+        json!({"action": "A", "steps": [{"id": "layer.new.layer"}], "documents": [0]}),
+        json!({"steps": [{"id": "layer.new.layer"}], "documents": []}),
+        json!({"steps": [{"id": "layer.new.layer"}], "documents": [7]}),
+        json!({"steps": [{"id": "layer.new.layer"}], "documents": [0], "overrides": [{"document": 1, "step": 0, "params": {}}]}),
+        json!({"steps": [{"id": "layer.new.layer"}], "documents": [0], "overrides": [{"document": 0, "step": 3, "params": {}}]}),
+        json!({"action": "A", "documents": [0], "overrides": [{"document": 0, "step": 0, "params": {}}]}),
+    ] {
+        let (error, blocks) = c.call("actions_play", bad.clone()).await;
+        assert!(error, "{bad}: {blocks:?}");
+    }
+}

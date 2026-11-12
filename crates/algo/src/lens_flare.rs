@@ -122,15 +122,23 @@ impl Geometry {
     }
 }
 
-/// Adds `weight` times the light of one level into `light` (the output tile, row-major).
-fn add_level(level: &Level, weight: f32, g: &Geometry, light: &mut [[f32; 3]]) {
+/// Whether a radial element is a ghost: a reflection placed along the axis away from the flare
+/// centre (the core, its glows and rings sit at `t = 0`).
+fn is_ghost(e: &Radial) -> bool {
+    e.t.abs() > 0.02
+}
+
+/// Adds `weight` times the light of one level into `light` (the output tile, row-major). Without
+/// `ghosts` only the flare's core is drawn: its glows, rings, streaks and rays, none of the
+/// reflections across the frame.
+fn add_level(level: &Level, weight: f32, g: &Geometry, light: &mut [[f32; 3]], ghosts: bool) {
     if weight <= 0.0 {
         return;
     }
     let (w, h) = g.size;
     let (ox, oy) = g.origin;
     // Radial elements, each only over the pixels it can reach.
-    for e in level.radial {
+    for e in level.radial.iter().filter(|e| ghosts || !is_ghost(e)) {
         let Some(reach) = e.knots.last().map(|k| k.0 * g.unit) else { continue };
         let p = g.point(e.t, e.perp);
         let x0 = ((p.0 - reach - ox).floor().max(0.0) as usize).min(w);
@@ -152,7 +160,7 @@ fn add_level(level: &Level, weight: f32, g: &Geometry, light: &mut [[f32; 3]]) {
         }
     }
 
-    for s in level.streaks {
+    for s in level.streaks.iter().filter(|s| ghosts || s.t.abs() <= 0.02) {
         let p = g.point(s.t, s.perp);
         let (sin, cos) = s.angle.to_radians().sin_cos();
         let half = s.half.max(1e-3);
@@ -210,7 +218,7 @@ fn add_level(level: &Level, weight: f32, g: &Geometry, light: &mut [[f32; 3]]) {
     }
 }
 
-pub(crate) fn lens_flare(src: &Image, out: Rect, ctx: &Ctx, brightness: f32, centre: (f32, f32), lens: LensType) -> Vec<f32> {
+pub(crate) fn lens_flare(src: &Image, out: Rect, ctx: &Ctx, brightness: f32, centre: (f32, f32), lens: LensType, ghosts: bool) -> Vec<f32> {
     let n = src.ch;
     let b = ctx.bounds;
     let (bw, bh) = (b.width() as f32, b.height() as f32);
@@ -230,9 +238,9 @@ pub(crate) fn lens_flare(src: &Image, out: Rect, ctx: &Ctx, brightness: f32, cen
 
     let mut light = vec![[0.0f32; 3]; w * h];
     if let Some((lo, hi, f)) = bracket(levels(lens), brightness.clamp(10.0, 300.0)) {
-        add_level(lo, 1.0 - f, &g, &mut light);
+        add_level(lo, 1.0 - f, &g, &mut light, ghosts);
         if !std::ptr::eq(lo, hi) {
-            add_level(hi, f, &g, &mut light);
+            add_level(hi, f, &g, &mut light, ghosts);
         }
     }
 

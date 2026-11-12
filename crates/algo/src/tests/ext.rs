@@ -63,7 +63,7 @@ fn new_filters() -> Vec<FilterParams> {
         FilterParams::Shear { points: vec![[0.0, 0.0], [0.5, 0.3], [1.0, 0.0]], undefined: UndefinedAreas::Repeat },
         FilterParams::ZigZag { amount: 50.0, ridges: 4.0, style: ZigZagStyle::PondRipples },
         FilterParams::Fibers { variance: 16.0, strength: 4.0, seed: 8, foreground: BLACK, background: WHITE },
-        FilterParams::LensFlare { brightness: 100.0, center_x: 0.3, center_y: 0.3, lens: LensType::Zoom },
+        FilterParams::LensFlare { brightness: 100.0, center_x: 0.3, center_y: 0.3, lens: LensType::Zoom, ghosts: true },
         FilterParams::LightingEffects {
             lights: vec![Light::default()],
             gloss: 0.0,
@@ -429,7 +429,7 @@ fn fibers_lie_between_colours_and_are_seeded() {
 #[test]
 fn lens_flare_is_brightest_at_its_centre() {
     let s = flat(SampleType::F32, R, [0.2, 0.2, 0.2, 1.0]);
-    let out = run(&s, &FilterParams::LensFlare { brightness: 100.0, center_x: 0.25, center_y: 0.5, lens: LensType::Prime105 });
+    let out = run(&s, &FilterParams::LensFlare { brightness: 100.0, center_x: 0.25, center_y: 0.5, lens: LensType::Prime105, ghosts: true });
     assert!(out.pixel(10, 15)[0] > 0.9);
     assert!(out.pixel(10, 15)[0] > out.pixel(38, 2)[0]);
     assert!(out.pixel(38, 2)[0] >= 0.2 - 1e-6, "screen never darkens");
@@ -438,7 +438,7 @@ fn lens_flare_is_brightest_at_its_centre() {
 /// A Lens Flare on black over `r` (its reference bounds), as straight RGB.
 fn flare_on_black(r: Rect, lens: LensType) -> Vec<f32> {
     let s = flat(SampleType::F32, r, BLACK);
-    let p = FilterParams::LensFlare { brightness: 100.0, center_x: 0.3, center_y: 0.3, lens };
+    let p = FilterParams::LensFlare { brightness: 100.0, center_x: 0.3, center_y: 0.3, lens, ghosts: true };
     apply(&s, &p, output_area(&p, s.content_bounds(), r, None), r, None).read_region(r)
 }
 
@@ -484,7 +484,7 @@ fn lens_flare_with_an_overflowing_centre_leaves_finite_pixels() {
     let src = flat(SampleType::F32, R, [0.2, 0.3, 0.4, 1.0]);
     for lens in [LensType::Zoom, LensType::Prime35, LensType::Prime105, LensType::MoviePrime] {
         for (cx, cy) in [(f32::INFINITY, f32::NEG_INFINITY), (1e38, -1e38), (f32::NAN, 0.5), (5.0, -5.0)] {
-            let out = run(&src, &FilterParams::LensFlare { brightness: 100.0, center_x: cx, center_y: cy, lens });
+            let out = run(&src, &FilterParams::LensFlare { brightness: 100.0, center_x: cx, center_y: cy, lens, ghosts: true });
             let px = out.read_region(R);
             assert!(px.iter().all(|v| v.is_finite()), "{lens:?} at ({cx}, {cy})");
             assert!(px.iter().zip(src.read_region(R)).all(|(a, b)| *a >= b - 1e-6), "{lens:?}: screen never darkens");
@@ -498,7 +498,7 @@ fn lens_flare_between_two_measured_brightnesses_blends_their_light() {
     // 32-bit the result is the light itself; at 0 and 1 the clamp makes the blend nonlinear.
     let black = flat(SampleType::F32, R, [0.0, 0.0, 0.0, 1.0]);
     for lens in [LensType::Zoom, LensType::Prime35, LensType::Prime105, LensType::MoviePrime] {
-        let at = |brightness: f32| run(&black, &FilterParams::LensFlare { brightness, center_x: 0.25, center_y: 0.5, lens }).read_region(R);
+        let at = |brightness: f32| run(&black, &FilterParams::LensFlare { brightness, center_x: 0.25, center_y: 0.5, lens, ghosts: true }).read_region(R);
         let (lo, mid, hi) = (at(75.0), at(87.5), at(100.0));
         let mut checked = 0;
         for ((l, m), h) in lo.iter().zip(&mid).zip(&hi) {
@@ -514,7 +514,7 @@ fn lens_flare_between_two_measured_brightnesses_blends_their_light() {
 #[test]
 fn lens_flare_never_darkens_32_bit_values_above_one() {
     // #5785: the screen formula turned 2.0 into 1.5 (and 1.0 at the core).
-    let p = FilterParams::LensFlare { brightness: 150.0, center_x: 0.25, center_y: 0.5, lens: LensType::Zoom };
+    let p = FilterParams::LensFlare { brightness: 150.0, center_x: 0.25, center_y: 0.5, lens: LensType::Zoom, ghosts: true };
     let out = run(&flat(SampleType::F32, R, [2.0, 2.0, 2.0, 1.0]), &p);
     for px in out.read_region(R).as_chunks::<4>().0 {
         assert!(px[..3].iter().all(|&v| v >= 2.0), "{px:?}");
@@ -524,7 +524,7 @@ fn lens_flare_never_darkens_32_bit_values_above_one() {
 #[test]
 fn lens_flare_8_bit_result_is_the_screen_blend() {
     // The flare amount per pixel, read from a black 32-bit image (screen over 0 is the amount).
-    let p = FilterParams::LensFlare { brightness: 150.0, center_x: 0.25, center_y: 0.5, lens: LensType::Zoom };
+    let p = FilterParams::LensFlare { brightness: 150.0, center_x: 0.25, center_y: 0.5, lens: LensType::Zoom, ghosts: true };
     let amount = run(&flat(SampleType::F32, R, [0.0, 0.0, 0.0, 1.0]), &p).read_region(R);
     let src = pattern(SampleType::U8, R);
     let base = src.read_region(R);

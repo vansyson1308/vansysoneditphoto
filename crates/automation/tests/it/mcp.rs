@@ -1552,6 +1552,7 @@ async fn convention_tool_hints_match_what_each_tool_does() {
         ("doc_import_data_sets", EDITS),
         ("command_run", EDITS),
         ("command_batch", EDITS),
+        ("actions_play", EDITS),
         ("jobs_cancel", EDITS),
         ("ui_pointer", EDITS),
         ("ui_menu_invoke", EDITS),
