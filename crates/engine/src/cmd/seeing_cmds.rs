@@ -36,6 +36,14 @@ use crate::{EngineError, Result, Session};
 pub const RECIPE_VERSION: u32 = 1;
 /// Author of the notes that hold a variant's recipe and the viewer's reactions.
 pub const NOTE_AUTHOR: &str = "MagicPic Seeing";
+/// The author these notes carried before the product was renamed. A variant saved then keeps its
+/// recipe and reactions.
+const EARLIER_NOTE_AUTHOR: &str = "PhotoCraft Seeing";
+
+/// Whether `note` is one this feature wrote.
+fn ours(note: &Note) -> bool {
+    note.author == NOTE_AUTHOR || note.author == EARLIER_NOTE_AUTHOR
+}
 const RECIPE_PREFIX: &str = "recipe: ";
 const REACTION_PREFIX: &str = "reaction: ";
 /// Most steps in one recipe.
@@ -76,7 +84,7 @@ pub struct Source {
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct Recipe {
     /// Format version ([`RECIPE_VERSION`]).
-    #[serde(default = "version")]
+    #[serde(default = "version", alias = "photocraftSeeing")]
     pub magicpic_seeing: u32,
     /// Short name of the variant ("exposure +2 EV").
     #[serde(default)]
@@ -552,7 +560,7 @@ fn make_variant(s: &mut Session, cmd: &str, mut recipe: Recipe, name: Option<&st
         let note = recipe_note(&recipe)?;
         failed = s
             .edit("Seeing Recipe", |doc, _| {
-                doc.notes.retain(|n| n.author != NOTE_AUTHOR);
+                doc.notes.retain(|n| !ours(n));
                 doc.notes.push(note);
                 Ok(())
             })
@@ -622,9 +630,9 @@ fn chance_variant(s: &mut Session, p: &Value) -> Result<Value> {
 
 /// The recipe and the reactions stored in a document's notes.
 fn stored(doc: &Document) -> (Option<Recipe>, Vec<&str>) {
-    let ours = || doc.notes.iter().filter(|n| n.author == NOTE_AUTHOR);
-    let recipe = ours().filter_map(|n| n.text.strip_prefix(RECIPE_PREFIX)).filter_map(|t| serde_json::from_str::<Recipe>(t).ok()).next_back();
-    (recipe, ours().filter_map(|n| n.text.strip_prefix(REACTION_PREFIX)).collect())
+    let mine = || doc.notes.iter().filter(|n| ours(n));
+    let recipe = mine().filter_map(|n| n.text.strip_prefix(RECIPE_PREFIX)).filter_map(|t| serde_json::from_str::<Recipe>(t).ok()).next_back();
+    (recipe, mine().filter_map(|n| n.text.strip_prefix(REACTION_PREFIX)).collect())
 }
 
 /// `seeing.recipe`: the recipe the active document was made with, and the reactions noted. A query.

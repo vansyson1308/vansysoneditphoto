@@ -1,5 +1,5 @@
 //! Save for Web navigation and indexed palette UI. Draft state is serialized in dialog fields.
-use super::{Arc, Map, Optimized, MagicpicApp, Tokens, Value, WebSettings, json, n, params, s, web_cmds};
+use super::{Arc, MagicpicApp, Map, Optimized, Tokens, Value, WebSettings, json, n, params, s, web_cmds};
 
 /// Export dimensions, using the same percent/width/height precedence as web_document.
 pub fn dimensions(doc: &magicpic_doc::Document, p: &Value) -> Result<(f64, f64), String> {
@@ -491,8 +491,7 @@ mod tests {
 
     #[test]
     fn absurd_dimensions_and_navigation_fields_are_safe() {
-        let doc =
-            magicpic_doc::Document::new("fixture", magicpic_geom::Size::new(100, 50), magicpic_color::ColorMode::Rgb, magicpic_color::SampleType::U8);
+        let doc = magicpic_doc::Document::new("fixture", magicpic_geom::Size::new(100, 50), magicpic_color::ColorMode::Rgb, magicpic_color::SampleType::U8);
         assert!(dimensions(&doc, &json!({"percent": 1e308})).is_err());
         assert!(dimensions(&doc, &json!({"width": 1e300})).is_err());
         let f = serde_json::from_value::<Map<String, Value>>(json!({"__zoom": 1e300, "__center": [1e300, -1e300]})).unwrap();

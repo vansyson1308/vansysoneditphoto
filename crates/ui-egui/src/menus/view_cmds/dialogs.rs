@@ -1,5 +1,5 @@
 use super::dispatch::no_params;
-use super::{DialogKind, Map, MagicpicApp, Value, json};
+use super::{DialogKind, MagicpicApp, Map, Value, json};
 
 // ---------- dialogs and pickers in front of engine commands ----------
 

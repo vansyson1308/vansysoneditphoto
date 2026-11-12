@@ -610,10 +610,8 @@ fn legacy_rgb_replace_color_and_ordinary_gradient_exports_are_unchanged() {
     magicpic_algo::tone::replace_color(&mut expected, [0.3, 0.8, 0.2], 40.0, 60.0, 20.0, -10.0);
     s.execute("image.adjustments.replaceColor", json!({"color":[0.3,0.8,0.2],"fuzziness":40,"hue":60,"saturation":20,"lightness":-10})).unwrap();
     assert_eq!(raw(&s), expected.as_flattened());
-    let action = magicpic_engine::actions_cmds::Action::new(
-        "Ordinary",
-        vec![("image.adjustments.gradientMap".into(), json!({"stops":[[0,"#000000"],[1,"#ffffff"]]}))],
-    );
+    let action =
+        magicpic_engine::actions_cmds::Action::new("Ordinary", vec![("image.adjustments.gradientMap".into(), json!({"stops":[[0,"#000000"],[1,"#ffffff"]]}))]);
     let (b, _) = atn_cmds::export("Ordinary", &[&action], &[], false).unwrap();
     assert_eq!(
         atn::parse(&b).unwrap().actions[0].items[0].event,
@@ -683,11 +681,7 @@ fn an_unchanged_lab_tone_shift_preserves_native_cmyk_samples() {
     for depth in [8, 16, 32] {
         let mut s = fixture("cmyk", depth);
         s.edit("nontrivial native CMYK", |doc, active| {
-            doc.layer_mut(active.unwrap())
-                .unwrap()
-                .surface_mut()
-                .unwrap()
-                .write_region(magicpic_doc::Rect::from_xywh(1, 0, 1, 1), &[0.2, 0.3, 0.4, 0.25, 1.0]);
+            doc.layer_mut(active.unwrap()).unwrap().surface_mut().unwrap().write_region(magicpic_doc::Rect::from_xywh(1, 0, 1, 1), &[0.2, 0.3, 0.4, 0.25, 1.0]);
             Ok(())
         })
         .unwrap();

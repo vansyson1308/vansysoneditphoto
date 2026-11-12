@@ -77,11 +77,7 @@ fn custom_and_fibers_recordings_round_trip_replay_native_settings_and_undo() {
             let before = magicpic_format::save_to_bytes(&s.active().unwrap().doc, &Default::default()).unwrap();
             s.actions.list = imported.actions.clone();
             assert_eq!(s.execute("actions.play", json!({"action":"Dialog"})).unwrap()["ran"], 1);
-            assert_eq!(
-                magicpic_compose::flatten(&s.active().unwrap().doc).px,
-                magicpic_compose::flatten(&native.active().unwrap().doc).px,
-                "{id} {depth}-bit"
-            );
+            assert_eq!(magicpic_compose::flatten(&s.active().unwrap().doc).px, magicpic_compose::flatten(&native.active().unwrap().doc).px, "{id} {depth}-bit");
             s.execute("edit.undo", json!({})).unwrap();
             assert_eq!(magicpic_format::save_to_bytes(&s.active().unwrap().doc, &Default::default()).unwrap(), before);
         }

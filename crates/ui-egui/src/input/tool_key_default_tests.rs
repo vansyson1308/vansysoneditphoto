@@ -1,4 +1,4 @@
-use super::{Key, Modifiers, MagicpicApp, Tool, handle};
+use super::{Key, MagicpicApp, Modifiers, Tool, handle};
 use crate::panels::toolbar::TOOL_SECTIONS;
 use crate::spring_tools::key_of;
 use std::collections::HashSet;

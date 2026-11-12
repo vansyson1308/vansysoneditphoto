@@ -1,11 +1,16 @@
-PhotoCraft
-Copyright (c) 2026 ArtCraft Team and the PhotoCraft contributors.
+MagicPic
+Copyright (c) 2026 the MagicPic contributors.
 Licensed under the MIT License or the Apache License, Version 2.0, at your option
 (LICENSE-MIT, LICENSE-APACHE).
 
-The ArtCraft name, wordmark and logos in docs/brand/ are trademarks of the ArtCraft Team. They are
-not open source and are not covered by the license above; their terms are in
-docs/brand/LICENSE-brand.txt.
+MagicPic is a modified version (a fork) of PhotoCraft, https://github.com/storytold/photocraft:
+Copyright (c) 2026 ArtCraft Team and the PhotoCraft contributors, licensed under the same two
+licenses. The files of this repository were changed from PhotoCraft's: the product was renamed
+and features were added; the git history records each change. MagicPic is not made, sponsored
+or endorsed by the ArtCraft Team.
+
+The ArtCraft name, wordmark and logos are trademarks of the ArtCraft Team. They are not part of
+MagicPic and are not in this repository.
 
 Third-party material
 
@@ -74,7 +79,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 Optional PDF reader (craft-pdf)
 
-PhotoCraft imports PDF pages through craft-pdf (https://github.com/storytold/craft-libs,
+MagicPic imports PDF pages through craft-pdf (https://github.com/storytold/craft-libs,
 MIT OR Apache-2.0), pinned to revision c5a1cbfb5f9049f9270955caffb5bee5997aebf7. It vendors
 Hayro 0.7.1, hayro-interpret 0.7.0, hayro-syntax 0.7.2, hayro-jbig2 0.3.0 and
 hayro-cmap 0.1.0 (https://github.com/LaurenzV/hayro, MIT OR Apache-2.0). The reader bundles

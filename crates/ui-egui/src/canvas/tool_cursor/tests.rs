@@ -1272,9 +1272,7 @@ fn pipette_svg_accepts_a_preamble_and_reports_broken_styling_or_xml() {
 fn pipette_failed_bitmap_keeps_a_visible_fallback() {
     let ctx = egui::Context::default();
     let child = egui::ViewportId::from_hash_of("pipette-failed-child");
-    ctx.data_mut(|d| {
-        d.insert_temp(egui::Id::unique("magicpic-pipette-cache"), vec![CachedPipette { scale: 1.0, painted: true, image: None, texture: None }])
-    });
+    ctx.data_mut(|d| d.insert_temp(egui::Id::unique("magicpic-pipette-cache"), vec![CachedPipette { scale: 1.0, painted: true, image: None, texture: None }]));
     let mut input = egui::RawInput { viewport_id: child, ..Default::default() };
     input.viewports.entry(child).or_default();
     let mut output = ctx.run_ui(input, |ui| {

@@ -13,8 +13,8 @@ release: 1
 section: graphics
 priority: optional
 maintainer: ${MAGICPIC_MAINTAINER}
-vendor: Learning Machines LLC
-homepage: https://getartcraft.com/apps/photocraft
+vendor: MagicPic contributors
+homepage: https://github.com/vansyson1308/vansysoneditphoto
 license: MIT OR Apache-2.0
 description: |-
   Open-source, native image editor with familiar, professional tools.

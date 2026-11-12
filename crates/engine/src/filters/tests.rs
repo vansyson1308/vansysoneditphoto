@@ -605,9 +605,8 @@ fn filter_diagnostics_native_nonfinite_samples() {
     let area = magicpic_geom::Rect::new(0, 0, 1, 1);
     let mut surface = magicpic_raster::Surface::new(magicpic_color::PixelFormat::RGBA32F);
     surface.write_pixel(0, 0, &[f32::NAN, 0., 0., 1.]);
-    let error = algo::try_apply_in_with(&surface, &FilterParams::Average, area, area, None, area, &magicpic_raster::Interrupt::NONE)
-        .map_err(filter_error)
-        .unwrap_err();
+    let error =
+        algo::try_apply_in_with(&surface, &FilterParams::Average, area, area, None, area, &magicpic_raster::Interrupt::NONE).map_err(filter_error).unwrap_err();
     assert!(error.to_string().contains("finite"), "{error}");
     assert!(!error.to_string().contains("could not prepare"));
     let checks = std::sync::atomic::AtomicUsize::new(0);

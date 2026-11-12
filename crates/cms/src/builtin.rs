@@ -97,8 +97,13 @@ impl Builtin {
     }
 
     /// Looks up an id (case-insensitive; a few aliases and the descriptions are accepted).
+    ///
+    /// A name written by PhotoCraft, which MagicPic was forked from, carries that product's name
+    /// ("sGray (sRGB tone curve, PhotoCraft)", `photocraftcoatedcmyk`). It names the same profile,
+    /// so documents and settings saved there keep resolving.
     pub fn from_id(s: &str) -> Option<Builtin> {
-        let n: String = s.to_ascii_lowercase().chars().filter(|c| c.is_ascii_alphanumeric()).collect();
+        let s = &s.to_ascii_lowercase().replace("photocraft", "magicpic");
+        let n: String = s.chars().filter(|c| c.is_ascii_alphanumeric()).collect();
         let alias = match n.as_str() {
             "srgb" | "srgbiec6196621" | "srgbiec61966" => Some(Builtin::Srgb),
             "p3" | "displayp3" => Some(Builtin::DisplayP3),

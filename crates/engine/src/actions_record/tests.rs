@@ -114,9 +114,12 @@ fn frame_action_keeps_the_layer_it_wraps() {
     let played = s.execute("actions.play", json!({"action": "Frame picture"})).unwrap();
     assert!(played.get("failed").is_none(), "{played}");
     assert!(
-        s.active().unwrap().doc.walk().iter().any(
-            |(_, _, layer)| matches!(&layer.content, magicpic_doc::LayerContent::Group(group) if group.children.iter().any(|child| child.id.0 == target))
-        ),
+        s.active()
+            .unwrap()
+            .doc
+            .walk()
+            .iter()
+            .any(|(_, _, layer)| matches!(&layer.content, magicpic_doc::LayerContent::Group(group) if group.children.iter().any(|child| child.id.0 == target))),
         "the replayed frame wraps Picture"
     );
 }

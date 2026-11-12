@@ -796,7 +796,7 @@ fn print_image(doc: &Document, p: &Value, cmd: &str) -> Result<(PrintImage, Valu
         t.execute("image.mode.rgb", json!({}))?;
     }
     match handling {
-        "magicpicManages" | "photoshopManages" => {
+        "magicpicManages" | "photocraftManages" | "photoshopManages" => {
             let profile = p.get("printerProfile").and_then(Value::as_str).ok_or_else(|| bad(cmd, "\"magicpicManages\" needs a \"printerProfile\""))?;
             let intent = p.get("intent").and_then(Value::as_str).unwrap_or("relative");
             let bpc = p.get("bpc").and_then(Value::as_bool).unwrap_or(true);
@@ -1175,7 +1175,7 @@ fn windows_pdf_loads(dll: &std::path::Path) -> bool {
 /// draws RGB/gray and vector marks only; it must never silently omit requested page content.
 fn native_rgb_compatible(page: &PrintPage, handling: &str) -> bool {
     matches!(page.image.channels, 1 | 3)
-        && (page.image.icc.is_none() || matches!(handling, "magicpicManages" | "photoshopManages" | "noColorManagement"))
+        && (page.image.icc.is_none() || matches!(handling, "magicpicManages" | "photocraftManages" | "photoshopManages" | "noColorManagement"))
         && page.description.as_deref().is_none_or(str::is_empty)
         && page.label.as_deref().is_none_or(str::is_empty)
 }
@@ -1335,7 +1335,7 @@ fn print_windows(page: &PrintPage, p: &Value, title: &str, copies: u32) -> Resul
     let rect = page_rect_top_left(page);
     let primitives = windows_marks::primitives(page.marks, rect);
     let color_policy = match p.get("colorHandling").and_then(Value::as_str) {
-        Some("magicpicManages" | "photoshopManages") => craft_print::rgb::ColorPolicy::ApplicationManaged,
+        Some("magicpicManages" | "photocraftManages" | "photoshopManages") => craft_print::rgb::ColorPolicy::ApplicationManaged,
         Some("noColorManagement") => craft_print::rgb::ColorPolicy::Unmanaged,
         _ => craft_print::rgb::ColorPolicy::DriverManaged,
     };

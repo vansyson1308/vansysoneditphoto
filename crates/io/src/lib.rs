@@ -1146,9 +1146,8 @@ fn checked_stages(
     // `as_deref_mut` would tie the trait object's lifetime to this function's; the closure shortens it.
     #[allow(clippy::option_as_ref_deref)]
     let r = export_stages_with_renderer(doc, name_or_ext, opts, ctl, renderer.as_mut().map(|r| -> &mut dyn BandRenderer { &mut **r }))?;
-    if let Err(e) = magicpic_raster::spill::check_since(scratch_generation)
-        .map_err(IoError::Unsupported)
-        .and_then(|()| doc.scratch_health().map_err(IoError::Unsupported))
+    if let Err(e) =
+        magicpic_raster::spill::check_since(scratch_generation).map_err(IoError::Unsupported).and_then(|()| doc.scratch_health().map_err(IoError::Unsupported))
     {
         // The provisional result is discarded: queue its renderer notes (fallback reasons, CPU-only
         // formats) back on the renderer so the caller can still report them next to the error.

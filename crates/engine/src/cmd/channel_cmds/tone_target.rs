@@ -99,8 +99,7 @@ mod tests {
     /// Pixel targets need a layer; a saved alpha remains independently addressable without one.
     #[test]
     fn review_missing_pixel_layer_does_not_fall_back_to_composite() {
-        let mut doc =
-            magicpic_doc::Document::new("Channels", magicpic_geom::Size::new(8, 8), magicpic_color::ColorMode::Rgb, magicpic_color::SampleType::U8);
+        let mut doc = magicpic_doc::Document::new("Channels", magicpic_geom::Size::new(8, 8), magicpic_color::ColorMode::Rgb, magicpic_color::SampleType::U8);
         doc.channels.push(magicpic_doc::AlphaChannel::new("Saved", magicpic_raster::Surface::new(magicpic_color::PixelFormat::GRAY8)));
         let mut s = Session::new();
         s.add_document(doc, None);

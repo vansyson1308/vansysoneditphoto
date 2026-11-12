@@ -26,13 +26,8 @@ fn scene() -> (Session, LayerId, LayerId, LayerId) {
 }
 
 fn red_png(dir: &str) -> String {
-    let doc = Document::with_background(
-        "red",
-        Size::new(4, 4),
-        magicpic_doc::ColorMode::Rgb,
-        magicpic_doc::SampleType::U8,
-        magicpic_doc::Color::rgb(1.0, 0.0, 0.0),
-    );
+    let doc =
+        Document::with_background("red", Size::new(4, 4), magicpic_doc::ColorMode::Rgb, magicpic_doc::SampleType::U8, magicpic_doc::Color::rgb(1.0, 0.0, 0.0));
     let bytes = magicpic_io::export(&doc, "png", &magicpic_io::ExportOptions::default()).unwrap().bytes;
     let path = format!("{dir}/replacement.png");
     std::fs::write(&path, bytes).unwrap();

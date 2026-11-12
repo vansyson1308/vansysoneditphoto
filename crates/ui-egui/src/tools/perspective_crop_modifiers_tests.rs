@@ -102,10 +102,7 @@ fn alt_corner_drag_past_the_opposite_corner_on_both_axes_turns_the_rectangle_180
     // Where the turned rectangle will lie (40,60 to 100,100): a red patch in its bottom right and
     // a green one in its top left.
     let patch = |app: &mut MagicpicApp, x: i32, y: i32, c: [f32; 4]| {
-        Arc::make_mut(&mut app.session.active_mut().unwrap().doc).layers[0]
-            .surface_mut()
-            .unwrap()
-            .fill_rect(magicpic_geom::Rect::from_xywh(x, y, 10, 10), &c);
+        Arc::make_mut(&mut app.session.active_mut().unwrap().doc).layers[0].surface_mut().unwrap().fill_rect(magicpic_geom::Rect::from_xywh(x, y, 10, 10), &c);
     };
     patch(&mut app, 90, 90, [1.0, 0.0, 0.0, 1.0]);
     patch(&mut app, 40, 60, [0.0, 1.0, 0.0, 1.0]);

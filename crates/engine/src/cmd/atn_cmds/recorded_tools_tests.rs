@@ -118,9 +118,8 @@ fn create_droplet_step_loads_plays_and_saves_back() {
     // The action the droplet runs.
     s.actions.list.push(crate::actions_cmds::Action::new("Sharpen", vec![("filter.sharpen.sharpen".into(), json!({}))]));
     s.actions.list[0].set = Some("Tools".into());
-    let loaded = s
-        .execute("actions.load", json!({"data": magicpic_paint::tile::b64_encode(&action(vec![step(b"CrtD", "Create Droplet", recorded.clone())]))}))
-        .unwrap();
+    let loaded =
+        s.execute("actions.load", json!({"data": magicpic_paint::tile::b64_encode(&action(vec![step(b"CrtD", "Create Droplet", recorded.clone())]))})).unwrap();
     assert_eq!(loaded["unsupported"], json!([]), "{loaded}");
     let a = s.actions.list.iter().find(|a| a.name == "A").unwrap();
     assert_eq!(

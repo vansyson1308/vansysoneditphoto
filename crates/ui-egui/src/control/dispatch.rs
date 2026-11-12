@@ -4,7 +4,7 @@ use super::params::{
     BUTTONS, KEY_MODIFIERS, MAX_CLICKS, MAX_SCREEN_POINT, POINTER_MODIFIERS, UI_SET_FIELDS, bool_field, err, f32_field, f32_range, input_choice,
     input_modifiers, input_number, input_object, merged_object, modifiers_from, num_field, ok, screen_point, uint_field, whole_object,
 };
-use super::{ControlRequest, DialogKind, Outcome, MagicpicApp, SHELL_DIALOG, Tool, ToolEvent, Value, json, run_waiting, tool_event, wrap};
+use super::{ControlRequest, DialogKind, MagicpicApp, Outcome, SHELL_DIALOG, Tool, ToolEvent, Value, json, run_waiting, tool_event, wrap};
 use magicpic_engine::jobs::{CancelReport, JobId};
 
 /// A domain handler: `Some` when it owns the request's method, `None` to let the next one try.

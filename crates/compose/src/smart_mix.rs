@@ -145,11 +145,8 @@ pub fn mix(base: &Surface, filtered: &Surface, area: Rect, mode: BlendMode, opac
             }
             let cb = [b[0], b[1], b[2]];
             let ct = [t[0], t[1], t[2]];
-            let color = if fmt.sample == SampleType::F32 {
-                magicpic_color::blend::blend_rgb_hdr(mode, cb, ct)
-            } else {
-                magicpic_color::blend::blend_rgb(mode, cb, ct)
-            };
+            let color =
+                if fmt.sample == SampleType::F32 { magicpic_color::blend::blend_rgb_hdr(mode, cb, ct) } else { magicpic_color::blend::blend_rgb(mode, cb, ct) };
             let mut alpha = b[3] + (t[3] - b[3]) * opacity;
             if fmt.sample == SampleType::F32 && !alpha.is_finite() {
                 // A convex mix of finite alphas is representable even when their F32

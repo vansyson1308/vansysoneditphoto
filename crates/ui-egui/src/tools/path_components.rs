@@ -94,9 +94,7 @@ fn component_at(path: &Path, at: [f64; 2], tol: f64) -> Option<std::ops::Range<u
     let components = path.components();
     if let Some(hit) = magicpic_vector::edit::hit(path, Point::new(at[0], at[1]), tol, &[]) {
         let s = match hit {
-            magicpic_vector::edit::Hit::Anchor([s, _])
-            | magicpic_vector::edit::Hit::Handle([s, _], _)
-            | magicpic_vector::edit::Hit::Segment([s, _], _) => s,
+            magicpic_vector::edit::Hit::Anchor([s, _]) | magicpic_vector::edit::Hit::Handle([s, _], _) | magicpic_vector::edit::Hit::Segment([s, _], _) => s,
         };
         return components.into_iter().find(|c| c.contains(&s));
     }

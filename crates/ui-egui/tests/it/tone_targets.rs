@@ -497,10 +497,8 @@ fn scalar_action_gray_alias_seeds_the_visible_controls() {
     for kind in ["levels", "curves"] {
         let mut app = fixture(ColorMode::Lab, SampleType::U8, ChannelTarget::Color(0));
         let gray = if kind == "levels" { json!({"gamma":2}) } else { json!([[0, 255], [255, 0]]) };
-        let mut action = magicpic_engine::actions_cmds::Action::new(
-            "Gray alias",
-            vec![(format!("image.adjustments.{kind}"), json!({"target":{"channel":0},"gray":gray}))],
-        );
+        let mut action =
+            magicpic_engine::actions_cmds::Action::new("Gray alias", vec![(format!("image.adjustments.{kind}"), json!({"target":{"channel":0},"gray":gray}))]);
         action.dialogs.insert(0);
         app.session.actions.list.push(action);
         let mut h = harness(app);
@@ -1196,10 +1194,7 @@ fn record_again_uses_recorded_alpha_settings_and_matches_its_preview() {
             } else {
                 recorded["points"] = json!([[0, 255], [255, 0]]);
             }
-            app.session
-                .actions
-                .list
-                .push(magicpic_engine::actions_cmds::Action::new("Recorded alpha", vec![(format!("image.adjustments.{kind}"), recorded)]));
+            app.session.actions.list.push(magicpic_engine::actions_cmds::Action::new("Recorded alpha", vec![(format!("image.adjustments.{kind}"), recorded)]));
             app.ui.actions.selected = Some(0);
             app.ui.actions.selected_step = Some(0);
             let original = app.session.active().unwrap().doc.clone();

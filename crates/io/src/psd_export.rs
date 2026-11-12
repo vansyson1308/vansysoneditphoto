@@ -487,8 +487,8 @@ impl Ex<'_> {
                     magicpic_doc::Adjustment::Unsupported { psd_key, .. } => Some(psd_key.as_bytes()),
                     _ => None,
                 };
-                let keep = keep
-                    || matches!(a, magicpic_doc::Adjustment::Unsupported { raw: r, .. } if raw.iter().any(|(k, d)| own == Some(&k[..]) && d[..] == r[..]));
+                let keep =
+                    keep || matches!(a, magicpic_doc::Adjustment::Unsupported { raw: r, .. } if raw.iter().any(|(k, d)| own == Some(&k[..]) && d[..] == r[..]));
                 if !keep {
                     raw.retain(|(k, _)| !adjust_map::ADJUSTMENT_KEYS.contains(&k) && k != b"CgEd" && own != Some(&k[..]));
                     let w = adjust_map::write(a);
@@ -739,9 +739,7 @@ impl Ex<'_> {
             let item = match (sm.stack_mode, self.source_composite(&src.uuid)) {
                 (None, Some((img, img_bounds))) => {
                     let unfiltered = match &sm.perspective {
-                        Some(p) => {
-                            magicpic_algo::warp::place_source_projective(&img, img_bounds, &magicpic_algo::transform::Homography(*p), sm.warp.as_ref())
-                        }
+                        Some(p) => magicpic_algo::warp::place_source_projective(&img, img_bounds, &magicpic_algo::transform::Homography(*p), sm.warp.as_ref()),
                         None => magicpic_algo::warp::place_source(&img, img_bounds, &sm.transform, sm.warp.as_ref()),
                     };
                     match unfiltered {
@@ -789,10 +787,7 @@ impl Ex<'_> {
             blocks::PlldWarp::None => None,
             blocks::PlldWarp::Warp(w) => Some(w),
         };
-        if sm.source != (magicpic_doc::SmartSource::Linked { path: id.clone() })
-            || sm.warp != warp
-            || !sm.smart_filters.is_empty()
-            || sm.filter_mask.is_some()
+        if sm.source != (magicpic_doc::SmartSource::Linked { path: id.clone() }) || sm.warp != warp || !sm.smart_filters.is_empty() || sm.filter_mask.is_some()
         {
             return true;
         }
@@ -999,8 +994,7 @@ impl Ex<'_> {
             return c.surface.clone();
         }
         if self.cmyk
-            && let Some(s) =
-                magicpic_compose::gradient_fill::render_cmyk_fill(f, self.canvas, magicpic_compose::fill_frame(l, self.canvas), self.fmt.sample)
+            && let Some(s) = magicpic_compose::gradient_fill::render_cmyk_fill(f, self.canvas, magicpic_compose::fill_frame(l, self.canvas), self.fmt.sample)
         {
             return s;
         }

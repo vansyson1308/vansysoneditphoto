@@ -1114,12 +1114,8 @@ fn approve_high_memory_rejects_invalid_types_and_formats_structured_error() {
     // fields, and only the fields an approval request has: no soft limit and no capacity, since
     // no approval can raise the ceiling.
     let mut hard_obj = json!({"id": 2, "ok": false, "error": "test"});
-    let hard = crate::AutomationError::Engine(magicpic_engine::EngineError::PsdHardBudget {
-        name: "big.psd".into(),
-        required: 9000,
-        limit: 8000,
-        free_memory: None,
-    });
+    let hard =
+        crate::AutomationError::Engine(magicpic_engine::EngineError::PsdHardBudget { name: "big.psd".into(), required: 9000, limit: 8000, free_memory: None });
     super::attach_memory_error_details(&mut hard_obj, &hard);
     assert_eq!(hard_obj["required"], 9000);
     assert_eq!(hard_obj["hard"], 8000);

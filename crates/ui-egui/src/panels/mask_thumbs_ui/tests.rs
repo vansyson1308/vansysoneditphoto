@@ -900,9 +900,8 @@ fn selecting_an_adjustment_layer_from_another_layer_targets_its_mask() {
             s.execute("layer.vectorMask.add", json!({"layer": id, "path": path})).unwrap();
             let mut h = harness(s, 0, ppp, 360.0);
             assert!(layer(&h, id).mask.is_some(), "{command}: the adjustment layer has a mask");
-            let name_of = |h: &Harness<'_, MagicpicApp>, l: u64| {
-                crate::layer_row_ui::recorded(&h.ctx).into_iter().find(|r| r.layer == l).unwrap().name.unwrap().center()
-            };
+            let name_of =
+                |h: &Harness<'_, MagicpicApp>, l: u64| crate::layer_row_ui::recorded(&h.ctx).into_iter().find(|r| r.layer == l).unwrap().name.unwrap().center();
             // Each mask thumbnail targets its own mask.
             for kind in [MaskKind::Pixel, MaskKind::Vector] {
                 let at = mask_rect(&h, id, kind).center();

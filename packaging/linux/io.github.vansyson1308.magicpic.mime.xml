@@ -4,6 +4,9 @@
 <mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
   <mime-type type="application/x-magicpic">
     <comment>MagicPic document</comment>
+    <!-- The same files as PhotoCraft's (MagicPic is a fork of it and keeps the format): one type
+         for the *.pcraft glob when both programs are installed. -->
+    <alias type="application/x-photocraft"/>
     <icon name="io.github.vansyson1308.magicpic"/>
     <glob pattern="*.pcraft"/>
   </mime-type>

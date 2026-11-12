@@ -543,8 +543,7 @@ mod tests {
                 let dark = preview.sample([0.0, 0.0], 1, false, &params).unwrap();
                 let light = preview.sample([1.0 / 40.0, 0.0], 1, false, &params).unwrap();
                 assert!(light[0] - dark[0] > 0.5, "native alternating pixels survive: {mode:?}/{depth:?}");
-                let mut doc =
-                    magicpic_doc::Document::new("test", magicpic_geom::Size::new(40, 30), magicpic_doc::ColorMode::Rgb, magicpic_doc::SampleType::U8);
+                let mut doc = magicpic_doc::Document::new("test", magicpic_geom::Size::new(40, 30), magicpic_doc::ColorMode::Rgb, magicpic_doc::SampleType::U8);
                 doc.icc_profile = Some(magicpic_cms::Builtin::Srgb.profile().to_bytes());
                 let display = magicpic_engine::color_cmds::ColorState::default().canvas_display(&doc).unwrap();
                 assert_eq!(crop_image(&expected, PixelRect::new(-12, 8, -10, 9), &display).size, [2, 1]);
@@ -600,8 +599,7 @@ mod tests {
         let px: Vec<f32> = (0..n).flat_map(|i| [(i % 251) as f32 / 255.0, (i % 241) as f32 / 255.0, (i % 239) as f32 / 255.0, (i % 7) as f32 / 6.0]).collect();
         source.write_region(area, &px);
         for profile in [magicpic_cms::Builtin::AdobeRgbCompat, magicpic_cms::Builtin::Srgb] {
-            let mut doc =
-                magicpic_doc::Document::new("test", magicpic_geom::Size::new(1024, 1024), magicpic_doc::ColorMode::Rgb, magicpic_doc::SampleType::U8);
+            let mut doc = magicpic_doc::Document::new("test", magicpic_geom::Size::new(1024, 1024), magicpic_doc::ColorMode::Rgb, magicpic_doc::SampleType::U8);
             doc.icc_profile = Some(profile.profile().to_bytes());
             let mut color = magicpic_engine::color_cmds::ColorState::default();
             color.settings.monitor_profile = "srgb".into();

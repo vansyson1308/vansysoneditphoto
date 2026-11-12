@@ -27,8 +27,11 @@ fn main() -> std::io::Result<()> {
     res.set_icon("../../assets/app-icon/magicpic.ico")
         .set("ProductName", "MagicPic")
         .set("FileDescription", "MagicPic command-line interface")
-        .set("CompanyName", "Learning Machines LLC")
-        .set("LegalCopyright", "Copyright (c) the MagicPic authors. MIT OR Apache-2.0.")
+        .set("CompanyName", "MagicPic contributors")
+        .set(
+            "LegalCopyright",
+            "Copyright (c) the MagicPic contributors. Based on PhotoCraft, (c) ArtCraft Team and the PhotoCraft contributors. MIT OR Apache-2.0.",
+        )
         .set("OriginalFilename", "magicpic-cli.exe")
         .set("InternalName", "magicpic-cli");
     if let Err(err) = res.compile() {

@@ -55,8 +55,7 @@ fn open_photo(w: u32, h: u32) -> Res<Session> {
             }
         }
     });
-    let img =
-        magicpic_codecs::Image::from_raw(w, h, magicpic_codecs::ChannelLayout::Rgb, magicpic_codecs::SampleType::U8, px).map_err(|e| e.to_string())?;
+    let img = magicpic_codecs::Image::from_raw(w, h, magicpic_codecs::ChannelLayout::Rgb, magicpic_codecs::SampleType::U8, px).map_err(|e| e.to_string())?;
     let jpeg = magicpic_codecs::encode(&img, magicpic_codecs::Format::Jpeg, &Default::default()).map_err(|e| e.to_string())?;
     let doc = magicpic_io::import("photo.jpg", &jpeg).map_err(|e| e.to_string())?.document;
     let mut s = Session::new();

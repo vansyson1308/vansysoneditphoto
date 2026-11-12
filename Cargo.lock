@@ -4169,6 +4169,563 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "373f5eceeeab7925e0c1098212f2fbc4d416adec9d35051a6ab251e824c1854a"
 
 [[package]]
+name = "magicpic"
+version = "0.23.0"
+dependencies = [
+ "arboard",
+ "async-io",
+ "base64 0.22.1",
+ "blake3",
+ "chrono",
+ "clap",
+ "core-graphics2",
+ "craft-update",
+ "dispatch2",
+ "eframe",
+ "egui",
+ "fmv-macos-events",
+ "futures-lite",
+ "log",
+ "magicpic-automation",
+ "magicpic-cms",
+ "magicpic-codecs",
+ "magicpic-color",
+ "magicpic-compose",
+ "magicpic-doc",
+ "magicpic-engine",
+ "magicpic-format",
+ "magicpic-geom",
+ "magicpic-io",
+ "magicpic-raster",
+ "magicpic-tablet",
+ "magicpic-ui-egui",
+ "muda",
+ "objc2 0.6.5",
+ "objc2-app-kit 0.3.2",
+ "objc2-foundation 0.3.2",
+ "open",
+ "plist",
+ "resvg",
+ "rfd",
+ "ron",
+ "roxmltree 0.21.1",
+ "rustix 1.1.5",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+ "winit",
+ "winresource",
+ "winsafe",
+ "wl-clipboard-rs",
+ "x11rb",
+ "xcap",
+ "zbus",
+]
+
+[[package]]
+name = "magicpic-affinity"
+version = "0.23.0"
+dependencies = [
+ "crc32fast",
+ "flate2",
+ "proptest",
+ "ruzstd",
+]
+
+[[package]]
+name = "magicpic-algo"
+version = "0.23.0"
+dependencies = [
+ "criterion",
+ "magicpic-color",
+ "magicpic-geom",
+ "magicpic-raster",
+ "magicpic-testkit",
+ "rayon",
+ "rustfft",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "magicpic-automation"
+version = "0.23.0"
+dependencies = [
+ "base64 0.23.1",
+ "cap-std",
+ "clap",
+ "getrandom 0.3.4",
+ "hmac",
+ "magicpic-codecs",
+ "magicpic-color",
+ "magicpic-compose",
+ "magicpic-doc",
+ "magicpic-engine",
+ "magicpic-format",
+ "magicpic-geom",
+ "magicpic-gpu",
+ "magicpic-io",
+ "magicpic-psd",
+ "magicpic-raster",
+ "magicpic-raw",
+ "pollster 1.0.1",
+ "rmcp",
+ "rustix 1.1.5",
+ "schemars",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror 2.0.21",
+ "tokio",
+ "wgpu",
+]
+
+[[package]]
+name = "magicpic-cli"
+version = "0.23.0"
+dependencies = [
+ "clap",
+ "clap_complete",
+ "clap_mangen",
+ "magicpic-automation",
+ "magicpic-cms",
+ "magicpic-codecs",
+ "magicpic-doc",
+ "magicpic-engine",
+ "magicpic-format",
+ "magicpic-io",
+ "magicpic-psd",
+ "magicpic-raster",
+ "magicpic-raw",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tokio",
+ "winresource",
+ "xtask",
+]
+
+[[package]]
+name = "magicpic-cms"
+version = "0.23.0"
+dependencies = [
+ "moxcms",
+ "rayon",
+]
+
+[[package]]
+name = "magicpic-codecs"
+version = "0.23.0"
+dependencies = [
+ "craft-heif",
+ "craft-jpeg",
+ "exr",
+ "flate2",
+ "half",
+ "image",
+ "image-webp",
+ "jpeg-encoder",
+ "jxl-oxide",
+ "png 0.18.1",
+ "proptest",
+ "rayon",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tiff",
+ "zune-core 0.5.3",
+ "zune-jpeg 0.5.15",
+ "zune-jpegxl",
+]
+
+[[package]]
+name = "magicpic-color"
+version = "0.23.0"
+dependencies = [
+ "magicpic-cms",
+ "serde",
+]
+
+[[package]]
+name = "magicpic-compose"
+version = "0.23.0"
+dependencies = [
+ "criterion",
+ "magicpic-cms",
+ "magicpic-color",
+ "magicpic-doc",
+ "magicpic-geom",
+ "magicpic-paint",
+ "magicpic-raster",
+ "magicpic-vector",
+ "proptest",
+ "rayon",
+]
+
+[[package]]
+name = "magicpic-doc"
+version = "0.23.0"
+dependencies = [
+ "magicpic-color",
+ "magicpic-geom",
+ "magicpic-raster",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "magicpic-engine"
+version = "0.23.0"
+dependencies = [
+ "base64 0.22.1",
+ "blake3",
+ "chrono",
+ "craft-print",
+ "exr",
+ "flate2",
+ "magicpic-affinity",
+ "magicpic-algo",
+ "magicpic-cms",
+ "magicpic-codecs",
+ "magicpic-color",
+ "magicpic-compose",
+ "magicpic-doc",
+ "magicpic-format",
+ "magicpic-geom",
+ "magicpic-io",
+ "magicpic-ipp",
+ "magicpic-ops",
+ "magicpic-paint",
+ "magicpic-plugins",
+ "magicpic-psd",
+ "magicpic-raster",
+ "magicpic-raw",
+ "magicpic-testkit",
+ "magicpic-text",
+ "magicpic-vector",
+ "rayon",
+ "roxmltree 0.21.1",
+ "same-file",
+ "semver",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+ "wat",
+ "web-time",
+ "winsafe",
+]
+
+[[package]]
+name = "magicpic-format"
+version = "0.23.0"
+dependencies = [
+ "blake3",
+ "craft-pcraft-format",
+ "crc32fast",
+ "exacl",
+ "flate2",
+ "libc",
+ "magicpic-codecs",
+ "magicpic-color",
+ "magicpic-doc",
+ "magicpic-geom",
+ "magicpic-raster",
+ "proptest",
+ "rustix 1.1.5",
+ "ruzstd",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "winsafe",
+]
+
+[[package]]
+name = "magicpic-geom"
+version = "0.23.0"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "magicpic-gpu"
+version = "0.23.0"
+dependencies = [
+ "bytemuck",
+ "half",
+ "log",
+ "magicpic-algo",
+ "magicpic-cms",
+ "magicpic-color",
+ "magicpic-compose",
+ "magicpic-doc",
+ "magicpic-geom",
+ "magicpic-raster",
+ "magicpic-vector",
+ "pollster 1.0.1",
+ "rayon",
+ "thiserror 2.0.21",
+ "wgpu",
+]
+
+[[package]]
+name = "magicpic-io"
+version = "0.23.0"
+dependencies = [
+ "blake3",
+ "craft-docpath",
+ "craft-pdf",
+ "crc32fast",
+ "flate2",
+ "imagesize",
+ "kurbo 0.13.1",
+ "lopdf",
+ "magicpic-affinity",
+ "magicpic-algo",
+ "magicpic-cms",
+ "magicpic-codecs",
+ "magicpic-color",
+ "magicpic-compose",
+ "magicpic-doc",
+ "magicpic-format",
+ "magicpic-geom",
+ "magicpic-paint",
+ "magicpic-psd",
+ "magicpic-raster",
+ "magicpic-raw",
+ "magicpic-testkit",
+ "magicpic-text",
+ "magicpic-vector",
+ "miniz_oxide 0.9.1",
+ "proptest",
+ "resvg",
+ "roxmltree 0.21.1",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tiff",
+ "ttf-parser",
+ "zune-core 0.5.3",
+ "zune-jpegxl",
+]
+
+[[package]]
+name = "magicpic-ipp"
+version = "0.23.0"
+
+[[package]]
+name = "magicpic-ops"
+version = "0.23.0"
+dependencies = [
+ "magicpic-doc",
+]
+
+[[package]]
+name = "magicpic-paint"
+version = "0.23.0"
+dependencies = [
+ "magicpic-cms",
+ "magicpic-color",
+ "magicpic-geom",
+ "magicpic-raster",
+ "rayon",
+ "rustc-hash 2.1.3",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "magicpic-plugins"
+version = "0.23.0"
+dependencies = [
+ "magicpic-color",
+ "magicpic-geom",
+ "magicpic-raster",
+ "rayon",
+ "rustix 1.1.5",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "wasmi",
+ "wat",
+]
+
+[[package]]
+name = "magicpic-psd"
+version = "0.23.0"
+dependencies = [
+ "encoding_rs",
+ "flate2",
+ "magicpic-psd",
+ "proptest",
+ "serde",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "magicpic-raster"
+version = "0.23.0"
+dependencies = [
+ "crc32fast",
+ "lz4_flex",
+ "magicpic-color",
+ "magicpic-geom",
+ "proptest",
+ "rayon",
+ "rustix 1.1.5",
+ "serde",
+ "sysinfo",
+ "winsafe",
+]
+
+[[package]]
+name = "magicpic-raw"
+version = "0.23.0"
+dependencies = [
+ "flate2",
+ "image",
+ "jxl-oxide",
+ "magicpic-raw",
+ "png 0.18.1",
+ "rayon",
+ "zune-core 0.5.3",
+ "zune-jpeg 0.5.15",
+ "zune-jpegxl",
+]
+
+[[package]]
+name = "magicpic-tablet"
+version = "0.23.0"
+dependencies = [
+ "block2 0.6.2",
+ "log",
+ "objc2 0.6.5",
+ "objc2-app-kit 0.3.2",
+ "objc2-core-graphics",
+ "objc2-foundation 0.3.2",
+ "windows",
+ "wintab",
+ "x11rb",
+]
+
+[[package]]
+name = "magicpic-testkit"
+version = "0.23.0"
+dependencies = [
+ "memory-stats",
+ "serde_json",
+]
+
+[[package]]
+name = "magicpic-text"
+version = "0.23.0"
+dependencies = [
+ "flate2",
+ "magicpic-color",
+ "magicpic-doc",
+ "magicpic-geom",
+ "magicpic-psd",
+ "magicpic-raster",
+ "parley",
+ "rayon",
+ "skrifa 0.47.0",
+]
+
+[[package]]
+name = "magicpic-ui-egui"
+version = "0.23.0"
+dependencies = [
+ "base64 0.23.1",
+ "chrono",
+ "craft-i18n",
+ "craft-print",
+ "craft-ui",
+ "craft-update",
+ "eframe",
+ "egui",
+ "egui_extras",
+ "egui_kittest",
+ "epaint_default_fonts",
+ "flate2",
+ "icu_casemap",
+ "icu_locale_core",
+ "log",
+ "magicpic-algo",
+ "magicpic-cms",
+ "magicpic-codecs",
+ "magicpic-color",
+ "magicpic-compose",
+ "magicpic-doc",
+ "magicpic-engine",
+ "magicpic-format",
+ "magicpic-geom",
+ "magicpic-gpu",
+ "magicpic-io",
+ "magicpic-paint",
+ "magicpic-plugins",
+ "magicpic-psd",
+ "magicpic-raster",
+ "magicpic-raw",
+ "magicpic-testkit",
+ "magicpic-text",
+ "magicpic-vector",
+ "rayon",
+ "serde",
+ "serde_json",
+ "sys-locale",
+ "tempfile",
+ "toml",
+ "unicode-bidi",
+ "web-time",
+ "winsafe",
+]
+
+[[package]]
+name = "magicpic-vector"
+version = "0.23.0"
+dependencies = [
+ "magicpic-color",
+ "magicpic-doc",
+ "magicpic-geom",
+ "magicpic-raster",
+ "rayon",
+]
+
+[[package]]
+name = "magicpic-web"
+version = "0.23.0"
+dependencies = [
+ "eframe",
+ "egui",
+ "js-sys",
+ "log",
+ "magicpic-codecs",
+ "magicpic-doc",
+ "magicpic-engine",
+ "magicpic-io",
+ "magicpic-paint",
+ "magicpic-psd",
+ "magicpic-raster",
+ "magicpic-ui-egui",
+ "rfd",
+ "serde_json",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
+name = "magicpic-web-boot"
+version = "0.23.0"
+dependencies = [
+ "flate2",
+ "js-sys",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
 name = "maybe-owned"
 version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5320,563 +5877,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c6fd9027e2d9319be6349febd1db4e8d02aa544921200c9b777720ac34a3aa89"
 dependencies = [
  "siphasher",
-]
-
-[[package]]
-name = "magicpic"
-version = "0.23.0"
-dependencies = [
- "arboard",
- "async-io",
- "base64 0.22.1",
- "blake3",
- "chrono",
- "clap",
- "core-graphics2",
- "craft-update",
- "dispatch2",
- "eframe",
- "egui",
- "fmv-macos-events",
- "futures-lite",
- "log",
- "muda",
- "objc2 0.6.5",
- "objc2-app-kit 0.3.2",
- "objc2-foundation 0.3.2",
- "open",
- "magicpic-automation",
- "magicpic-cms",
- "magicpic-codecs",
- "magicpic-color",
- "magicpic-compose",
- "magicpic-doc",
- "magicpic-engine",
- "magicpic-format",
- "magicpic-geom",
- "magicpic-io",
- "magicpic-raster",
- "magicpic-tablet",
- "magicpic-ui-egui",
- "plist",
- "resvg",
- "rfd",
- "ron",
- "roxmltree 0.21.1",
- "rustix 1.1.5",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.21",
- "winit",
- "winresource",
- "winsafe",
- "wl-clipboard-rs",
- "x11rb",
- "xcap",
- "zbus",
-]
-
-[[package]]
-name = "magicpic-affinity"
-version = "0.23.0"
-dependencies = [
- "crc32fast",
- "flate2",
- "proptest",
- "ruzstd",
-]
-
-[[package]]
-name = "magicpic-algo"
-version = "0.23.0"
-dependencies = [
- "criterion",
- "magicpic-color",
- "magicpic-geom",
- "magicpic-raster",
- "magicpic-testkit",
- "rayon",
- "rustfft",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "magicpic-automation"
-version = "0.23.0"
-dependencies = [
- "base64 0.23.1",
- "cap-std",
- "clap",
- "getrandom 0.3.4",
- "hmac",
- "magicpic-codecs",
- "magicpic-color",
- "magicpic-compose",
- "magicpic-doc",
- "magicpic-engine",
- "magicpic-format",
- "magicpic-geom",
- "magicpic-gpu",
- "magicpic-io",
- "magicpic-psd",
- "magicpic-raster",
- "magicpic-raw",
- "pollster 1.0.1",
- "rmcp",
- "rustix 1.1.5",
- "schemars",
- "serde",
- "serde_json",
- "sha2",
- "thiserror 2.0.21",
- "tokio",
- "wgpu",
-]
-
-[[package]]
-name = "magicpic-cli"
-version = "0.23.0"
-dependencies = [
- "clap",
- "clap_complete",
- "clap_mangen",
- "magicpic-automation",
- "magicpic-cms",
- "magicpic-codecs",
- "magicpic-doc",
- "magicpic-engine",
- "magicpic-format",
- "magicpic-io",
- "magicpic-psd",
- "magicpic-raster",
- "magicpic-raw",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.21",
- "tokio",
- "winresource",
- "xtask",
-]
-
-[[package]]
-name = "magicpic-cms"
-version = "0.23.0"
-dependencies = [
- "moxcms",
- "rayon",
-]
-
-[[package]]
-name = "magicpic-codecs"
-version = "0.23.0"
-dependencies = [
- "craft-heif",
- "craft-jpeg",
- "exr",
- "flate2",
- "half",
- "image",
- "image-webp",
- "jpeg-encoder",
- "jxl-oxide",
- "png 0.18.1",
- "proptest",
- "rayon",
- "serde_json",
- "thiserror 2.0.21",
- "tiff",
- "zune-core 0.5.3",
- "zune-jpeg 0.5.15",
- "zune-jpegxl",
-]
-
-[[package]]
-name = "magicpic-color"
-version = "0.23.0"
-dependencies = [
- "magicpic-cms",
- "serde",
-]
-
-[[package]]
-name = "magicpic-compose"
-version = "0.23.0"
-dependencies = [
- "criterion",
- "magicpic-cms",
- "magicpic-color",
- "magicpic-doc",
- "magicpic-geom",
- "magicpic-paint",
- "magicpic-raster",
- "magicpic-vector",
- "proptest",
- "rayon",
-]
-
-[[package]]
-name = "magicpic-doc"
-version = "0.23.0"
-dependencies = [
- "magicpic-color",
- "magicpic-geom",
- "magicpic-raster",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "magicpic-engine"
-version = "0.23.0"
-dependencies = [
- "base64 0.22.1",
- "blake3",
- "chrono",
- "craft-print",
- "exr",
- "flate2",
- "magicpic-affinity",
- "magicpic-algo",
- "magicpic-cms",
- "magicpic-codecs",
- "magicpic-color",
- "magicpic-compose",
- "magicpic-doc",
- "magicpic-format",
- "magicpic-geom",
- "magicpic-io",
- "magicpic-ipp",
- "magicpic-ops",
- "magicpic-paint",
- "magicpic-plugins",
- "magicpic-psd",
- "magicpic-raster",
- "magicpic-raw",
- "magicpic-testkit",
- "magicpic-text",
- "magicpic-vector",
- "rayon",
- "roxmltree 0.21.1",
- "same-file",
- "semver",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.21",
- "wat",
- "web-time",
- "winsafe",
-]
-
-[[package]]
-name = "magicpic-format"
-version = "0.23.0"
-dependencies = [
- "blake3",
- "craft-pcraft-format",
- "crc32fast",
- "exacl",
- "flate2",
- "libc",
- "magicpic-codecs",
- "magicpic-color",
- "magicpic-doc",
- "magicpic-geom",
- "magicpic-raster",
- "proptest",
- "rustix 1.1.5",
- "ruzstd",
- "serde",
- "serde_json",
- "thiserror 2.0.21",
- "winsafe",
-]
-
-[[package]]
-name = "magicpic-geom"
-version = "0.23.0"
-dependencies = [
- "serde",
-]
-
-[[package]]
-name = "magicpic-gpu"
-version = "0.23.0"
-dependencies = [
- "bytemuck",
- "half",
- "log",
- "magicpic-algo",
- "magicpic-cms",
- "magicpic-color",
- "magicpic-compose",
- "magicpic-doc",
- "magicpic-geom",
- "magicpic-raster",
- "magicpic-vector",
- "pollster 1.0.1",
- "rayon",
- "thiserror 2.0.21",
- "wgpu",
-]
-
-[[package]]
-name = "magicpic-io"
-version = "0.23.0"
-dependencies = [
- "blake3",
- "craft-docpath",
- "craft-pdf",
- "crc32fast",
- "flate2",
- "imagesize",
- "kurbo 0.13.1",
- "lopdf",
- "miniz_oxide 0.9.1",
- "magicpic-affinity",
- "magicpic-algo",
- "magicpic-cms",
- "magicpic-codecs",
- "magicpic-color",
- "magicpic-compose",
- "magicpic-doc",
- "magicpic-format",
- "magicpic-geom",
- "magicpic-paint",
- "magicpic-psd",
- "magicpic-raster",
- "magicpic-raw",
- "magicpic-testkit",
- "magicpic-text",
- "magicpic-vector",
- "proptest",
- "resvg",
- "roxmltree 0.21.1",
- "serde_json",
- "thiserror 2.0.21",
- "tiff",
- "ttf-parser",
- "zune-core 0.5.3",
- "zune-jpegxl",
-]
-
-[[package]]
-name = "magicpic-ipp"
-version = "0.23.0"
-
-[[package]]
-name = "magicpic-ops"
-version = "0.23.0"
-dependencies = [
- "magicpic-doc",
-]
-
-[[package]]
-name = "magicpic-paint"
-version = "0.23.0"
-dependencies = [
- "magicpic-cms",
- "magicpic-color",
- "magicpic-geom",
- "magicpic-raster",
- "rayon",
- "rustc-hash 2.1.3",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "magicpic-plugins"
-version = "0.23.0"
-dependencies = [
- "magicpic-color",
- "magicpic-geom",
- "magicpic-raster",
- "rayon",
- "rustix 1.1.5",
- "serde",
- "serde_json",
- "thiserror 2.0.21",
- "wasmi",
- "wat",
-]
-
-[[package]]
-name = "magicpic-psd"
-version = "0.23.0"
-dependencies = [
- "encoding_rs",
- "flate2",
- "magicpic-psd",
- "proptest",
- "serde",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "magicpic-raster"
-version = "0.23.0"
-dependencies = [
- "crc32fast",
- "lz4_flex",
- "magicpic-color",
- "magicpic-geom",
- "proptest",
- "rayon",
- "rustix 1.1.5",
- "serde",
- "sysinfo",
- "winsafe",
-]
-
-[[package]]
-name = "magicpic-raw"
-version = "0.23.0"
-dependencies = [
- "flate2",
- "image",
- "jxl-oxide",
- "magicpic-raw",
- "png 0.18.1",
- "rayon",
- "zune-core 0.5.3",
- "zune-jpeg 0.5.15",
- "zune-jpegxl",
-]
-
-[[package]]
-name = "magicpic-tablet"
-version = "0.23.0"
-dependencies = [
- "block2 0.6.2",
- "log",
- "objc2 0.6.5",
- "objc2-app-kit 0.3.2",
- "objc2-core-graphics",
- "objc2-foundation 0.3.2",
- "windows",
- "wintab",
- "x11rb",
-]
-
-[[package]]
-name = "magicpic-testkit"
-version = "0.23.0"
-dependencies = [
- "memory-stats",
- "serde_json",
-]
-
-[[package]]
-name = "magicpic-text"
-version = "0.23.0"
-dependencies = [
- "flate2",
- "parley",
- "magicpic-color",
- "magicpic-doc",
- "magicpic-geom",
- "magicpic-psd",
- "magicpic-raster",
- "rayon",
- "skrifa 0.47.0",
-]
-
-[[package]]
-name = "magicpic-ui-egui"
-version = "0.23.0"
-dependencies = [
- "base64 0.23.1",
- "chrono",
- "craft-i18n",
- "craft-print",
- "craft-ui",
- "craft-update",
- "eframe",
- "egui",
- "egui_extras",
- "egui_kittest",
- "epaint_default_fonts",
- "flate2",
- "icu_casemap",
- "icu_locale_core",
- "log",
- "magicpic-algo",
- "magicpic-cms",
- "magicpic-codecs",
- "magicpic-color",
- "magicpic-compose",
- "magicpic-doc",
- "magicpic-engine",
- "magicpic-format",
- "magicpic-geom",
- "magicpic-gpu",
- "magicpic-io",
- "magicpic-paint",
- "magicpic-plugins",
- "magicpic-psd",
- "magicpic-raster",
- "magicpic-raw",
- "magicpic-testkit",
- "magicpic-text",
- "magicpic-vector",
- "rayon",
- "serde",
- "serde_json",
- "sys-locale",
- "tempfile",
- "toml",
- "unicode-bidi",
- "web-time",
- "winsafe",
-]
-
-[[package]]
-name = "magicpic-vector"
-version = "0.23.0"
-dependencies = [
- "magicpic-color",
- "magicpic-doc",
- "magicpic-geom",
- "magicpic-raster",
- "rayon",
-]
-
-[[package]]
-name = "magicpic-web"
-version = "0.23.0"
-dependencies = [
- "eframe",
- "egui",
- "js-sys",
- "log",
- "magicpic-codecs",
- "magicpic-doc",
- "magicpic-engine",
- "magicpic-io",
- "magicpic-paint",
- "magicpic-psd",
- "magicpic-raster",
- "magicpic-ui-egui",
- "rfd",
- "serde_json",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
-]
-
-[[package]]
-name = "magicpic-web-boot"
-version = "0.23.0"
-dependencies = [
- "flate2",
- "js-sys",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
 ]
 
 [[package]]

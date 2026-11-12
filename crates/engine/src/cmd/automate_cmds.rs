@@ -435,7 +435,8 @@ fn run_droplet(s: &mut Session, p: &Value) -> Result<Value> {
     let cmd = "file.automate.runDroplet";
     let path = p.get("droplet").or_else(|| p.get("path")).and_then(Value::as_str).ok_or_else(|| bad(cmd, "missing \"droplet\""))?;
     let v: Value = serde_json::from_slice(&read_file(path)?).map_err(|e| bad(cmd, format!("{path}: {e}")))?;
-    if v.get("magicpicDroplet").is_none() {
+    // `photocraftDroplet` marks a droplet made in PhotoCraft, which MagicPic was forked from: the same file.
+    if v.get("magicpicDroplet").is_none() && v.get("photocraftDroplet").is_none() {
         return Err(bad(cmd, format!("{path} is not a MagicPic droplet")));
     }
     let steps = v.get("action").and_then(|a| a.get("steps")).cloned().ok_or_else(|| bad(cmd, "droplet has no action"))?;
@@ -478,10 +479,8 @@ fn run_droplet(s: &mut Session, p: &Value) -> Result<Value> {
 fn statistics(s: &mut Session, p: &Value) -> Result<Value> {
     let cmd = "file.scripts.statistics";
     let mode = p.get("mode").or_else(|| p.get("stackMode")).and_then(Value::as_str).unwrap_or("median");
-    let sm = magicpic_doc::StackMode::ALL
-        .into_iter()
-        .find(|m| m.id().eq_ignore_ascii_case(mode))
-        .ok_or_else(|| bad(cmd, format!("unknown stack mode `{mode}`")))?;
+    let sm =
+        magicpic_doc::StackMode::ALL.into_iter().find(|m| m.id().eq_ignore_ascii_case(mode)).ok_or_else(|| bad(cmd, format!("unknown stack mode `{mode}`")))?;
     let input = p.get("input").or_else(|| p.get("paths")).cloned().ok_or_else(|| bad(cmd, "missing \"input\" (files or a folder)"))?;
     let align = p.get("align").and_then(Value::as_bool).unwrap_or(false);
     let r = s.execute("file.scripts.loadFilesIntoStack", json!({"paths": input, "align": align, "createSmartObject": true}))?;

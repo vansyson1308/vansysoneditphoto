@@ -14,12 +14,12 @@ mod mac_menu;
 
 #[cfg(target_os = "macos")]
 fn main() {
+    use magicpic_ui_egui::MagicpicApp;
+    use magicpic_ui_egui::native_menu;
     use objc2::MainThreadMarker;
     use objc2::rc::Retained;
     use objc2_app_kit::{NSApplication, NSEvent, NSEventMask, NSEventModifierFlags, NSEventSubtype, NSEventType, NSMenu};
     use objc2_foundation::{NSPoint, NSString};
-    use magicpic_ui_egui::MagicpicApp;
-    use magicpic_ui_egui::native_menu;
     use serde_json::json;
 
     // Without a harness nothing answers cargo-nextest's `--list`, so it ran the whole test as its

@@ -97,8 +97,7 @@ fn both_token_and_token_file_exits_with_status_2() {
 #[test]
 fn missing_automation_read_root_exits_with_status_2() {
     // `AuthorizedWorkspace::new` fails when the read root does not exist.
-    let Run { status, stderr } =
-        run_magicpic(&["--control", "0", "--control-token", VALID_TOKEN, "--automation-read-root", "/nonexistent/magicpic-test-path"]);
+    let Run { status, stderr } = run_magicpic(&["--control", "0", "--control-token", VALID_TOKEN, "--automation-read-root", "/nonexistent/magicpic-test-path"]);
     assert_eq!(status.code(), Some(2), "missing read root must exit 2, stderr: {stderr}");
     assert!(stderr.contains("cannot configure automation workspace"), "stderr: {stderr}");
 }

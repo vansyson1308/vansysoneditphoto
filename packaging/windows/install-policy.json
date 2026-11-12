@@ -1,7 +1,7 @@
 {
   "id": "magicpic",
   "name": "MagicPic",
-  "upgradeCode": "D9660F32-2D0A-4ABE-B73D-17BE25F1542C",
+  "upgradeCode": "352695EA-057B-451B-B908-4BDFF619D88A",
   "sources": [
     "magicpic.wxs"
   ],
@@ -20,134 +20,134 @@
   "registry": [
     [
       "-1",
-      "Software\\Classes\\Magicpic.PhotoshopDocument\\shell\\open\\command",
+      "Software\\Classes\\MagicPic.PhotoshopDocument\\shell\\open\\command",
       "",
       "\"[#MagicpicExe]\" \"%1\""
     ],
     [
       "-1",
-      "Software\\Classes\\Magicpic.Image\\shell\\open\\command",
+      "Software\\Classes\\MagicPic.Image\\shell\\open\\command",
       "",
       "\"[#MagicpicExe]\" \"%1\""
     ],
     [
       "-1",
       "Software\\Classes\\.psd\\OpenWithProgids",
-      "Magicpic.PhotoshopDocument",
+      "MagicPic.PhotoshopDocument",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.psb\\OpenWithProgids",
-      "Magicpic.PhotoshopDocument",
+      "MagicPic.PhotoshopDocument",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.pdn\\OpenWithProgids",
-      "Magicpic.Image",
+      "MagicPic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.ora\\OpenWithProgids",
-      "Magicpic.Image",
+      "MagicPic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.kra\\OpenWithProgids",
-      "Magicpic.Image",
+      "MagicPic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.krz\\OpenWithProgids",
-      "Magicpic.Image",
+      "MagicPic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.png\\OpenWithProgids",
-      "Magicpic.Image",
+      "MagicPic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.jpg\\OpenWithProgids",
-      "Magicpic.Image",
+      "MagicPic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.jpeg\\OpenWithProgids",
-      "Magicpic.Image",
+      "MagicPic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.tif\\OpenWithProgids",
-      "Magicpic.Image",
+      "MagicPic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.tiff\\OpenWithProgids",
-      "Magicpic.Image",
+      "MagicPic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.webp\\OpenWithProgids",
-      "Magicpic.Image",
+      "MagicPic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.gif\\OpenWithProgids",
-      "Magicpic.Image",
+      "MagicPic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.bmp\\OpenWithProgids",
-      "Magicpic.Image",
+      "MagicPic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.tga\\OpenWithProgids",
-      "Magicpic.Image",
+      "MagicPic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.exr\\OpenWithProgids",
-      "Magicpic.Image",
+      "MagicPic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.hdr\\OpenWithProgids",
-      "Magicpic.Image",
+      "MagicPic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.avif\\OpenWithProgids",
-      "Magicpic.Image",
+      "MagicPic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.qoi\\OpenWithProgids",
-      "Magicpic.Image",
+      "MagicPic.Image",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.ico\\OpenWithProgids",
-      "Magicpic.Image",
+      "MagicPic.Image",
       ""
     ],
     [

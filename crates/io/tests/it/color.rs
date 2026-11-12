@@ -87,13 +87,9 @@ fn cmyk_to_png_is_colour_managed_and_tagged_srgb() {
 #[test]
 fn cmyk_fills_survive_psd_roundtrip_at_every_depth() {
     use magicpic_doc::{Color, Document, Fill, GradientStyle, Layer, LayerContent};
-    let icc = magicpic_cms::synth::cmyk_profile(&magicpic_cms::synth::CmykParams {
-        tvi: [0.26, 0.26, 0.26, 0.3],
-        grid_a2b: 5,
-        grid_b2a: 9,
-        ..Default::default()
-    })
-    .to_bytes();
+    let icc =
+        magicpic_cms::synth::cmyk_profile(&magicpic_cms::synth::CmykParams { tvi: [0.26, 0.26, 0.26, 0.3], grid_a2b: 5, grid_b2a: 9, ..Default::default() })
+            .to_bytes();
     let a = Color { mode: ColorMode::Cmyk, c: [0.2, 0.4, 0.6, 0.3], alpha: 0.7 };
     let b = Color { mode: ColorMode::Cmyk, c: [0.6, 0.2, 0.3, 0.1], alpha: 0.4 };
     for depth in SampleType::ALL {
@@ -186,12 +182,8 @@ fn cmyk_merged_composite_reads_through_the_embedded_profile() {
     // that profile, as the layers are, or every comparison against it is off (#3778).
     use magicpic_cms::{Intent, Transform};
     use magicpic_psd::{Compression, ImageResource, Version, testgen};
-    let profile = magicpic_cms::synth::cmyk_profile(&magicpic_cms::synth::CmykParams {
-        tvi: [0.26, 0.26, 0.26, 0.3],
-        grid_a2b: 5,
-        grid_b2a: 9,
-        ..Default::default()
-    });
+    let profile =
+        magicpic_cms::synth::cmyk_profile(&magicpic_cms::synth::CmykParams { tvi: [0.26, 0.26, 0.26, 0.3], grid_a2b: 5, grid_b2a: 9, ..Default::default() });
     let reference = |p: &Profile, ink: &[f32; 4]| {
         let t = Transform::new(p, Builtin::Srgb.profile(), Intent::RelativeColorimetric, true).unwrap();
         let mut o = [0.0f32; 4];

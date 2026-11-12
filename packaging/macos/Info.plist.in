@@ -73,7 +73,7 @@
   <key>NSRequiresAquaSystemAppearance</key>
   <false/>
   <key>NSHumanReadableCopyright</key>
-  <string>Copyright © the MagicPic authors. MIT OR Apache-2.0.</string>
+  <string>Copyright © the MagicPic contributors. Based on PhotoCraft, © ArtCraft Team and the PhotoCraft contributors. MIT OR Apache-2.0.</string>
 
   <!-- MagicPic's own format. -->
   <key>UTExportedTypeDeclarations</key>

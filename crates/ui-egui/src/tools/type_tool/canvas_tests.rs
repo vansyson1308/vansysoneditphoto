@@ -3187,8 +3187,7 @@ fn box_overlay(text: &str, height: u32, turn: f64) -> (Vec<egui::Shape>, Pos2) {
         aspect: 1.0,
     };
     let (_, aff, _) = layout(&mut app, LayerId(id)).unwrap();
-    let magicpic_doc::text::TextShape::Box { x, y, width, height } = text_layer(&app.session.active().unwrap().doc, LayerId(id)).unwrap().shape.clone()
-    else {
+    let magicpic_doc::text::TextShape::Box { x, y, width, height } = text_layer(&app.session.active().unwrap().doc, LayerId(id)).unwrap().shape.clone() else {
         panic!("a paragraph box")
     };
     let p = aff.apply(Point::new(f64::from(x + width), f64::from(y + height)));
@@ -3281,8 +3280,7 @@ ef", "size": 24, "box": [200.0, 150.0, 260.0, height]}),
         preedit: None,
     });
     let (_, aff, _) = layout(&mut app, LayerId(id)).unwrap();
-    let magicpic_doc::text::TextShape::Box { x, y, width, height } = text_layer(&app.session.active().unwrap().doc, LayerId(id)).unwrap().shape.clone()
-    else {
+    let magicpic_doc::text::TextShape::Box { x, y, width, height } = text_layer(&app.session.active().unwrap().doc, LayerId(id)).unwrap().shape.clone() else {
         panic!("a paragraph box")
     };
     let pt = |a: f32, b: f32| aff.apply(Point::new(f64::from(a), f64::from(b)));

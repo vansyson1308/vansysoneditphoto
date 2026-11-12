@@ -8,7 +8,9 @@
 //! The catalogs live in [storytold/craft-i18n](https://github.com/storytold/craft-i18n)
 //! (`locales/<code>/common.tsv`, shared by the Crafting Apps, and `photocraft.tsv`), not in this
 //! repository. `build.rs` embeds them from `CRAFT_I18N_DIR` (CI and releases check out the commit
-//! in `craft-i18n.rev`); without it the build is English only. Lookup, fallback (MagicPic's rows
+//! in `craft-i18n.rev`); without it the build is English only. The rows were written for PhotoCraft,
+//! which MagicPic was forked from: `build.rs` embeds a copy with the product name replaced on both
+//! sides of each row, so texts that name the product keep their translations. Lookup, fallback (MagicPic's rows
 //! over shared ones), plural forms (CLDR) and language names are the `craft-i18n` crate's
 //! (craft-libs). Which languages are offered, how the system locale picks one, reading direction
 //! and `{name}` placeholders stay here.

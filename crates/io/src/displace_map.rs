@@ -308,13 +308,7 @@ mod tests {
             .with("Nm  ", Value::Text(magicpic_psd::descriptor::UnicodeString::new_nul("Displace...")))
             .with(
                 "blendOptions",
-                blend_options(&SmartFilter {
-                    command: String::new(),
-                    params: J::Null,
-                    blend: magicpic_color::BlendMode::Normal,
-                    opacity: 1.0,
-                    visible: true,
-                }),
+                blend_options(&SmartFilter { command: String::new(), params: J::Null, blend: magicpic_color::BlendMode::Normal, opacity: 1.0, visible: true }),
             )
             .with("enab", Value::Boolean(true))
             .with("hasoptions", Value::Boolean(true))

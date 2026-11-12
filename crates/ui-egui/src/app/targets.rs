@@ -72,9 +72,7 @@ impl MagicpicApp {
         let layer_mask = st.channel_view.target == magicpic_engine::channel_cmds::ChannelTarget::LayerMask;
         let composite = (st.channel_view.target == magicpic_engine::channel_cmds::ChannelTarget::Composite || layer_mask) && st.doc.quick_mask.is_none();
         let has_mask = st.active_layer.and_then(|id| st.doc.layer(id)).is_some_and(|l| l.mask.is_some());
-        if matches!(st.channel_view.target, magicpic_engine::channel_cmds::ChannelTarget::Color(_))
-            && magicpic_engine::mask_view_cmds::current(st).is_some()
-        {
+        if matches!(st.channel_view.target, magicpic_engine::channel_cmds::ChannelTarget::Color(_)) && magicpic_engine::mask_view_cmds::current(st).is_some() {
             return true;
         }
         if !composite || !has_mask {

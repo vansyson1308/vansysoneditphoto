@@ -1,5 +1,5 @@
 //! Catalog metadata, strict tool envelopes and live resources.
-use super::{Arc, Backend, BatchParams, DocIndex, ListParams, McpError, Parameters, MagicpicMcp, RunParams, ServerHandler, Value, json};
+use super::{Arc, Backend, BatchParams, DocIndex, ListParams, MagicpicMcp, McpError, Parameters, RunParams, ServerHandler, Value, json};
 use rmcp::RoleServer;
 use rmcp::model::{
     CallToolRequestParams, CallToolResponse, Implementation, ListResourcesResult, ListToolsResult, PaginatedRequestParams, ReadResourceRequestParams,

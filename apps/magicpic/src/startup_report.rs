@@ -79,13 +79,9 @@ mod tests {
     fn the_text_names_the_error_renderer_version_and_log() {
         let log = Path::new("/home/me/.config/magicpic/logs/magicpic.log");
         let body = text("no adapter for Vulkan", "dx12", None, "0.15.1 (abc1234)", Some(log));
-        for part in [
-            "could not start",
-            "no adapter for Vulkan",
-            "Renderer: dx12",
-            "Version: 0.15.1 (abc1234)",
-            "Log file: /home/me/.config/magicpic/logs/magicpic.log",
-        ] {
+        for part in
+            ["could not start", "no adapter for Vulkan", "Renderer: dx12", "Version: 0.15.1 (abc1234)", "Log file: /home/me/.config/magicpic/logs/magicpic.log"]
+        {
             assert!(body.contains(part), "{part:?} missing from {body:?}");
         }
         assert!(!body.contains("Startup:"), "no fallback to explain: {body:?}");

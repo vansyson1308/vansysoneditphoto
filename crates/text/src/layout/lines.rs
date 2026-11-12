@@ -1,8 +1,8 @@
 //! Placing one broken line of a paragraph: kerning and tab stops, glyph and cluster positions,
 //! decorations, and the line's vertical-type and justification adjustments.
 
-use parley::{PositionedLayoutItem, Run};
 use magicpic_doc::text::{CharStyle, Kerning, TextAlign};
+use parley::{PositionedLayoutItem, Run};
 use skrifa::instance::NormalizedCoord;
 
 use super::area::{LineMetrics, line_metrics};

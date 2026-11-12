@@ -237,8 +237,7 @@ pub fn apply_coverage(
         } else {
             let d = to_rgba(&fmt, px);
             let s = to_rgba(&fmt, src);
-            let o =
-                if lock_transparency { magicpic_color::blend::composite_atop(blend, d, s, k) } else { magicpic_color::blend::composite(blend, d, s, k) };
+            let o = if lock_transparency { magicpic_color::blend::composite_atop(blend, d, s, k) } else { magicpic_color::blend::composite(blend, d, s, k) };
             let mut enc = [0.0f32; 8];
             from_rgba_into(&fmt, o, &mut enc);
             px.copy_from_slice(&enc[..n]);

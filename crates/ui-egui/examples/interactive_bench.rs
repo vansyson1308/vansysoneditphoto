@@ -357,8 +357,8 @@ fn adjust_preview_case(b: &mut Bench, s: &Session, target: LayerId, name: &str, 
     b.time_path(&format!("{name}, layer preview zoomed out{sel}"), report_path, |b| {
         v = (v + 7) % 120;
         let t = Instant::now();
-        let p = magicpic_ui_egui::adjust_preview::proxy_with_settings(&proxy, "curves", &json!({"points": [[0, 0], [100, 100 + v], [255, 255]]}))
-            .expect("preview");
+        let p =
+            magicpic_ui_egui::adjust_preview::proxy_with_settings(&proxy, "curves", &json!({"points": [[0, 0], [100, 100 + v], [255, 255]]})).expect("preview");
         let build = ms(t);
         let (render, path) = b.render_preview(&p, pregion);
         (build + render, path)

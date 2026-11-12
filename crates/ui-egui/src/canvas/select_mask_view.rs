@@ -534,13 +534,7 @@ pub fn preview_document(doc: &Document, active: Option<LayerId>, params: &Value,
 
 /// [`preview_document`] on `proxy`, the document already reduced by `k` (the Select and Mask
 /// workspace builds it itself, its selection already carrying the workspace's tool edits).
-pub fn preview_proxy(
-    mut proxy: Document,
-    active: Option<LayerId>,
-    params: &Value,
-    k: u32,
-    cancel: Option<&magicpic_engine::jobs::JobCtx>,
-) -> Option<Document> {
+pub fn preview_proxy(mut proxy: Document, active: Option<LayerId>, params: &Value, k: u32, cancel: Option<&magicpic_engine::jobs::JobCtx>) -> Option<Document> {
     let view = View::of(params);
     let k = k.max(1);
     let active = active.filter(|id| proxy.layer(*id).is_some());

@@ -1150,14 +1150,9 @@ mod tests {
 
         // Write an initial 4x4 red PNG
         let red_png = {
-            let img = magicpic_codecs::Image::from_raw(
-                4,
-                4,
-                magicpic_codecs::ChannelLayout::Rgba,
-                magicpic_codecs::SampleType::U8,
-                [255, 0, 0, 255].repeat(16),
-            )
-            .unwrap();
+            let img =
+                magicpic_codecs::Image::from_raw(4, 4, magicpic_codecs::ChannelLayout::Rgba, magicpic_codecs::SampleType::U8, [255, 0, 0, 255].repeat(16))
+                    .unwrap();
             magicpic_codecs::encode(&img, magicpic_codecs::Format::Png, &magicpic_codecs::EncodeOptions::default()).unwrap()
         };
         std::fs::write(&file_path, &red_png).unwrap();
@@ -1218,8 +1213,7 @@ mod tests {
         let path_str = file_path.to_string_lossy().into_owned();
 
         let img =
-            magicpic_codecs::Image::from_raw(4, 4, magicpic_codecs::ChannelLayout::Rgba, magicpic_codecs::SampleType::U8, [0, 255, 0, 255].repeat(16))
-                .unwrap();
+            magicpic_codecs::Image::from_raw(4, 4, magicpic_codecs::ChannelLayout::Rgba, magicpic_codecs::SampleType::U8, [0, 255, 0, 255].repeat(16)).unwrap();
         let png = magicpic_codecs::encode(&img, magicpic_codecs::Format::Png, &magicpic_codecs::EncodeOptions::default()).unwrap();
         std::fs::write(&file_path, &png).unwrap();
 
@@ -1315,14 +1309,9 @@ mod tests {
         let file_path = temp_dir.join("large_payload.psd");
         let path_str = file_path.to_string_lossy().into_owned();
 
-        let img = magicpic_codecs::Image::from_raw(
-            512,
-            512,
-            magicpic_codecs::ChannelLayout::Rgb,
-            magicpic_codecs::SampleType::U8,
-            [255, 0, 0].repeat(512 * 512),
-        )
-        .unwrap();
+        let img =
+            magicpic_codecs::Image::from_raw(512, 512, magicpic_codecs::ChannelLayout::Rgb, magicpic_codecs::SampleType::U8, [255, 0, 0].repeat(512 * 512))
+                .unwrap();
         let jfif = magicpic_codecs::encode(&img, magicpic_codecs::Format::Jpeg, &magicpic_codecs::EncodeOptions::default()).unwrap();
         let mut res_data = vec![0u8; 28];
         res_data[0..4].copy_from_slice(&1u32.to_be_bytes()); // format: 1 (kJpegRGB)
@@ -1368,8 +1357,7 @@ mod tests {
         let path_str = file_path.to_string_lossy().into_owned();
 
         let img =
-            magicpic_codecs::Image::from_raw(8, 8, magicpic_codecs::ChannelLayout::Rgba, magicpic_codecs::SampleType::U8, [0, 0, 255, 255].repeat(64))
-                .unwrap();
+            magicpic_codecs::Image::from_raw(8, 8, magicpic_codecs::ChannelLayout::Rgba, magicpic_codecs::SampleType::U8, [0, 0, 255, 255].repeat(64)).unwrap();
         let png = magicpic_codecs::encode(&img, magicpic_codecs::Format::Png, &magicpic_codecs::EncodeOptions::default()).unwrap();
         std::fs::write(&file_path, &png).unwrap();
 
@@ -1410,8 +1398,7 @@ mod tests {
         let path_str = file_path.to_string_lossy().into_owned();
 
         let img =
-            magicpic_codecs::Image::from_raw(8, 8, magicpic_codecs::ChannelLayout::Rgba, magicpic_codecs::SampleType::U8, [255, 0, 0, 255].repeat(64))
-                .unwrap();
+            magicpic_codecs::Image::from_raw(8, 8, magicpic_codecs::ChannelLayout::Rgba, magicpic_codecs::SampleType::U8, [255, 0, 0, 255].repeat(64)).unwrap();
         let png = magicpic_codecs::encode(&img, magicpic_codecs::Format::Png, &magicpic_codecs::EncodeOptions::default()).unwrap();
         std::fs::write(&file_path, &png).unwrap();
 
@@ -1443,12 +1430,8 @@ mod tests {
         let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
         let doc_path = "C:/fake/path/active_project.psd".to_string();
 
-        let doc = magicpic_doc::Document::new(
-            "active_project",
-            magicpic_geom::Size::new(100, 100),
-            magicpic_color::ColorMode::Rgb,
-            magicpic_color::SampleType::U8,
-        );
+        let doc =
+            magicpic_doc::Document::new("active_project", magicpic_geom::Size::new(100, 100), magicpic_color::ColorMode::Rgb, magicpic_color::SampleType::U8);
         let (doc_id, _) = app.session.open_document(doc, Some(doc_path.clone()));
         let st = app.session.active().unwrap();
         let revision = st.revision;
@@ -1514,8 +1497,8 @@ mod tests {
         let path_str = file_path.to_string_lossy().into_owned();
 
         // Write a PNG with 4097x1 dimensions (exceeds 4096 cap on longest side)
-        let img = magicpic_codecs::Image::from_raw(4097, 1, magicpic_codecs::ChannelLayout::Rgba, magicpic_codecs::SampleType::U8, vec![0u8; 4097 * 4])
-            .unwrap();
+        let img =
+            magicpic_codecs::Image::from_raw(4097, 1, magicpic_codecs::ChannelLayout::Rgba, magicpic_codecs::SampleType::U8, vec![0u8; 4097 * 4]).unwrap();
         let png = magicpic_codecs::encode(&img, magicpic_codecs::Format::Png, &magicpic_codecs::EncodeOptions::default()).unwrap();
         std::fs::write(&file_path, &png).unwrap();
 

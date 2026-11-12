@@ -274,13 +274,7 @@ mod tests {
             .with("Nm  ", Value::Text(UnicodeString::new_nul("Perspektivische Verformung...")))
             .with(
                 "blendOptions",
-                blend_options(&SmartFilter {
-                    command: String::new(),
-                    params: J::Null,
-                    blend: magicpic_color::BlendMode::Normal,
-                    opacity: 1.0,
-                    visible: true,
-                }),
+                blend_options(&SmartFilter { command: String::new(), params: J::Null, blend: magicpic_color::BlendMode::Normal, opacity: 1.0, visible: true }),
             )
             .with("enab", Value::Boolean(true))
             .with("hasoptions", Value::Boolean(true))

@@ -472,8 +472,7 @@ fn the_estimate_is_the_exported_files_size() {
         ("width".into(), json!(9000)),
         ("height".into(), json!(9000)),
     ]);
-    let at_10 =
-        magicpic_io::export(&default_export_document(&big, &small, None).unwrap(), "x.png", &settings(&small).io_options()).unwrap().bytes.len() as u64;
+    let at_10 = magicpic_io::export(&default_export_document(&big, &small, None).unwrap(), "x.png", &settings(&small).io_options()).unwrap().bytes.len() as u64;
     assert_eq!(default_exact_estimate(&big, &small), Some(at_10), "100 × 100 at 10 %, within it");
 }
 
@@ -1000,13 +999,8 @@ fn profile_and_metadata_follow_the_existing_exporter() {
     let all = settings(&f);
     assert!(all.xmp_all && all.embed_metadata && all.embed_icc);
 
-    let mut doc = Document::with_background(
-        "x",
-        magicpic_doc::Size::new(8, 8),
-        magicpic_doc::ColorMode::Rgb,
-        magicpic_doc::SampleType::U8,
-        magicpic_doc::Color::WHITE,
-    );
+    let mut doc =
+        Document::with_background("x", magicpic_doc::Size::new(8, 8), magicpic_doc::ColorMode::Rgb, magicpic_doc::SampleType::U8, magicpic_doc::Color::WHITE);
     doc.icc_profile = Some(Builtin::DisplayP3.profile().to_bytes());
     doc.metadata.xmp = Some("<x:xmpmeta>secret</x:xmpmeta>".into());
     let before = doc.clone();

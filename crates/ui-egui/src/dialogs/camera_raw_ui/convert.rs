@@ -1,5 +1,5 @@
 use super::open::{Coverage, Target};
-use super::{CameraRaw, CameraRawDialog, LayerId, MAX_SAMPLERS, PROXY_SIDE, MagicpicApp, Rect, RgbHistogram, Value, json};
+use super::{CameraRaw, CameraRawDialog, LayerId, MAX_SAMPLERS, MagicpicApp, PROXY_SIDE, Rect, RgbHistogram, Value, json};
 
 /// Camera Raw Defaults › Sharpen For: output sharpening, folded into the Camera Raw step `rest`
 /// as the workflow's Sharpen For is. Returns what it applied.

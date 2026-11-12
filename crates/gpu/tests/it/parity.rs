@@ -3078,8 +3078,7 @@ fn pages_are_evicted_under_the_budget() {
     g.paged.set_resident_budget(page);
     for round in 0..3 {
         let cpu = timed("eviction CPU reference", || magicpic_compose::flatten(&d));
-        let (out, s) =
-            timed("eviction GPU render/readback", || magicpic_gpu::render_to_vec_stats(&mut g.paged, &g.device, &g.queue, &d, d.bounds())).unwrap();
+        let (out, s) = timed("eviction GPU render/readback", || magicpic_gpu::render_to_vec_stats(&mut g.paged, &g.device, &g.queue, &d, d.bounds())).unwrap();
         let worst = worst_diff(&cpu.px, &out);
         assert!(worst.0 <= TOL, "round {round}: max diff {:.2}/255 at {}", worst.0 * 255.0, worst.1);
         assert!(s.evicted > 0, "round {round}: {s:?}");

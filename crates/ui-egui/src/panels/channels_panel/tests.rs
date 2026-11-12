@@ -184,9 +184,8 @@ fn channel_selection_sets_visibility_and_eye_overrides_do_not_retarget() {
             let st = h.state().session.active().unwrap();
             (0..st.doc.pixel_format().mode.color_channels()).filter(|k| st.channel_view.color_visible(*k)).collect::<Vec<_>>()
         };
-        let colors = |h: &egui_kittest::Harness<'_, MagicpicApp>| {
-            magicpic_engine::color_channels::selected(&h.state().session).unwrap().indices().collect::<Vec<_>>()
-        };
+        let colors =
+            |h: &egui_kittest::Harness<'_, MagicpicApp>| magicpic_engine::color_channels::selected(&h.state().session).unwrap().indices().collect::<Vec<_>>();
 
         click(&mut h, first, Modifiers::NONE);
         assert_eq!(visible(&h), vec![selected[0]], "{mode}: clicking one row shows it alone");
@@ -305,8 +304,7 @@ fn footer_loads_the_selected_layer_mask_and_preserves_color_alpha_targets() {
         h.event(egui::Event::PointerButton { pos: p, button: PointerButton::Primary, pressed: false, modifiers: Modifiers::NONE });
         h.run_steps(2);
     };
-    let sample =
-        |h: &egui_kittest::Harness<'_, MagicpicApp>, x, y| h.state().session.active().unwrap().doc.selection.as_ref().unwrap().sample_channel(x, y, 0);
+    let sample = |h: &egui_kittest::Harness<'_, MagicpicApp>, x, y| h.state().session.active().unwrap().doc.selection.as_ref().unwrap().sample_channel(x, y, 0);
 
     assert_eq!(h.state().session.active().unwrap().channel_view.target, ChannelTarget::Composite);
     click_load(&mut h);

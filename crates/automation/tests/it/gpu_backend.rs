@@ -198,14 +198,9 @@ mod tests {
         for depth in [SampleType::U16, SampleType::F32] {
             let doc = make_test_doc(64, 64, depth);
             let expected = magicpic_io::export_flat(&doc, magicpic_codecs::Format::Png, &opts).expect("CPU export");
-            let res = magicpic_io::export_flat_with_renderer(
-                &doc,
-                magicpic_codecs::Format::Png,
-                &opts,
-                &magicpic_raster::Interrupt::NONE,
-                Some(&mut gpu_renderer),
-            )
-            .expect("the export must retry on the CPU");
+            let res =
+                magicpic_io::export_flat_with_renderer(&doc, magicpic_codecs::Format::Png, &opts, &magicpic_raster::Interrupt::NONE, Some(&mut gpu_renderer))
+                    .expect("the export must retry on the CPU");
             assert_eq!(expected.bytes, res.bytes, "{depth:?} exports must keep the CPU compositor's precision");
             assert!(res.warnings.iter().any(|w| w.contains("falling back to CPU")), "{depth:?} export must report its CPU fallback: {:?}", res.warnings);
         }
@@ -249,14 +244,12 @@ mod tests {
         let doc = make_test_doc(64, 64, SampleType::U8);
 
         // 1. Cancellation preservation
-        let cancel_res =
-            gpu_renderer.render_bands(&doc, doc.bounds(), 16, &magicpic_raster::Interrupt::NONE, &mut |_| Err(magicpic_io::IoError::Cancelled));
+        let cancel_res = gpu_renderer.render_bands(&doc, doc.bounds(), 16, &magicpic_raster::Interrupt::NONE, &mut |_| Err(magicpic_io::IoError::Cancelled));
         assert!(matches!(cancel_res, Err(magicpic_io::RenderError::Cancelled)), "cancellation must be preserved: {cancel_res:?}");
 
         // 2. Sink I/O error preservation
-        let sink_res = gpu_renderer.render_bands(&doc, doc.bounds(), 16, &magicpic_raster::Interrupt::NONE, &mut |_| {
-            Err(magicpic_io::IoError::Read("simulated sink error".into()))
-        });
+        let sink_res = gpu_renderer
+            .render_bands(&doc, doc.bounds(), 16, &magicpic_raster::Interrupt::NONE, &mut |_| Err(magicpic_io::IoError::Read("simulated sink error".into())));
         assert!(matches!(sink_res, Err(magicpic_io::RenderError::Sink(_))), "sink error must be preserved as RenderError::Sink: {sink_res:?}");
     }
 

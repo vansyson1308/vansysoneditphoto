@@ -88,8 +88,7 @@ pub(crate) fn intercept(app: &mut MagicpicApp, id: &str, params: &Value) -> Opti
         SmartSource::Embedded { bytes, .. } => bytes.as_slice(),
         SmartSource::Linked { path } => magicpic_io::linked::embedded_payload(&st.doc.metadata, path)?.1,
     };
-    if !(magicpic_io::svg::is_svg(bytes) || bytes.starts_with(b"%PDF-") || bytes.starts_with(b"%!PS-Adobe-") || bytes.starts_with(&[0xc5, 0xd0, 0xd3, 0xc6]))
-    {
+    if !(magicpic_io::svg::is_svg(bytes) || bytes.starts_with(b"%PDF-") || bytes.starts_with(b"%!PS-Adobe-") || bytes.starts_with(&[0xc5, 0xd0, 0xd3, 0xc6])) {
         return None;
     }
     let doc = st.doc.id;

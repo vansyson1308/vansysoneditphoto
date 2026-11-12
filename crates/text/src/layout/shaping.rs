@@ -5,8 +5,8 @@ use std::borrow::Cow;
 use std::cell::Cell;
 use std::ops::Range;
 
-use parley::{Alignment, AlignmentOptions, FontFeatures, Layout, LayoutContext, PositionedLayoutItem, StyleProperty};
 use magicpic_doc::text::{CharStyle, ParagraphStyle, TextAlign, TextDirection};
+use parley::{Alignment, AlignmentOptions, FontFeatures, Layout, LayoutContext, PositionedLayoutItem, StyleProperty};
 
 use super::area::{LineMetrics, MAX_AREA_PASSES, area_metrics, break_area};
 use super::paragraphs::{TabWidth, strip_break, tab_widths};

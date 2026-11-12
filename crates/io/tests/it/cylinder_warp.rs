@@ -44,9 +44,7 @@ fn document(transform: Affine, perspective: Option<[f64; 9]>) -> (Document, Warp
 fn render(sm: &SmartObject) -> Surface {
     let src = contents();
     match &sm.perspective {
-        Some(p) => {
-            magicpic_algo::warp::place_source_projective(&src, Rect::new(0, 0, 100, 100), &magicpic_algo::transform::Homography(*p), sm.warp.as_ref())
-        }
+        Some(p) => magicpic_algo::warp::place_source_projective(&src, Rect::new(0, 0, 100, 100), &magicpic_algo::transform::Homography(*p), sm.warp.as_ref()),
         None => magicpic_algo::warp::place_source(&src, Rect::new(0, 0, 100, 100), &sm.transform, sm.warp.as_ref()),
     }
     .unwrap()

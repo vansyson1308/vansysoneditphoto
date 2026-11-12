@@ -14,8 +14,10 @@
 #[cfg(not(target_arch = "wasm32"))]
 pub const UPDATE_APP: craft_update::app::App = craft_update::app::App {
     icon_png: Some(include_bytes!("../../../assets/app-icon/hicolor/128x128/apps/io.github.vansyson1308.magicpic.png")),
-    accent: Some([0x2f, 0x7b, 0xf5]),
-    ..craft_update::suite::MAGICPIC
+    accent: Some([0x6a, 0x3d, 0xf0]),
+    developer: "the MagicPic contributors",
+    // MagicPic's own releases, never the upstream project's: an update must stay this program.
+    ..craft_update::app::App::new("magicpic", "MagicPic", "Image editing", "vansyson1308/vansysoneditphoto")
 };
 
 /// Translate a string literal into the current UI language: `tl!("Image Size…")`.

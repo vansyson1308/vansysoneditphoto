@@ -1,7 +1,7 @@
 //! Compact live-gradient Properties controls, sharing the editor's stop interaction.
 
 use super::{
-    Color32, Fill, GradientStyle, Layer, LayerId, Marker, MagicpicApp, Rect, Sense, Sink, Stroke, StrokeKind, Tokens, c32, cmds, edit_stop_color, fill_of,
+    Color32, Fill, GradientStyle, Layer, LayerId, MagicpicApp, Marker, Rect, Sense, Sink, Stroke, StrokeKind, Tokens, c32, cmds, edit_stop_color, fill_of,
     json, preset_stop_color, selection_after_edit, stops_editor_for, strip_key, vec2, widgets,
 };
 use crate::{icons, props_layout, theme};

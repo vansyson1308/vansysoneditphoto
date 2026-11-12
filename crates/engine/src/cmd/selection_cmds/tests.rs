@@ -51,12 +51,7 @@ fn color_range_skin_tones_selects_skin_not_cream_and_refuses_detect_faces() {
 fn selection_sampling_refuses_oversized_canvases_before_reading_pixels() {
     let mut s = Session::new();
     s.add_document(
-        magicpic_doc::Document::new(
-            "large",
-            magicpic_geom::Size::new(300_000, 300_000),
-            magicpic_color::ColorMode::Rgb,
-            magicpic_color::SampleType::U8,
-        ),
+        magicpic_doc::Document::new("large", magicpic_geom::Size::new(300_000, 300_000), magicpic_color::ColorMode::Rgb, magicpic_color::SampleType::U8),
         None,
     );
     for all_layers in [false, true] {
@@ -96,12 +91,8 @@ fn selection_sampling_all_layers_reports_a_failed_composite_and_keeps_the_select
 #[test]
 fn modify_rejects_oversized_canvases_before_reading_the_mask() {
     let mut s = Session::new();
-    let mut doc = magicpic_doc::Document::new(
-        "large",
-        magicpic_geom::Size::new(300_000, 300_000),
-        magicpic_color::ColorMode::Rgb,
-        magicpic_color::SampleType::U8,
-    );
+    let mut doc =
+        magicpic_doc::Document::new("large", magicpic_geom::Size::new(300_000, 300_000), magicpic_color::ColorMode::Rgb, magicpic_color::SampleType::U8);
     let mut selection = magicpic_raster::Surface::new(magicpic_color::PixelFormat::GRAY8);
     selection.write_pixel(0, 0, &[1.0]);
     doc.selection = Some(selection);

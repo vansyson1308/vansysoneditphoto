@@ -7,12 +7,12 @@ fn main() {
     use std::cell::RefCell;
     use std::rc::Rc;
 
+    use magicpic_tablet::Sample;
+    use magicpic_tablet::macos::Monitor;
     use objc2::MainThreadMarker;
     use objc2_app_kit::{NSApplication, NSEvent};
     use objc2_core_graphics::{CGEvent, CGEventField, CGEventMouseSubtype, CGEventType, CGMouseButton};
     use objc2_foundation::NSPoint;
-    use magicpic_tablet::Sample;
-    use magicpic_tablet::macos::Monitor;
 
     // Answer cargo-nextest's `--list` (and nothing for `--ignored`), as tests/mac_menu_appkit.rs
     // in apps/magicpic does; `monitor_macos --exact` falls through to the test.

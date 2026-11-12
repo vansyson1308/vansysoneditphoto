@@ -413,11 +413,12 @@ fn droplets_carry_the_actions_their_play_steps_call() {
         }
     }
 
-    // Droplets written before `calledActions` still run.
+    // Droplets written before `calledActions` still run. Those were made in PhotoCraft, which
+    // MagicPic was forked from, and carry its marker.
     let old = format!("{dir}/old.pcdroplet");
     std::fs::write(
         &old,
-        json!({"magicpicDroplet": 1, "action": {"steps": [["image.imageRotation.90cw", {}]]}, "options": {"output": format!("{dir}/out-old")}}).to_string(),
+        json!({"photocraftDroplet": 1, "action": {"steps": [["image.imageRotation.90cw", {}]]}, "options": {"output": format!("{dir}/out-old")}}).to_string(),
     )
     .unwrap();
     let r = fresh.execute("file.automate.runDroplet", json!({"droplet": old, "input": [dir.clone()]})).unwrap();

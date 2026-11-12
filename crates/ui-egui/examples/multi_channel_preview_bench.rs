@@ -22,10 +22,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     fixture.execute("file.new", json!({"width":6000,"height":4000,"depth":16,"background":"transparent"}))?;
     fixture.execute("layer.new.layer", json!({}))?;
     fixture.edit("Bands", |doc, id| {
-        let surface = doc
-            .layer_mut(id.ok_or(magicpic_engine::EngineError::NoDocument)?)
-            .and_then(|l| l.surface_mut())
-            .ok_or(magicpic_engine::EngineError::NoDocument)?;
+        let surface =
+            doc.layer_mut(id.ok_or(magicpic_engine::EngineError::NoDocument)?).and_then(|l| l.surface_mut()).ok_or(magicpic_engine::EngineError::NoDocument)?;
         for x in (0..6000).step_by(64) {
             let value = 0.15 + (x % 640) as f32 / 1000.0;
             surface.fill_rect(Rect::new(x, 0, (x + 64).min(6000), 4000), &[value, 0.4, 1.0 - value, 0.8]);

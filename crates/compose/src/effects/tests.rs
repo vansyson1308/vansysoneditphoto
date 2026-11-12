@@ -1063,8 +1063,7 @@ fn an_inside_stroke_emboss_counts_as_an_interior_blend() {
         })
     };
     let layer = |effects: Vec<Effect>| {
-        let mut l =
-            magicpic_doc::Layer::new("L", magicpic_doc::LayerContent::Raster(magicpic_raster::Surface::new(magicpic_color::PixelFormat::RGBA8)));
+        let mut l = magicpic_doc::Layer::new("L", magicpic_doc::LayerContent::Raster(magicpic_raster::Surface::new(magicpic_color::PixelFormat::RGBA8)));
         l.effects.items = effects;
         l
     };
@@ -1091,8 +1090,7 @@ fn stroke_emboss_bevels_every_stroke_even_a_transparent_one() {
     };
     let emboss = Effect::BevelEmboss(bevel_of(BevelStyle::StrokeEmboss, BevelTechnique::Smooth));
     let maps = |effects: Vec<Effect>| {
-        let mut l =
-            magicpic_doc::Layer::new("L", magicpic_doc::LayerContent::Raster(magicpic_raster::Surface::new(magicpic_color::PixelFormat::RGBA8)));
+        let mut l = magicpic_doc::Layer::new("L", magicpic_doc::LayerContent::Raster(magicpic_raster::Surface::new(magicpic_color::PixelFormat::RGBA8)));
         l.effects.items = effects;
         let n = l.effects.items.len();
         let m = build_maps(&l, square(60, 20, 40).v, Rect::new(0, 0, 60, 60), &GlobalLight::default(), &no_tex());

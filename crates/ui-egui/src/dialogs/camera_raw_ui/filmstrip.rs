@@ -4,9 +4,7 @@
 
 use super::open::{Target, commit_open_raw, open_raw_with, return_on_failure};
 use super::sidecar::read_sidecar;
-use super::{
-    Align2, CameraRaw, CameraRawDialog, Color32, ERect, FontId, MagicpicApp, RawOpen, Rect, Sense, Stroke, Tokens, Value, json, pos2, vec2, widgets,
-};
+use super::{Align2, CameraRaw, CameraRawDialog, Color32, ERect, FontId, MagicpicApp, RawOpen, Rect, Sense, Stroke, Tokens, Value, json, pos2, vec2, widgets};
 
 /// The filmstrip column, shown when more than one raw is being opened.
 pub(super) const FILM_W: f32 = 150.0;

@@ -3,7 +3,7 @@ use super::commit::{cancel, commit, start_steps};
 use super::draw::texture_quad;
 use super::preview::{Above, AbovePlan, preview_image};
 use super::{
-    Arc, BezierMesh, CAS_ONLY_SCALES, Color32, DocId, Document, Follow, Homography, LOCKED, LayerContent, LayerId, MadeLayer, OtherTexels, MagicpicApp,
+    Arc, BezierMesh, CAS_ONLY_SCALES, Color32, DocId, Document, Follow, Homography, LOCKED, LayerContent, LayerId, MadeLayer, MagicpicApp, OtherTexels,
     Several, Steps, TransformPreview, TransformSession, Warp, WarpStyle, corners, default_interpolation, json, swap_mode_texels,
 };
 
@@ -582,13 +582,7 @@ pub(super) fn fold_made(app: &mut MagicpicApp, document: DocId, layer: LayerId, 
 /// Free Transform of a targeted unlinked layer mask, alpha channel or Quick Mask by itself: the
 /// box frames its content (or the selection) and previews the moving values in grey over the
 /// document with them vacated.
-fn begin_lone(
-    app: &mut MagicpicApp,
-    ctx: &egui::Context,
-    doc: Arc<Document>,
-    surf: magicpic_raster::Surface,
-    target: serde_json::Value,
-) -> Result<(), String> {
+fn begin_lone(app: &mut MagicpicApp, ctx: &egui::Context, doc: Arc<Document>, surf: magicpic_raster::Surface, target: serde_json::Value) -> Result<(), String> {
     use magicpic_engine::transform_cmds as tc;
     let b = tc::target_frame(&doc, &surf);
     if b.is_empty() {

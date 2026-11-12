@@ -1,5 +1,5 @@
 use super::fields::choice_label;
-use super::{Map, MagicpicApp, RichText, Tokens, Value, json, prefs};
+use super::{MagicpicApp, Map, RichText, Tokens, Value, json, prefs};
 
 /// Performance › Graphics: the compositor's GPU memory budget and whether the active document's
 /// layers fit it (the GPU Memory preference sets it).

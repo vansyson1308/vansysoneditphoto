@@ -13,8 +13,7 @@ fn a_psd_save_streams_the_exported_bytes_and_keeps_the_old_file_on_error() {
     let mut doc = Document::new("streamed", magicpic_geom::Size::new(64, 48), magicpic_doc::ColorMode::Rgb, magicpic_color::SampleType::U8);
     let fmt = doc.pixel_format();
     let px: Vec<u8> = (0..64 * 48 * fmt.bytes_per_pixel()).map(|i| (i * 7 % 251) as u8).collect();
-    doc.layers
-        .push(magicpic_doc::Layer::new("A", magicpic_doc::LayerContent::Raster(magicpic_raster::Surface::from_interleaved(fmt, doc.bounds(), &px))));
+    doc.layers.push(magicpic_doc::Layer::new("A", magicpic_doc::LayerContent::Raster(magicpic_raster::Surface::from_interleaved(fmt, doc.bounds(), &px))));
     let opts = magicpic_io::ExportOptions::default();
     for name in ["a.psd", "a.psb"] {
         let path = dir.join(name);

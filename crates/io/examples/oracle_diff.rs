@@ -57,10 +57,8 @@ fn compare_modes(doc: &magicpic_doc::Document, ours: &[[f32; 4]], merged: &[[f32
         wr(format!("{out}_ps.f32"), merged);
         let mut meta = format!("{} {}\n", doc.size.width, doc.size.height);
         for (i, l) in doc.layers.iter().enumerate() {
-            let b = magicpic_compose::surface_to_buffer(
-                l.surface().unwrap_or(&magicpic_raster::Surface::new(magicpic_color::PixelFormat::RGBA8)),
-                doc.bounds(),
-            );
+            let b =
+                magicpic_compose::surface_to_buffer(l.surface().unwrap_or(&magicpic_raster::Surface::new(magicpic_color::PixelFormat::RGBA8)), doc.bounds());
             wr(format!("{out}_L{i}.f32"), &b.px);
             meta += &format!("{i} {}\n", l.name);
         }
@@ -253,8 +251,7 @@ fn write_comparison_png(doc: &magicpic_doc::Document, ours: &[[f32; 4]], merged:
     } else {
         (img, w, h)
     };
-    let image =
-        magicpic_codecs::Image::from_raw((w * 3) as u32, h as u32, magicpic_codecs::ChannelLayout::Rgba, magicpic_codecs::SampleType::U8, img).unwrap();
+    let image = magicpic_codecs::Image::from_raw((w * 3) as u32, h as u32, magicpic_codecs::ChannelLayout::Rgba, magicpic_codecs::SampleType::U8, img).unwrap();
     std::fs::write(&out, magicpic_codecs::encode(&image, magicpic_codecs::Format::Png, &Default::default()).unwrap()).unwrap();
     println!("wrote {out}");
 }

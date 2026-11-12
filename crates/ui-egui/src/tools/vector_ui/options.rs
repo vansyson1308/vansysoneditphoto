@@ -2,7 +2,7 @@ use super::path_ops::active_path_name;
 use super::pen::path_operations_menu;
 use super::shapes::is_shape_tool;
 use super::{ArrowDefaultLink, arrow_default_link_id, copy_arrow_to_tool_defaults};
-use super::{GradientChoices, LayerContent, PaintChange, MagicpicApp, Tokens, Tool, Value, json, paint_param, swatch};
+use super::{GradientChoices, LayerContent, MagicpicApp, PaintChange, Tokens, Tool, Value, json, paint_param, swatch};
 
 // ---------------------------------------------------------------------------------------------
 // Options bars

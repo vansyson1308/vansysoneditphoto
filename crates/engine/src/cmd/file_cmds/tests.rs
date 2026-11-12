@@ -708,8 +708,7 @@ fn batch_quiet_raw_applies_prior_settings_and_workflow_without_touching_inputs()
     assert!(result["errors"].as_array().unwrap().is_empty(), "{result}");
     let actual = magicpic_io::import("raw.psd", &std::fs::read(join(&output, "raw.psd")).unwrap()).unwrap().document;
     assert_eq!(actual.resolution_dpi, 240.0);
-    let (expected, _) =
-        magicpic_io::raw::import_raw_tuned("raw.dng", &bytes, &magicpic_io::raw::RawTuning { exposure: 1.0, ..Default::default() }).unwrap();
+    let (expected, _) = magicpic_io::raw::import_raw_tuned("raw.dng", &bytes, &magicpic_io::raw::RawTuning { exposure: 1.0, ..Default::default() }).unwrap();
     let mut oracle = Session::new();
     oracle.add_document(expected.document, None);
     oracle.execute("edit.convertToProfile", json!({"profile":s.prefs().raw_defaults.color_space.profile_id(),"intent":"relative"})).unwrap();
@@ -1546,10 +1545,7 @@ fn revert_batch_and_stack_open_a_raw_at_the_raw_defaults_resolution() {
     let quiet = join(&dir, "quiet-raw");
     let r = s.execute("file.automate.batch", json!({"input":[path],"output":quiet,"format":"psd","suppressWarnings":true,"steps":[]})).unwrap();
     assert!(r["errors"].as_array().unwrap().is_empty(), "{r}");
-    assert!(
-        r["notices"][0]["warnings"].as_array().unwrap().iter().any(|warning| warning.as_str().unwrap().contains(magicpic_io::raw::DEVELOPED_NOTE)),
-        "{r}"
-    );
+    assert!(r["notices"][0]["warnings"].as_array().unwrap().iter().any(|warning| warning.as_str().unwrap().contains(magicpic_io::raw::DEVELOPED_NOTE)), "{r}");
     let quiet = magicpic_io::import("IMG_0003.psd", &std::fs::read(join(&quiet, "IMG_0003.psd")).unwrap()).unwrap().document;
     assert_eq!(quiet.resolution_dpi, 240.0);
     s.execute("file.scripts.loadFilesIntoStack", json!({"paths": [path]})).unwrap();

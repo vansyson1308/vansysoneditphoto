@@ -56,14 +56,7 @@ fn step(ctx: &egui::Context, app: &mut MagicpicApp, view: &mut View, xf: ViewXfo
 
 /// An active canvas and an inactive one in the same frame, as Window › Arrange lays them out: the
 /// inactive cell shows the other of two documents.
-fn step_two(
-    ctx: &egui::Context,
-    app: &mut MagicpicApp,
-    active: (&mut View, ViewXform),
-    inactive: (&mut View, ViewXform),
-    events: Vec<Event>,
-    opts: FrameOpts,
-) {
+fn step_two(ctx: &egui::Context, app: &mut MagicpicApp, active: (&mut View, ViewXform), inactive: (&mut View, ViewXform), events: Vec<Event>, opts: FrameOpts) {
     ctx.begin_pass(egui::RawInput { screen_rect: Some(Rect::from_min_size(Pos2::ZERO, vec2(1000.0, 800.0))), focused: true, events, ..Default::default() });
     let active_idx = app.session.active_index().unwrap_or(0);
     let (view, xf) = active;
@@ -535,8 +528,7 @@ fn atomic_press_release_sequences_keep_their_own_travel() {
 fn a_secondary_canvas_cannot_move_or_cancel_the_active_pattern_drag() {
     let mut app = MagicpicApp::new(magicpic_engine::Session::new(), crate::Services::default());
     app.run("file.new", json!({"width": 40, "height": 30})).unwrap();
-    let id =
-        app.run(magicpic_engine::pattern_fill_cmds::CREATE, json!({"pattern": "Checkerboard", "phase": [2.5, -3.25]})).unwrap()["layer"].as_u64().unwrap();
+    let id = app.run(magicpic_engine::pattern_fill_cmds::CREATE, json!({"pattern": "Checkerboard", "phase": [2.5, -3.25]})).unwrap()["layer"].as_u64().unwrap();
     let dialog = crate::pattern_fill_ui::open(&mut app).unwrap();
     // Window › Arrange: a second document in its own cell, the fill's document active.
     app.run("file.new", json!({"width": 30, "height": 20})).unwrap();

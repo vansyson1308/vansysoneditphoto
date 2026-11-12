@@ -342,6 +342,23 @@ fn recipe_of_a_plain_document_is_null() {
     assert!(s.execute("seeing.recipe", json!({})).unwrap()["recipe"].is_null());
 }
 
+/// A variant saved before the product was renamed carries the earlier note author and recipe key.
+/// Its recipe is still found, replays, and a new variant of it does not inherit the old notes.
+#[test]
+fn a_recipe_saved_under_the_earlier_product_name_is_still_read() {
+    let mut s = picture(8);
+    let text = r#"recipe: {"photocraftSeeing":1,"label":"exposure -2 EV","kind":"underexpose","seed":3,"steps":[{"id":"layer.newAdjustmentLayer.exposure","params":{"exposure":-2}}]}"#;
+    s.execute("notes.add", json!({"x": 1, "y": 1, "text": text, "author": "PhotoCraft Seeing"})).unwrap();
+    let stored = s.execute("seeing.recipe", json!({})).unwrap();
+    assert_eq!(stored["recipe"]["label"], "exposure -2 EV", "{stored}");
+    assert_eq!(stored["recipe"]["magicpicSeeing"], 1, "written back under the current key");
+    let recipe: Value = serde_json::from_str(text.trim_start_matches("recipe: ")).unwrap();
+    s.execute("seeing.variant", json!({"recipe": recipe})).unwrap();
+    let doc = &s.active().unwrap().doc;
+    assert!(doc.notes.iter().all(|n| n.author == NOTE_AUTHOR), "the source's old note is not carried into the variant");
+    assert_eq!(doc.notes.len(), 1);
+}
+
 #[test]
 fn nothing_runs_without_a_document_and_bad_params_are_errors() {
     let mut s = Session::new();

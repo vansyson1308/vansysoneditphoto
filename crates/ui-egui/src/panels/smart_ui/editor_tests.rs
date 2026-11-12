@@ -383,11 +383,7 @@ fn tone_filter_editor_ignores_current_channel_target() {
                 assert!(std::sync::Arc::ptr_eq(&h.state().session.active().unwrap().doc, &before), "preview never writes to the selected plane");
                 let shown = magicpic_compose::flatten(h.state().filter_preview.as_ref().unwrap().result.as_ref().unwrap()).px.clone();
                 crate::dialogs::confirm(h.state_mut(), id).unwrap();
-                assert_eq!(
-                    shown,
-                    magicpic_compose::flatten(&h.state().session.active().unwrap().doc).px,
-                    "{mode} {kind} view={view}: preview matches commit"
-                );
+                assert_eq!(shown, magicpic_compose::flatten(&h.state().session.active().unwrap().doc).px, "{mode} {kind} view={view}: preview matches commit");
                 assert_eq!(smart(h.state(), layer).smart_filters.len(), 3);
                 assert_eq!(read(&smart(h.state(), layer).smart_filters[2].params), read(&recorded));
                 let after = &h.state().session.active().unwrap().doc;

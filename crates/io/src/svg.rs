@@ -724,10 +724,8 @@ fn bounded_data_image(
         counter.svg_chain = counter.svg_chain.max(u64::try_from(depth + 1).unwrap_or(u64::MAX));
         Some(usvg::ImageKind::SVG(tree))
     } else {
-        let supported = matches!(
-            format,
-            Some(magicpic_codecs::Format::Png | magicpic_codecs::Format::Jpeg | magicpic_codecs::Format::Gif | magicpic_codecs::Format::WebP)
-        );
+        let supported =
+            matches!(format, Some(magicpic_codecs::Format::Png | magicpic_codecs::Format::Jpeg | magicpic_codecs::Format::Gif | magicpic_codecs::Format::WebP));
         let size = supported.then(|| imagesize::blob_size(&data).ok()).flatten();
         let Some(size) = size else { return unreadable_image(budget, "embedded SVG image has unsupported or invalid raster data") };
         let mut dimensions = (size.width, size.height);

@@ -6,7 +6,7 @@ use std::sync::{Arc, Weak};
 use serde_json::json;
 
 use super::pen::closing;
-use super::{DocId, Document, PenPath, MagicpicApp, Tool};
+use super::{DocId, Document, MagicpicApp, PenPath, Tool};
 
 /// A Pen or Curvature Pen path finished: closed on its first anchor, ended with ↩/Esc or by
 /// another tool. It keeps the path being drawn as it was just before, and the document the finish

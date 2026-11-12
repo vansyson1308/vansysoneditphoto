@@ -156,12 +156,8 @@ pub fn optimize(
                 look = rgba(&data, layout);
             }
             let img = magicpic_codecs::Image::from_u8(ww, hh, layout, data).map_err(e)?.with_icc(icc.map(<[u8]>::to_vec)).with_meta(meta());
-            let opts = magicpic_codecs::EncodeOptions {
-                png_interlaced: st.interlaced,
-                embed_icc: icc.is_some(),
-                embed_metadata: xmp.is_some(),
-                ..Default::default()
-            };
+            let opts =
+                magicpic_codecs::EncodeOptions { png_interlaced: st.interlaced, embed_icc: icc.is_some(), embed_metadata: xmp.is_some(), ..Default::default() };
             (magicpic_codecs::encode(&img, magicpic_codecs::Format::Png, &opts).map_err(e)?, None)
         }
         WebFormat::Webp => {

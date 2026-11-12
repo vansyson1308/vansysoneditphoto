@@ -1,6 +1,6 @@
 use super::overlay::path_lines;
 use super::shapes::hex;
-use super::{Color32, Document, LayerContent, Path, MagicpicApp, Rect, Sense, Stroke, Tokens, Value, json, pos2, vec2};
+use super::{Color32, Document, LayerContent, MagicpicApp, Path, Rect, Sense, Stroke, Tokens, Value, json, pos2, vec2};
 
 // ---------------------------------------------------------------------------------------------
 // Paths panel

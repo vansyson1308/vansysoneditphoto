@@ -559,8 +559,7 @@ mod multi_channel_tests {
     fn both_tone_editors_render_subset_choices_without_mutating_values() {
         for kind in ["levels", "curves"] {
             let cx = context("rgb");
-            let base =
-                magicpic_engine::adjust_params::to_params(&magicpic_engine::adjust_params::default_for(kind, magicpic_doc::ColorMode::Rgb).unwrap());
+            let base = magicpic_engine::adjust_params::to_params(&magicpic_engine::adjust_params::default_for(kind, magicpic_doc::ColorMode::Rgb).unwrap());
             let mut values = base.clone();
             let mut harness = egui_kittest::Harness::new_ui(|ui| {
                 if ui.ctx().fonts(|f| f.families().contains(&egui::FontFamily::Name("medium".into()))) {

@@ -253,8 +253,7 @@ fn unreadable_lr16_warns_on_import_and_is_not_saved_twice() {
 fn photo_filter_psd_is_four_byte_aligned_and_round_trips() {
     let color = [60000u16, 30000, 0].map(|x| x as f32 / 65535.0);
     let adjustment = magicpic_doc::Adjustment::PhotoFilter { color, density: 0.14, preserve_luminosity: true };
-    let mut doc =
-        Document::with_background("Photo Filter PSD", magicpic_geom::Size::new(32, 24), ColorMode::Rgb, SampleType::U8, magicpic_doc::Color::WHITE);
+    let mut doc = Document::with_background("Photo Filter PSD", magicpic_geom::Size::new(32, 24), ColorMode::Rgb, SampleType::U8, magicpic_doc::Color::WHITE);
     let mut layer = Layer::new("Warming Filter", LayerContent::Adjustment(adjustment.clone()));
     doc.layers.push(layer.clone());
 

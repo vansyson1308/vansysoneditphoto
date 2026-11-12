@@ -16,11 +16,11 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::mpsc::{Receiver, channel};
 
+use magicpic_ui_egui::native_menu::{self, Backend, Chord, Event, MenuBar, MenuRole, Node, Standard};
 use muda::accelerator::{Accelerator, Code, Modifiers};
 use muda::{CheckMenuItem, Menu, MenuEvent, MenuItem, PredefinedMenuItem, Submenu};
 use objc2::MainThreadMarker;
 use objc2_app_kit::{NSApplication, NSEventModifierFlags, NSEventType};
-use magicpic_ui_egui::native_menu::{self, Backend, Chord, Event, MenuBar, MenuRole, Node, Standard};
 
 enum Handle {
     Plain(MenuItem),

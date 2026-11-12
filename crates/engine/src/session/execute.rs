@@ -280,8 +280,7 @@ impl Session {
         if let Some(id) = filter_mask_layer {
             smart_cmds::refresh_after_filter_mask_edit(&mut doc, id)?;
         }
-        if let Err(error) = magicpic_raster::spill::check_since(scratch_generation).and_then(|()| before.scratch_health()).and_then(|()| doc.scratch_health())
-        {
+        if let Err(error) = magicpic_raster::spill::check_since(scratch_generation).and_then(|()| before.scratch_health()).and_then(|()| doc.scratch_health()) {
             st.active_layer = previous_active_layer;
             return Err(EngineError::Other(error));
         }

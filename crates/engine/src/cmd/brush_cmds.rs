@@ -11,9 +11,7 @@ use magicpic_geom::Rect;
 use magicpic_paint::mixer::{MixerSettings, MixerState};
 use magicpic_paint::replace::{Limits, ReplaceMode, ReplaceSettings, Sampling, apply_color_replacement, color_replacement_effect};
 use magicpic_paint::tile::PREVIEW_SIDE;
-use magicpic_paint::{
-    BrushPreset, BrushSettings, GrayTile, Pattern, PresetCaptures, StoredTile, Stroke, StrokePoint, StrokeRenderer, TipShape, render_stroke,
-};
+use magicpic_paint::{BrushPreset, BrushSettings, GrayTile, Pattern, PresetCaptures, StoredTile, Stroke, StrokePoint, StrokeRenderer, TipShape, render_stroke};
 use magicpic_raster::Surface;
 use serde_json::{Value, json};
 

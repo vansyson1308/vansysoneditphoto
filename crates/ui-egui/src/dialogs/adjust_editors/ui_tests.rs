@@ -851,10 +851,7 @@ fn gradient_map_picker_import_cancel_and_errors_preserve_state() {
         None,
         Some(FileDialogAnswer::Contents("broken.grd".into(), b"invalid".to_vec())),
         Some(FileDialogAnswer::Contents("old.grd".into(), b"8BGR\0\x03".to_vec())),
-        Some(FileDialogAnswer::Contents(
-            "noise.grd".into(),
-            magicpic_psd::grd::write(&[magicpic_psd::grd::GrdGradient { noise: true, ..Default::default() }]),
-        )),
+        Some(FileDialogAnswer::Contents("noise.grd".into(), magicpic_psd::grd::write(&[magicpic_psd::grd::GrdGradient { noise: true, ..Default::default() }]))),
         Some(FileDialogAnswer::Contents("wrong.abr".into(), Vec::new())),
         Some(FileDialogAnswer::Paths(vec!["/nonexistent/magicpic-gradients.grd".into()])),
         Some(FileDialogAnswer::Unavailable("dialog unavailable".into())),

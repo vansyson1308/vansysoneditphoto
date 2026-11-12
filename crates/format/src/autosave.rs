@@ -555,8 +555,7 @@ mod tests {
             std::process::id(),
             SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0)
         ));
-        let doc =
-            Arc::new(Document::new("Kept", magicpic_doc::Size { width: 4, height: 4 }, magicpic_color::ColorMode::Rgb, magicpic_color::SampleType::U8));
+        let doc = Arc::new(Document::new("Kept", magicpic_doc::Size { width: 4, height: 4 }, magicpic_color::ColorMode::Rgb, magicpic_color::SampleType::U8));
         let saver = Autosaver::new(&dir, "kept");
         saver.request(doc.clone(), 1, None, SaveOptions::default());
         assert!(saver.flush().is_some_and(|r| r.is_ok()));
@@ -621,8 +620,7 @@ mod tests {
             std::process::id(),
             SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0)
         ));
-        let doc =
-            Arc::new(Document::new("Lost", magicpic_doc::Size { width: 4, height: 4 }, magicpic_color::ColorMode::Rgb, magicpic_color::SampleType::U8));
+        let doc = Arc::new(Document::new("Lost", magicpic_doc::Size { width: 4, height: 4 }, magicpic_color::ColorMode::Rgb, magicpic_color::SampleType::U8));
         let saver = Autosaver::new(&dir, "first");
         saver.request(doc.clone(), 1, None, SaveOptions::default());
         assert!(saver.flush().is_some_and(|r| r.is_ok()));

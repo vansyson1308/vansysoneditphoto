@@ -865,14 +865,9 @@ fn svg_smart_handoff_is_memory_only_and_linked_sources_stay_denied() {
     let mut headless = crate::Headless::new();
     headless.command_run("file.new", serde_json::json!({"width": 16, "height": 16})).unwrap();
     let svg = r#"<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"><rect width="4" height="4" fill="red"/></svg>"#;
-    let inserted = magicpic_engine::file_cmds::place_bytes(
-        &mut headless.session,
-        "Artwork.svg",
-        svg.as_bytes().to_vec(),
-        None,
-        &serde_json::json!({"smartObject":true}),
-    )
-    .unwrap();
+    let inserted =
+        magicpic_engine::file_cmds::place_bytes(&mut headless.session, "Artwork.svg", svg.as_bytes().to_vec(), None, &serde_json::json!({"smartObject":true}))
+            .unwrap();
     let layer = inserted["layer"].clone();
     let handoff = headless.command_run("layer.smartObjects.exportSvg", serde_json::json!({"layer": layer})).unwrap();
     assert_eq!(handoff["svg"], svg);

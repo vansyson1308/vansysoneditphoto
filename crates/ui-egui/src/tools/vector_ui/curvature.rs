@@ -1,5 +1,5 @@
 use super::pen::{cancel_stale, pen_commit, resume_selected};
-use super::{PenPath, MagicpicApp};
+use super::{MagicpicApp, PenPath};
 
 /// Recompute a Curvature Pen path's handles from its anchors and corner points. The knots of a
 /// path it carries on (`PenPath::fixed`) keep theirs, but for the endpoint's outgoing handle

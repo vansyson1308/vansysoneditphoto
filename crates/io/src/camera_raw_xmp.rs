@@ -388,10 +388,13 @@ fn escape(s: &str) -> String {
 
 /// The XMP toolkit [`save`] names on `x:xmpmeta`.
 const TOOLKIT: &str = "MagicPic";
+/// The toolkit PhotoCraft, which MagicPic was forked from, names. Its sidecars are this program's
+/// own format, so one written there is still treated as ours.
+const UPSTREAM_TOOLKIT: &str = "PhotoCraft";
 const META_NS: &str = "adobe:ns:meta/";
 
-/// Did [`save`] write this file? True when its `x:xmpmeta` names MagicPic as the toolkit
-/// (`x:xmptk`). Lightroom, Bridge and Camera Raw put their own toolkit there when they write a
+/// Did [`save`] write this file? True when its `x:xmpmeta` names MagicPic (or PhotoCraft, the
+/// project it was forked from) as the toolkit (`x:xmptk`). Lightroom, Bridge and Camera Raw put their own toolkit there when they write a
 /// file, so a sidecar another application touched since reads false. Never panics.
 pub fn is_magicpic_xmp(bytes: &[u8]) -> bool {
     if bytes.len() > MAX_XMP_BYTES {
@@ -402,7 +405,7 @@ pub fn is_magicpic_xmp(bytes: &[u8]) -> bool {
     doc.descendants()
         .find(|n| n.is_element() && n.tag_name().namespace() == Some(META_NS) && n.tag_name().name() == "xmpmeta")
         .and_then(|n| n.attribute((META_NS, "xmptk")))
-        == Some(TOOLKIT)
+        .is_some_and(|toolkit| toolkit == TOOLKIT || toolkit == UPSTREAM_TOOLKIT)
 }
 
 /// Write `params` as a Camera Raw settings file Photoshop's Load Settings… reads.
@@ -590,6 +593,7 @@ mod tests {
         let wrapped = format!("\u{feff}<?xpacket begin=\"\" id=\"W5M0MpCehiHzreSzNTczkc9d\"?>\n{own}<?xpacket end=\"w\"?>");
         assert!(is_magicpic_xmp(wrapped.as_bytes()), "an xpacket wrapper and a byte order mark");
         assert!(!is_magicpic_xmp(FIXTURE), "Camera Raw's own toolkit");
+        assert!(is_magicpic_xmp(own.replace("x:xmptk=\"MagicPic\"", "x:xmptk=\"PhotoCraft\"").as_bytes()), "a sidecar the upstream app wrote");
         for other in [
             &b""[..],
             b"<x:xmpmeta",

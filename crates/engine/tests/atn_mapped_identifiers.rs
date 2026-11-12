@@ -194,10 +194,7 @@ fn review_layer_transform_uses_the_recorded_anchor() {
                 .unwrap();
                 s.execute("edit.transform", json!({"rotate":90,"reference":"topLeft","interpolation":"nearest"})).unwrap();
                 let state = s.active().unwrap();
-                assert_eq!(
-                    state.doc.layer(state.active_layer.unwrap()).unwrap().surface().unwrap().content_bounds(),
-                    magicpic_geom::Rect::new(0, 20, 20, 40)
-                );
+                assert_eq!(state.doc.layer(state.active_layer.unwrap()).unwrap().surface().unwrap().content_bounds(), magicpic_geom::Rect::new(0, 20, 20, 40));
                 assert_eq!(state.doc.layer(state.active_layer.unwrap()).unwrap().surface().unwrap().rgba(9, 22), [0.0, 1.0, 0.0, 1.0]);
                 s.execute("edit.undo", json!({})).unwrap();
             }

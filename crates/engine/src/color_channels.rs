@@ -557,8 +557,7 @@ pub(crate) fn tone_adjustment(
             if colors.len() == 1 {
                 *master = neutral;
                 if let Some(k) = colors.indices().next()
-                    && p.get(crate::adjust_params::channel_keys(magicpic_doc::adjust::ToneSpace::Lab).get(k).copied().unwrap_or(""))
-                        .is_none_or(Value::is_null)
+                    && p.get(crate::adjust_params::channel_keys(magicpic_doc::adjust::ToneSpace::Lab).get(k).copied().unwrap_or("")).is_none_or(Value::is_null)
                     && let Some(out) = per_channel.get_mut(k)
                 {
                     *out = group;
@@ -580,8 +579,7 @@ pub(crate) fn tone_adjustment(
             if colors.len() == 1 {
                 *master = neutral;
                 if let Some(k) = colors.indices().next()
-                    && p.get(crate::adjust_params::channel_keys(magicpic_doc::adjust::ToneSpace::Lab).get(k).copied().unwrap_or(""))
-                        .is_none_or(Value::is_null)
+                    && p.get(crate::adjust_params::channel_keys(magicpic_doc::adjust::ToneSpace::Lab).get(k).copied().unwrap_or("")).is_none_or(Value::is_null)
                     && let Some(out) = per_channel.get_mut(k)
                 {
                     *out = group;

@@ -154,8 +154,7 @@ pub(super) fn vector_mask_rasterize(s: &mut Session, p: &Value) -> Result<Value>
         let vm = l.vector_mask.take().ok_or_else(|| EngineError::Other("layer has no vector mask".into()))?;
         let mut mask = l.mask.take().unwrap_or_else(|| {
             let mut m = magicpic_doc::LayerMask::reveal_all();
-            m.surface =
-                magicpic_raster::Surface::with_default(magicpic_color::PixelFormat::new(magicpic_color::ColorMode::Grayscale, depth, false), &[1.0]);
+            m.surface = magicpic_raster::Surface::with_default(magicpic_color::PixelFormat::new(magicpic_color::ColorMode::Grayscale, depth, false), &[1.0]);
             m
         });
         if let Some(shown) = shown {

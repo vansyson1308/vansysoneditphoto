@@ -686,8 +686,7 @@ fn blending_page_renders_for_every_mode_and_odd_fields() {
     let mut app = MagicpicApp::new(magicpic_engine::Session::new(), Default::default());
     let mut layer = magicpic_doc::Layer::new("L", magicpic_doc::LayerContent::Adjustment(magicpic_doc::Adjustment::Invert));
     layer.advanced.knockout = magicpic_doc::Knockout::Deep;
-    for mode in [magicpic_color::ColorMode::Rgb, magicpic_color::ColorMode::Cmyk, magicpic_color::ColorMode::Lab, magicpic_color::ColorMode::Grayscale]
-    {
+    for mode in [magicpic_color::ColorMode::Rgb, magicpic_color::ColorMode::Cmyk, magicpic_color::ColorMode::Lab, magicpic_color::ColorMode::Grayscale] {
         let mut f = initial_fields(&layer, Some(BLENDING), 120.0);
         set_blending_fields(&mut f, &layer, mode);
         let mut out = ctx.run_ui(Default::default(), |ui| {

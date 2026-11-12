@@ -1,5 +1,5 @@
 use super::layers::footer_label;
-use super::{Layer, LayerId, MaskKind, MagicpicApp, Pos2, Rect, Sense, Stroke, StrokeKind, Tokens, Value, icons, json, pos2, vec2};
+use super::{Layer, LayerId, MagicpicApp, MaskKind, Pos2, Rect, Sense, Stroke, StrokeKind, Tokens, Value, icons, json, pos2, vec2};
 
 /// Scroll the Layers panel while holding a layer drag over its top/bottom edge or past them.
 ///

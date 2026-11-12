@@ -2807,8 +2807,7 @@ mod rotation_preview_isolation_tests {
             app.session
                 .edit("Fixture", |doc, active| {
                     if quick_mask {
-                        doc.quick_mask =
-                            Some(magicpic_doc::AlphaChannel::new("Quick Mask", magicpic_raster::Surface::new(magicpic_color::PixelFormat::GRAY8)));
+                        doc.quick_mask = Some(magicpic_doc::AlphaChannel::new("Quick Mask", magicpic_raster::Surface::new(magicpic_color::PixelFormat::GRAY8)));
                     }
                     for y in 0..16 {
                         for x in 0..8 {

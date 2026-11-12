@@ -1,7 +1,7 @@
 use super::open::{Target, cancel, raw_stage};
 use super::sidecar::{load_settings, report_file_error, save_settings};
 use super::{
-    Align2, BANDS, CameraRaw, CameraRawDialog, Color32, ERect, FontId, PANEL_W, MagicpicApp, Pos2, Sense, Stroke, Tokens, ToneZone, Value, Wheel, curve_lut,
+    Align2, BANDS, CameraRaw, CameraRawDialog, Color32, ERect, FontId, MagicpicApp, PANEL_W, Pos2, Sense, Stroke, Tokens, ToneZone, Value, Wheel, curve_lut,
     json, pos2, vec2, widgets,
 };
 

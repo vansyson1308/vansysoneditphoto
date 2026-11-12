@@ -464,8 +464,7 @@ fn index_layer_ids_and_text(doc: &Document, ex: &mut Ex<'_>) {
                 _ => fresh.push(l.id),
             }
         }
-        let objects =
-            doc.metadata.psd_global_blocks.iter().find(|(_, key, _)| key == b"Txt2").map_or(0, |(_, _, d)| magicpic_text::psd::txt2_object_count(d));
+        let objects = doc.metadata.psd_global_blocks.iter().find(|(_, key, _)| key == b"Txt2").map_or(0, |(_, _, d)| magicpic_text::psd::txt2_object_count(d));
         let mut next_txt = used_txt.iter().max().map_or(0, |m| m + 1).max(i32::try_from(objects).unwrap_or(i32::MAX));
         if next_txt.saturating_add(fresh.len() as i32) > magicpic_text::psd::MAX_TEXT_INDEX + 1 {
             next_txt = 0;

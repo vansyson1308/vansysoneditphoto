@@ -17,6 +17,28 @@ fn hindi_has_the_reveal_and_camera_raw_rows() {
     assert!(has(hi, "RAW Defaults…"), "RAW Defaults… is a catalog row, not a fallback");
 }
 
+/// The upstream catalogs were written for the program MagicPic was forked from. The build embeds
+/// them with the product name replaced on both sides of a row (`build.rs` `rebrand`), so a text
+/// that names the product still finds its translation, and the translation names MagicPic.
+#[test]
+fn rows_that_name_the_product_are_found_and_name_magicpic() {
+    if !needs_catalogs() {
+        return;
+    }
+    let vi = lang("vi");
+    for source in ["About MagicPic", "All shortcuts reset to MagicPic defaults.", "Nothing to paste: MagicPic can't read the system clipboard here"] {
+        assert!(has(vi, source), "{source:?} is a catalog row, not a fallback");
+        let shown = tr(vi, source);
+        assert_ne!(shown, source, "{source:?} is translated");
+        assert!(shown.contains("MagicPic"), "{shown:?} names MagicPic");
+    }
+    for code in LANGUAGES.iter().map(|l| l.code) {
+        for text in Lang::from_code(code).into_iter().flat_map(Lang::catalog_texts) {
+            assert!(!text.contains("PhotoCraft"), "{code}: an embedded row still names the upstream product");
+        }
+    }
+}
+
 #[test]
 fn hindi_tags_resolve() {
     if !needs_catalogs() {

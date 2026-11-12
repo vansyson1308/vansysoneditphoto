@@ -161,10 +161,8 @@ mod title_tests {
     }
 
     fn open_named(app: &mut crate::MagicpicApp, name: &str) {
-        app.session.add_document(
-            magicpic_doc::Document::new(name, magicpic_doc::Size::new(4, 4), magicpic_doc::ColorMode::Rgb, magicpic_doc::SampleType::U8),
-            None,
-        );
+        app.session
+            .add_document(magicpic_doc::Document::new(name, magicpic_doc::Size::new(4, 4), magicpic_doc::ColorMode::Rgb, magicpic_doc::SampleType::U8), None);
     }
 
     #[test]
@@ -729,8 +727,7 @@ mod snapshot_row_tests {
         app.run("history.newSnapshot", json!({})).unwrap();
         app.run("edit.fill", json!({"color": "#0000ff"})).unwrap();
         // 60 fps steps, so two clicks a frame apart count as a double-click.
-        let mut h =
-            Harness::builder().with_size(vec2(300.0, 400.0)).with_step_dt(1.0 / 60.0).build_ui_state(|ui, app: &mut MagicpicApp| history(app, ui), app);
+        let mut h = Harness::builder().with_size(vec2(300.0, 400.0)).with_step_dt(1.0 / 60.0).build_ui_state(|ui, app: &mut MagicpicApp| history(app, ui), app);
         h.run_steps(3);
         let steps = h.state().session.active().unwrap().history.entries().len();
         h.get_by_label("Snapshot 1").click();

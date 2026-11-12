@@ -714,13 +714,8 @@ fn select_and_mask_output_lists_all_six_targets() {
 
 #[test]
 fn preview_runs_engine_command_on_proxy() {
-    let mut doc = Document::with_background(
-        "p",
-        magicpic_doc::Size::new(64, 64),
-        magicpic_doc::ColorMode::Rgb,
-        magicpic_doc::SampleType::U8,
-        magicpic_doc::Color::WHITE,
-    );
+    let mut doc =
+        Document::with_background("p", magicpic_doc::Size::new(64, 64), magicpic_doc::ColorMode::Rgb, magicpic_doc::SampleType::U8, magicpic_doc::Color::WHITE);
     let bg = doc.layers[0].id;
     doc.layers[0].surface_mut().unwrap().fill_rect(magicpic_geom::Rect::new(0, 0, 32, 64), &[0.0, 0.0, 0.0, 1.0]);
     let out = preview_document(&doc, Some(bg), "filter.blur.gaussianBlur", &json!({"radius": 4.0}), 1).unwrap();
@@ -1315,8 +1310,7 @@ fn color_to_alpha_dialog_defaults_draw_and_preview() {
 fn preview_stays_inside_the_selection_at_every_proxy_factor() {
     use magicpic_doc::SampleType;
     for depth in [SampleType::U8, SampleType::U16, SampleType::F32] {
-        let mut doc =
-            Document::with_background("p", magicpic_doc::Size::new(64, 64), magicpic_doc::ColorMode::Rgb, depth, magicpic_doc::Color::gray(0.5));
+        let mut doc = Document::with_background("p", magicpic_doc::Size::new(64, 64), magicpic_doc::ColorMode::Rgb, depth, magicpic_doc::Color::gray(0.5));
         let bg = doc.layers[0].id;
         let mut sel = magicpic_raster::Surface::new(magicpic_doc::PixelFormat::GRAY8);
         sel.fill_rect(magicpic_geom::Rect::new(0, 0, 32, 64), &[1.0]);
@@ -1377,13 +1371,8 @@ fn notes_after_a_spec_are_not_parameters() {
 
 /// A filtered test image with structure at every scale (low-frequency waves plus a ramp).
 fn waves(n: u32) -> Document {
-    let mut doc = Document::with_background(
-        "w",
-        magicpic_doc::Size::new(n, n),
-        magicpic_doc::ColorMode::Rgb,
-        magicpic_doc::SampleType::U8,
-        magicpic_doc::Color::WHITE,
-    );
+    let mut doc =
+        Document::with_background("w", magicpic_doc::Size::new(n, n), magicpic_doc::ColorMode::Rgb, magicpic_doc::SampleType::U8, magicpic_doc::Color::WHITE);
     let s = doc.layers[0].surface_mut().unwrap();
     for y in 0..n as i32 {
         for x in 0..n as i32 {

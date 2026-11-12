@@ -643,14 +643,7 @@ fn rect_minus(area: magicpic_geom::Rect, hole: magicpic_geom::Rect) -> Vec<magic
 
 /// `(destination inside the tile, source rect inside `src`)` for a non-negative `dx`/`dy`
 /// smaller than the tile.
-fn wrap_pieces(
-    src: magicpic_geom::Rect,
-    dx: i32,
-    dy: i32,
-    tile: magicpic_geom::Rect,
-    w: i32,
-    h: i32,
-) -> Vec<(magicpic_geom::Rect, magicpic_geom::Rect)> {
+fn wrap_pieces(src: magicpic_geom::Rect, dx: i32, dy: i32, tile: magicpic_geom::Rect, w: i32, h: i32) -> Vec<(magicpic_geom::Rect, magicpic_geom::Rect)> {
     use magicpic_geom::Rect;
     let moved = src.translate(dx, dy);
     let zones = [

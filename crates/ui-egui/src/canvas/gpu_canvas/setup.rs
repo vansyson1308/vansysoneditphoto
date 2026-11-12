@@ -15,11 +15,7 @@ pub(super) fn texture_buffer<'a>(
 
 /// A CPU composite `buf` as texels of a `format` canvas texture, in `display`'s encoding: what
 /// [`GpuCanvas::upload_rect`] takes. Runs anywhere (a redraw's worker converts its own pieces).
-pub fn display_texels(
-    format: wgpu::TextureFormat,
-    display: Option<&magicpic_engine::display_color::CanvasDisplay>,
-    buf: &magicpic_compose::Buffer,
-) -> Vec<u8> {
+pub fn display_texels(format: wgpu::TextureFormat, display: Option<&magicpic_engine::display_color::CanvasDisplay>, buf: &magicpic_compose::Buffer) -> Vec<u8> {
     texels(format, &texture_buffer(display, buf).px)
 }
 

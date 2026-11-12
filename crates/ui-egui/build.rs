@@ -35,8 +35,27 @@ fn main() {
     deflate_egui_fonts();
 }
 
-/// The catalog this app reads in each locale: `locales/<locale>/photocraft.tsv`.
+/// The catalog this app reads in each locale: `locales/<locale>/photocraft.tsv`. The file keeps the
+/// name the upstream craft-i18n repository gives it.
 const APP_CATALOG: &str = "photocraft.tsv";
+
+/// The catalog with the product named as this program names itself. craft-i18n's rows were written
+/// for PhotoCraft: left as they are, a row whose source text names the product matches nothing in
+/// MagicPic's interface (the text falls back to English), and a translation would name another
+/// program. Both sides of a row change together, so the lookup still pairs them.
+fn rebrand(catalog: &str) -> String {
+    catalog.replace("PhotoCraft", "MagicPic").replace("photocraft", "magicpic")
+}
+
+/// Write the rebranded copy of the catalog at `app` for `code` under `OUT_DIR` and return its path.
+fn rebranded(code: &str, app: &std::path::Path) -> Result<std::path::PathBuf, String> {
+    let text = std::fs::read_to_string(app).map_err(|e| format!("{}: {e}", app.display()))?;
+    let dir = std::path::PathBuf::from(std::env::var_os("OUT_DIR").unwrap_or_default()).join("craft_i18n");
+    std::fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+    let out = dir.join(format!("{code}.tsv"));
+    std::fs::write(&out, rebrand(&text)).map_err(|e| format!("{}: {e}", out.display()))?;
+    Ok(out)
+}
 
 /// `CRAFT_I18N` from `CRAFT_I18N_DIR`: the `Embedded` list the craft-i18n crate reads.
 fn craft_i18n() -> String {
@@ -65,6 +84,16 @@ fn craft_i18n() -> String {
     for (code, shared, app) in entries {
         // `{:?}` escapes the path (Windows backslashes) as a Rust string literal.
         let shared = shared.map_or_else(|| "\"\"".to_string(), |p| format!("include_str!({p:?})"));
+        // A copy that can't be written leaves this locale out (its texts stay English) rather than
+        // embedding rows that name another program.
+        let app = match rebranded(&code, &app) {
+            Ok(app) => app,
+            Err(e) => {
+                let level = if required { "error" } else { "warning" };
+                println!("cargo::{level}=craft-i18n locale {code}: {e}; it is left out");
+                continue;
+            }
+        };
         let _ = writeln!(o, "    ({code:?}, {shared}, include_str!({app:?})),");
     }
     o.push_str("];\n");

@@ -108,8 +108,7 @@ impl Trail {
         if self.dabs.is_some() && self.fed >= points.len() {
             return;
         }
-        let mut dabs =
-            self.dabs.take().unwrap_or_else(|| Dabs { renderer: StrokeRenderer::new(&brush(), None, 1.0), reach, tail: magicpic_geom::Rect::EMPTY });
+        let mut dabs = self.dabs.take().unwrap_or_else(|| Dabs { renderer: StrokeRenderer::new(&brush(), None, 1.0), reach, tail: magicpic_geom::Rect::EMPTY });
         let new: Vec<StrokePoint> = points
             .get(self.fed..)
             .unwrap_or(&[])

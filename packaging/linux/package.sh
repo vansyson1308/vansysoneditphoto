@@ -43,7 +43,7 @@ case "$ARCH" in
   aarch64 | arm64) ARCH=aarch64; DEB_ARCH=arm64 ;;
   *) echo "unsupported architecture $ARCH" >&2; exit 2 ;;
 esac
-export MAGICPIC_MAINTAINER="${MAGICPIC_MAINTAINER:-MagicPic maintainers <magicpic@storyteller.ai>}"
+export MAGICPIC_MAINTAINER="${MAGICPIC_MAINTAINER:-MagicPic contributors <vansyson1308@users.noreply.github.com>}"
 BASENAME="magicpic-$VERSION-linux-$ARCH"
 
 echo "==> MagicPic $VERSION for Linux $ARCH ($FORMATS)"
@@ -192,7 +192,7 @@ if has appimage; then
   # file and fetch only the blocks that changed in a newer release, through the .zsync published
   # next to each AppImage on GitHub Releases. `latest` is the newest published release that is
   # not a pre-release. A fork's builds point at its own releases through GITHUB_REPOSITORY.
-  REPO="${GITHUB_REPOSITORY:-storytold/photocraft}"
+  REPO="${GITHUB_REPOSITORY:-vansyson1308/vansysoneditphoto}"
   UPDATE_INFO="gh-releases-zsync|${REPO%%/*}|${REPO#*/}|latest|magicpic-*-linux-$ARCH.AppImage.zsync"
   # Extract-and-run: works without FUSE (containers, CI). The output embeds the static runtime,
   # so users don't need libfuse2 either. With zsyncmake on the host (CI installs the zsync

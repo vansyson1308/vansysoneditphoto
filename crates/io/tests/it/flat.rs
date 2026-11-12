@@ -921,8 +921,7 @@ fn tga_transparency_reopens_as_alpha_1() {
 fn tga_alpha_channel_wins_over_transparency_and_skips_spot_channels() {
     let mut d = with_alpha_channel(single(ColorMode::Rgb, SampleType::U8, true), "Alpha 2");
     let spot = magicpic_raster::Surface::new(magicpic_color::PixelFormat::new(ColorMode::Grayscale, SampleType::U8, false));
-    let spot =
-        magicpic_doc::AlphaChannel { spot: Some((magicpic_color::Color::rgb(1.0, 0.0, 0.0), 1.0)), ..magicpic_doc::AlphaChannel::new("Spot", spot) };
+    let spot = magicpic_doc::AlphaChannel { spot: Some((magicpic_color::Color::rgb(1.0, 0.0, 0.0), 1.0)), ..magicpic_doc::AlphaChannel::new("Spot", spot) };
     d.channels.insert(0, spot);
     let r = export(&d, "a.tga", &ExportOptions::default()).unwrap();
     let (bpp, alpha_bits, img) = tga(&r.bytes);

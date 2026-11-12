@@ -632,12 +632,8 @@ fn one_pixel_line_fills_one_pixel_row() {
         assert!(matches!(l.content, LayerContent::Shape(_)), "a shape layer");
         let s = l.surface().unwrap();
         assert_eq!(s.content_bounds(), want, "one pixel across");
-        let mid = s.read_region(magicpic_geom::Rect::new(
-            (want.x0 + want.x1) / 2,
-            (want.y0 + want.y1) / 2,
-            (want.x0 + want.x1) / 2 + 1,
-            (want.y0 + want.y1) / 2 + 1,
-        ));
+        let mid =
+            s.read_region(magicpic_geom::Rect::new((want.x0 + want.x1) / 2, (want.y0 + want.y1) / 2, (want.x0 + want.x1) / 2 + 1, (want.y0 + want.y1) / 2 + 1));
         assert!(mid[3] > 0.999, "opaque: {mid:?}");
     }
 }

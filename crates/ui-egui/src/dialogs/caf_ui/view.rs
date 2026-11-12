@@ -2,8 +2,8 @@ use super::controls::{pointer, tool_icon, tool_tip};
 use super::lifecycle::{apply, bounds, cancel, commit, fill_edit, report, reset, set_sampling};
 use super::preview::{drive_preview, rebase, refresh};
 use super::{
-    Align2, BAR_H, CafTool, CafWorkspace, Color32, ERect, FontId, LEFT_W, PANEL_W, PREVIEW_W, MagicpicApp, Pos2, Rect, Sense, Stroke, Tokens, ToolEvent,
-    Value, json, pos2, vec2, widgets,
+    Align2, BAR_H, CafTool, CafWorkspace, Color32, ERect, FontId, LEFT_W, MagicpicApp, PANEL_W, PREVIEW_W, Pos2, Rect, Sense, Stroke, Tokens, ToolEvent, Value,
+    json, pos2, vec2, widgets,
 };
 
 /// A view: screen px per document px and the document point at the centre of `area`.

@@ -395,10 +395,18 @@ fn a_single_path_clip_becomes_the_groups_vector_mask() {
         .collect();
     let off = ours.chunks(4).zip(theirs.chunks(4)).filter(|(a, b)| a.iter().zip(*b).any(|(x, y)| x.abs_diff(*y) > 48)).count();
     assert!(off < 64, "{off} pixels differ");
-    // The report's file: MagicPic's own icon opens without the clip-path warning.
-    let icon = import_svg("magicpic.svg", include_bytes!("../../../../assets/app-icon/magicpic.svg")).unwrap();
+    // The shape of the report's file, an app icon: no width or height, a rounded square clipping a
+    // tile and an even-odd figure. It opens without the clip-path warning.
+    let tile = br##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+            <defs><clipPath id="t"><rect width="512" height="512" rx="112"/></clipPath></defs>
+            <g clip-path="url(#t)"><rect width="512" height="512" fill="#6a3df0"/>
+              <path fill="#ffffff" fill-rule="evenodd" d="M96 96H416V416H96Z M176 176V336H336V176Z"/></g></svg>"##;
+    let icon = import_svg("tile.svg", tile).unwrap();
     assert!(icon.warnings.iter().all(|w| !w.contains("clip-path")), "{:?}", icon.warnings);
     assert!(icon.document.layers.iter().any(|l| l.vector_mask.is_some()), "its rounded square is a vector mask");
+    // MagicPic's own icon has no clip; it opens without a warning about one.
+    let icon = import_svg("magicpic.svg", include_bytes!("../../../../assets/app-icon/magicpic.svg")).unwrap();
+    assert!(icon.warnings.iter().all(|w| !w.contains("clip-path")), "{:?}", icon.warnings);
     // Two shapes in the clip: rasterised, and said so.
     let two = br##"<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64">
             <defs><clipPath id="c"><rect width="20" height="20"/><rect x="30" width="20" height="20"/></clipPath></defs>

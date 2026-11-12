@@ -389,8 +389,7 @@ fn brightness_contrast_curves_cmyk_inks_as_stored() {
 fn hue_saturation_and_color_balance_keep_a_cmyk_layers_black() {
     let cmyk = PixelFormat::new(ColorMode::Cmyk, SampleType::U16, true);
     let ink = [0.2, 0.7, 0.1, 0.3, 1.0];
-    let hue =
-        Adjustment::HueSaturation { hue: 40.0, saturation: 25.0, lightness: -10.0, colorize: false, ranges: magicpic_doc::adjust::HueRange::defaults() };
+    let hue = Adjustment::HueSaturation { hue: 40.0, saturation: 25.0, lightness: -10.0, colorize: false, ranges: magicpic_doc::adjust::HueRange::defaults() };
     let balance =
         Adjustment::ColorBalance { shadows: [20.0, -10.0, 0.0], midtones: [-15.0, 10.0, 30.0], highlights: [0.0, 0.0, -20.0], preserve_luminosity: true };
     for adj in [hue, balance] {

@@ -23,8 +23,11 @@ fn main() {
     res.set_icon("../../assets/app-icon/magicpic.ico")
         .set("ProductName", "MagicPic")
         .set("FileDescription", "MagicPic image editor")
-        .set("CompanyName", "Learning Machines LLC")
-        .set("LegalCopyright", "Copyright (c) the MagicPic authors. MIT OR Apache-2.0.")
+        .set("CompanyName", "MagicPic contributors")
+        .set(
+            "LegalCopyright",
+            "Copyright (c) the MagicPic contributors. Based on PhotoCraft, (c) ArtCraft Team and the PhotoCraft contributors. MIT OR Apache-2.0.",
+        )
         .set("OriginalFilename", "magicpic.exe")
         .set("InternalName", "magicpic");
     if let Err(e) = res.compile() {

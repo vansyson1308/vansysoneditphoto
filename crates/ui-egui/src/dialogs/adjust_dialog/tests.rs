@@ -198,8 +198,7 @@ fn levels_alt_reset_restores_defaults() {
     let click = |pressed| egui::Event::PointerButton { pos: reset.center(), button: egui::PointerButton::Primary, pressed, modifiers: egui::Modifiers::ALT };
     input(&mut h, egui::Modifiers::ALT, &[egui::Event::PointerMoved(reset.center()), click(true), click(false)]);
     assert!(h.state().ui.dialogs.iter().any(|d| d.id == id), "Reset keeps the dialog open");
-    let defaults =
-        magicpic_engine::adjust_params::to_params(&magicpic_engine::adjust_params::default_for("levels", magicpic_doc::ColorMode::Rgb).unwrap());
+    let defaults = magicpic_engine::adjust_params::to_params(&magicpic_engine::adjust_params::default_for("levels", magicpic_doc::ColorMode::Rgb).unwrap());
     assert_eq!(field(&h, id, "inBlack"), defaults["inBlack"]);
     assert_eq!(field(&h, id, "gamma"), defaults["gamma"]);
 }
@@ -1066,8 +1065,7 @@ fn photo_filter_keeps_only_preserve_luminosity_from_its_last_ok() {
     app.ui.dialog_mut(id).unwrap().fields.insert("inBlack".into(), json!(30));
     crate::dialogs::confirm(&mut app, id).unwrap();
     let again = open(&mut app, levels).unwrap();
-    let defaults =
-        magicpic_engine::adjust_params::to_params(&magicpic_engine::adjust_params::default_for("levels", magicpic_doc::ColorMode::Rgb).unwrap());
+    let defaults = magicpic_engine::adjust_params::to_params(&magicpic_engine::adjust_params::default_for("levels", magicpic_doc::ColorMode::Rgb).unwrap());
     assert_eq!(app.ui.dialog_mut(again).unwrap().fields["inBlack"], defaults["inBlack"], "Levels opens neutral without ⌥");
 }
 
@@ -1241,8 +1239,7 @@ fn rabbit_picker_uses_current_address_after_retargeting() {
             assert!(sample_at(&mut app, 8.0, 8.0));
             let fields = &app.ui.dialog_mut(id).unwrap().fields;
             let actual =
-                magicpic_engine::adjust_params::from_params(kind, &crate::filter_dialog::params_of(fields), None, magicpic_doc::ColorMode::Grayscale)
-                    .unwrap();
+                magicpic_engine::adjust_params::from_params(kind, &crate::filter_dialog::params_of(fields), None, magicpic_doc::ColorMode::Grayscale).unwrap();
             assert_eq!(actual, expected, "{kind} address case {case}");
             let mut expected_base = cached;
             for key in ["target", "layer", "document"] {

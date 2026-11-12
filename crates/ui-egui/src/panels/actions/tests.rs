@@ -662,8 +662,7 @@ fn nested_shell_actions_include_view_steps_and_propagate_failures() {
     let r = app.run("actions.play", json!({"action":"Parent"})).unwrap();
     assert!(r.get("failed").is_none(), "{r}");
     assert!(app.ui.views[0].fit_pending);
-    app.session.authorize =
-        Some(|id, _| if id == "view.fitOnScreen" { Err(magicpic_engine::EngineError::Other("denied nested view".into())) } else { Ok(()) });
+    app.session.authorize = Some(|id, _| if id == "view.fitOnScreen" { Err(magicpic_engine::EngineError::Other("denied nested view".into())) } else { Ok(()) });
     let r = app.run("actions.play", json!({"action":"Parent"})).unwrap();
     assert!(r["failed"]["error"].as_str().unwrap().contains("denied nested view"));
     assert!(app.session.actions.playback_stack.is_empty());

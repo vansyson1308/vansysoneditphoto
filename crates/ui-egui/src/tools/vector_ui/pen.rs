@@ -2,7 +2,7 @@ use super::curvature::{curvature_hit, curvature_refresh};
 use super::options::selected_shape;
 use super::path_ops::{targeted_vector_mask, targeted_vector_mask_id, work_path_shown};
 use super::shapes::{fill_param, stroke_param};
-use super::{Document, LayerContent, Path, PenPath, MagicpicApp, Resumed, Tokens, Tool, ToolOptions, Value, json, vec2};
+use super::{Document, LayerContent, MagicpicApp, Path, PenPath, Resumed, Tokens, Tool, ToolOptions, Value, json, vec2};
 
 // ---------------------------------------------------------------------------------------------
 // Pen

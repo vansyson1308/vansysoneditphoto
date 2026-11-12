@@ -480,13 +480,7 @@ fn ruler_label(v: f64, step: f64, whole: bool) -> String {
 /// Returns the top, left and corner rects, the painter, the zero point and the tick sizes Shift
 /// snaps to ([`snap_tick`]).
 #[allow(clippy::type_complexity)]
-fn paint(
-    app: &MagicpicApp,
-    ui: &egui::Ui,
-    full: Rect,
-    xf: &ViewXform,
-    doc: &magicpic_doc::Document,
-) -> (Rect, Rect, Rect, egui::Painter, [f64; 2], [f64; 2]) {
+fn paint(app: &MagicpicApp, ui: &egui::Ui, full: Rect, xf: &ViewXform, doc: &magicpic_doc::Document) -> (Rect, Rect, Rect, egui::Painter, [f64; 2], [f64; 2]) {
     let t = Tokens::get(ui.ctx());
     let top = Rect::from_min_max(pos2(full.left() + RULER, full.top()), pos2(full.right(), full.top() + RULER));
     let left = Rect::from_min_max(pos2(full.left(), full.top() + RULER), pos2(full.left() + RULER, full.bottom()));

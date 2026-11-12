@@ -327,13 +327,8 @@ fn indexed_psd_keeps_the_table_length_and_transparent_entry() {
 
 /// A 4x2 document filled with `fill` in Indexed Color mode with `colors` and `transparent`.
 fn indexed_doc(fill: magicpic_color::Color, colors: Vec<[u8; 3]>, transparent: Option<u8>) -> magicpic_doc::Document {
-    let mut d = magicpic_doc::Document::with_background(
-        "i",
-        magicpic_doc::Size::new(4, 2),
-        magicpic_color::ColorMode::Rgb,
-        magicpic_color::SampleType::U8,
-        fill,
-    );
+    let mut d =
+        magicpic_doc::Document::with_background("i", magicpic_doc::Size::new(4, 2), magicpic_color::ColorMode::Rgb, magicpic_color::SampleType::U8, fill);
     d.mode = magicpic_color::ColorMode::Indexed;
     d.color_table = Some(magicpic_doc::ColorTable { colors, transparent });
     d
@@ -715,11 +710,7 @@ fn guides_and_alpha_names_roundtrip() {
     for name in ["Spot \u{e9}", "Alpha 2"] {
         d.channels.push(magicpic_doc::AlphaChannel::new(
             name,
-            magicpic_raster::Surface::new(magicpic_color::PixelFormat::new(
-                magicpic_color::ColorMode::Grayscale,
-                magicpic_color::SampleType::U8,
-                false,
-            )),
+            magicpic_raster::Surface::new(magicpic_color::PixelFormat::new(magicpic_color::ColorMode::Grayscale, magicpic_color::SampleType::U8, false)),
         ));
     }
     let f = document_to_psd(&d).unwrap();

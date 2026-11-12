@@ -38,11 +38,11 @@ pub use effects::{
     GradientStyle, Satin, Shadow, StrokeFx, StrokePosition,
 };
 pub use frame::Frame;
-pub use mode::{ColorTable, Duotone, DuotoneInk, StackMode};
-pub use pattern::Pattern;
 pub use magicpic_color::{BlendMode, Color, ColorMode, PixelFormat, SampleType};
 pub use magicpic_geom::{Affine, Rect, Size};
 pub use magicpic_raster::Surface;
+pub use mode::{ColorTable, Duotone, DuotoneInk, StackMode};
+pub use pattern::Pattern;
 use serde::{Deserialize, Serialize};
 pub use slices::{Slice, SliceKind, SliceOrigin, Slices};
 pub use text_styles::TextStyles;

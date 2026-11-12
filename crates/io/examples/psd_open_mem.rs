@@ -14,14 +14,13 @@ fn main() {
         return;
     }
     let t = std::time::Instant::now();
-    let res =
-        match magicpic_io::import_file(&path, std::path::Path::new(&path), &magicpic_io::ImportOptions::default(), &magicpic_raster::Interrupt::NONE) {
-            Ok(r) => r,
-            Err(e) => {
-                eprintln!("{path}: open failed: {e}");
-                std::process::exit(1);
-            }
-        };
+    let res = match magicpic_io::import_file(&path, std::path::Path::new(&path), &magicpic_io::ImportOptions::default(), &magicpic_raster::Interrupt::NONE) {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("{path}: open failed: {e}");
+            std::process::exit(1);
+        }
+    };
     report(&path, &format!("open {:.2}s", t.elapsed().as_secs_f64()), &res);
 }
 

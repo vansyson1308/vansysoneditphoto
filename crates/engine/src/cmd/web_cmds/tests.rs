@@ -864,8 +864,7 @@ fn image_assets_keep_full_artboards() {
         let fmt = doc.pixel_format();
         let mut logo = Layer::raster("logo.png", fmt);
         logo.surface_mut().unwrap().fill_rect(Rect::new(12, 10, 20, 16), &magicpic_raster::from_rgba(&fmt, [1.0, 0.0, 0.0, 1.0]));
-        let board =
-            magicpic_doc::Artboard { rect: Rect::new(4, 6, 44, 36), background: magicpic_doc::ArtboardBackground::Transparent, preset: String::new() };
+        let board = magicpic_doc::Artboard { rect: Rect::new(4, 6, 44, 36), background: magicpic_doc::ArtboardBackground::Transparent, preset: String::new() };
         let group = magicpic_doc::Group { children: vec![logo], expanded: true, artboard: Some(board), frame_stroke: None };
         doc.layers = vec![Layer::new("board.png", LayerContent::Group(group))];
         Ok(())

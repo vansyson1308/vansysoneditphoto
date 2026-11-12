@@ -91,7 +91,7 @@ fn main() {
                 app.session.updates.status = magicpic_engine::updates_cmds::Status::Available {
                     release: magicpic_engine::updates_cmds::Release {
                         version: "99.0.0".into(),
-                        url: "https://github.com/storytold/photocraft/releases/tag/v99.0.0".into(),
+                        url: "https://github.com/vansyson1308/vansysoneditphoto/releases/tag/v99.0.0".into(),
                     },
                 };
             }

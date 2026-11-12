@@ -160,7 +160,7 @@ fn render_start_rail(app: &mut MagicpicApp, ui: &mut egui::Ui, rail_w: f32) {
         learn_color,
     );
     if learn_resp.clicked() {
-        crate::links::open(app, ui.ctx(), crate::links::TUTORIALS);
+        crate::links::open(app, ui.ctx(), crate::links::GUIDE);
     }
 
     // 5. Bottom pinned community links
@@ -174,8 +174,7 @@ fn render_start_rail(app: &mut MagicpicApp, ui: &mut egui::Ui, rail_w: f32) {
 
     ui.add_space(8.0);
 
-    render_rail_link(app, ui, rail_w, tl!("Website"), "link", crate::links::APP_PAGE);
-    render_rail_link(app, ui, rail_w, tl!("Discord"), "message-square", crate::links::DISCORD);
+    render_rail_link(app, ui, rail_w, tl!("User guide"), "link", crate::links::GUIDE);
     render_rail_link(app, ui, rail_w, tl!("GitHub"), "link-2", crate::links::GITHUB);
 }
 
@@ -199,15 +198,8 @@ fn render_start_content(app: &mut MagicpicApp, ui: &mut egui::Ui, recent: &[Stri
     let t = crate::theme::Tokens::get(ui.ctx());
     ui.add_space(8.0);
 
-    // Top Row: [01] MagicPic
+    // Top row: the product name.
     ui.horizontal(|ui| {
-        let badge_size = egui::vec2(24.0, 19.0);
-        let (badge_rect, _) = ui.allocate_exact_size(badge_size, Sense::hover());
-        ui.painter().rect_filled(badge_rect, 3.0, egui::Color32::from_rgb(26, 115, 232));
-        ui.painter().text(badge_rect.center(), egui::Align2::CENTER_CENTER, "01", crate::theme::semibold(10.5), egui::Color32::WHITE);
-
-        ui.add_space(10.0);
-
         let title_galley = ui.painter().layout_no_wrap(tl!("MagicPic").into(), crate::theme::semibold(20.0), t.text);
         let (title_r, _) = ui.allocate_exact_size(title_galley.size(), Sense::hover());
         ui.painter().galley(title_r.min, title_galley, t.text);

@@ -141,11 +141,8 @@ pub(crate) fn run_cmds(a: &RunArgs, out: &mut dyn Write, err: &mut dyn Write) ->
         // A direct Batch reports per-file errors and continues, as in Scripts, unless it was
         // cancelled, ran out of script steps or couldn't write its error log; failed action or
         // script calls still stop the command list before export.
-        let failure = if id == "file.automate.batch" {
-            magicpic_engine::actions_cmds::batch_stop(&r)
-        } else {
-            magicpic_engine::actions_cmds::nested_failure(&id, &r)
-        };
+        let failure =
+            if id == "file.automate.batch" { magicpic_engine::actions_cmds::batch_stop(&r) } else { magicpic_engine::actions_cmds::nested_failure(&id, &r) };
         if let Some(message) = failure {
             return Err(CliError::NestedFailure { id, message });
         }

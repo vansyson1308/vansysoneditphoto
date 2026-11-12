@@ -1,4 +1,4 @@
-//! Starts Magicpic in the browser from compressed parts of its WebAssembly.
+//! Starts MagicPic in the browser from compressed parts of its WebAssembly.
 //!
 //! Static hosts cap the size of one file (Cloudflare Pages: 25 MiB), and the app's wasm is at
 //! that size. `packaging/web/package.sh` gzips it and cuts it into parts listed in

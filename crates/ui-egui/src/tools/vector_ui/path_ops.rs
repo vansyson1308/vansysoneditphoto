@@ -1,7 +1,7 @@
 use super::overlay::selected_saved_path_index;
 use super::paths_panel::{PathEntry, PathRow, path_rows};
 use super::pen::pen_commit;
-use super::{Affine, Document, LayerContent, Path, MagicpicApp, Tool, Value, json};
+use super::{Affine, Document, LayerContent, MagicpicApp, Path, Tool, Value, json};
 
 /// The path that path commands act on without a name: the one selected in the Paths panel, else
 /// the work path while it is shown (not after Make Selection hid it, #6079), else the selected

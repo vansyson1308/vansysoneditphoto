@@ -4,6 +4,6 @@ While this file sits next to magicpic.exe, MagicPic keeps its preferences, brush
 crash-recovery autosaves and startup state in the MagicPicData folder beside it, and writes
 nothing to %APPDATA% or %LOCALAPPDATA%. Copy the whole folder to move MagicPic with its settings.
 
-Delete this file to use the normal per-user folders instead: %APPDATA%\Magicpic for settings
-and %LOCALAPPDATA%\Magicpic\Recovery for crash-recovery autosaves. If MagicPicData can't be
+Delete this file to use the normal per-user folders instead: %APPDATA%\MagicPic for settings
+and %LOCALAPPDATA%\MagicPic\Recovery for crash-recovery autosaves. If MagicPicData can't be
 written (for example on a read-only drive), MagicPic says so and uses those folders instead.

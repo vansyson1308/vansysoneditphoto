@@ -456,9 +456,8 @@ mod tests {
         type Written = Arc<Mutex<Vec<(String, Vec<u8>)>>>;
         let written: Written = Arc::default();
         let w = written.clone();
-        let aco =
-            magicpic_psd::aco::write(&[magicpic_psd::aco::AcoSwatch { name: "Teal".into(), color: magicpic_psd::aco::AcoColor::Rgb([0, 32768, 32768]) }])
-                .unwrap();
+        let aco = magicpic_psd::aco::write(&[magicpic_psd::aco::AcoSwatch { name: "Teal".into(), color: magicpic_psd::aco::AcoColor::Rgb([0, 32768, 32768]) }])
+            .unwrap();
         use crate::file_dialog::FileDialogAnswer;
         let answers = vec![
             Some(FileDialogAnswer::Contents("Ocean.aco".into(), aco.clone())),

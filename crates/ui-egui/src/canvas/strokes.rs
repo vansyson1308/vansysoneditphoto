@@ -27,11 +27,7 @@ const CLONE_PREVIEW_MAX_SIDE: u32 = 1024;
 /// it covers and its `width × height` coverage values in 0..1. A very large soft tip, or a source
 /// the Clone Source panel scales down (which reads a larger area than it covers), is cropped
 /// around `at` to the sampling budget, keeping the middle of the dab.
-fn clone_dab_coverage(
-    brush: &magicpic_paint::BrushSettings,
-    at: [f64; 2],
-    map: &magicpic_engine::presets::clone_source::Mapping,
-) -> Option<(DRect, Vec<f32>)> {
+fn clone_dab_coverage(brush: &magicpic_paint::BrushSettings, at: [f64; 2], map: &magicpic_engine::presets::clone_source::Mapping) -> Option<(DRect, Vec<f32>)> {
     let brush = magicpic_paint::BrushSettings { opacity: 1.0, flow: 1.0, erase: false, ..brush.clone() };
     let stroke = magicpic_paint::Stroke { brush, points: vec![magicpic_paint::StrokePoint::new(at[0], at[1], 1.0)] };
     let (rect, cov) = magicpic_paint::retouch::stroke_coverage_within(&stroke, CLONE_PREVIEW_MAX_PIXELS)?;

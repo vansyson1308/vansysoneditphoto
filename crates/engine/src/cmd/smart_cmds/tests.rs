@@ -1290,8 +1290,7 @@ fn automation_smart_contents_checks_nested_reads_at_nontrivial_placements() {
     for (scale, psd_uuid, allowed) in [(1.0, false, true), (1.5, false, false), (1.5, true, true)] {
         let mut inner = Document::new("inner", Size::new(4, 4), magicpic_doc::ColorMode::Rgb, magicpic_doc::SampleType::U8);
         let source_path = if psd_uuid {
-            let linked =
-                magicpic_io::linked::LinkedFile { uuid: "nested-id".into(), file_name: "source.pcraft".into(), bytes: std::fs::read(&path).unwrap() };
+            let linked = magicpic_io::linked::LinkedFile { uuid: "nested-id".into(), file_name: "source.pcraft".into(), bytes: std::fs::read(&path).unwrap() };
             inner.metadata.psd_global_blocks.push((*b"8BIM", *b"lnk2", Arc::new(magicpic_io::linked::encode_linked_file(&linked))));
             linked.uuid
         } else {

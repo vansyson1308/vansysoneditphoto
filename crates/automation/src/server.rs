@@ -1943,12 +1943,8 @@ mod tests {
             assert!(serde_json::from_value::<PlaceParams>(json!({"path": "file.psd", "approve_high_memory": invalid})).is_err(), "{invalid}");
         }
 
-        let err = AutomationError::Engine(magicpic_engine::EngineError::PsdHardBudget {
-            name: "huge.psd".into(),
-            required: 9_000,
-            limit: 8_000,
-            free_memory: None,
-        });
+        let err =
+            AutomationError::Engine(magicpic_engine::EngineError::PsdHardBudget { name: "huge.psd".into(), required: 9_000, limit: 8_000, free_memory: None });
         let res = to_result(Err(err)).unwrap();
         assert_eq!(res.is_error, Some(true));
         let text = &res.content.first().and_then(|c| c.as_text()).unwrap().text;

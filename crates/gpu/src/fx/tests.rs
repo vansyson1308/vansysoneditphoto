@@ -224,8 +224,7 @@ fn paired_bevel_fields_equal_the_fields_one_at_a_time() {
             assert_eq!(bits(&outside), bits(&field(FieldKind::BevelOutside, reach, &shape, region, out)), "outside, reach {reach}, {out:?}");
             // The banded path (wasm) pairs them per band the same way.
             let halo = field_radius(FieldKind::BevelInside, reach) + 1;
-            let banded =
-                fields_in_windows(false, &shape, region, out, halo, |s, w, h| magicpic_compose::effects::bevel_distance_fields(s, w, h, reach as f32));
+            let banded = fields_in_windows(false, &shape, region, out, halo, |s, w, h| magicpic_compose::effects::bevel_distance_fields(s, w, h, reach as f32));
             for (k, kind) in [FieldKind::BevelInside, FieldKind::BevelOutside].into_iter().enumerate() {
                 let [one] =
                     fields_in_windows(false, &shape, region, out, halo, |s, w, h| [magicpic_compose::effects::distance_field(kind, s, w, h, reach as f32)]);

@@ -506,12 +506,7 @@ fn save_through(
     Ok(r.warnings)
 }
 
-fn save_file(
-    doc: &Document,
-    path: &str,
-    settings: &magicpic_ui_egui::ExportSettings,
-    ctl: &magicpic_ui_egui::jobs_ui::SaveCtl,
-) -> Result<Vec<String>, String> {
+fn save_file(doc: &Document, path: &str, settings: &magicpic_ui_egui::ExportSettings, ctl: &magicpic_ui_egui::jobs_ui::SaveCtl) -> Result<Vec<String>, String> {
     save_through(doc, path, settings, ctl, |p, encoded, progress| write_encoded_atomic(Path::new(p), encoded, progress))
 }
 

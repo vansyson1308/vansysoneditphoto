@@ -137,10 +137,8 @@ fn assert_required_camera_raw_fonts() {
             );
         }
         for (family, script) in [("BIZ UDPGothic", "Jpan"), ("Noto Sans CJK SC", "Hans"), ("NanumGothic", "Kore"), ("Noto Sans Devanagari", "Deva")] {
-            let faces: Vec<_> = magicpic_text::craft_fonts::CRAFT_FONTS
-                .iter()
-                .filter(|f| f.family == family && f.style == "Regular" && f.scripts.contains(&script))
-                .collect();
+            let faces: Vec<_> =
+                magicpic_text::craft_fonts::CRAFT_FONTS.iter().filter(|f| f.family == family && f.style == "Regular" && f.scripts.contains(&script)).collect();
             assert_eq!(faces.len(), 1, "the central default manifest supplies one {family} {script} Regular face");
             assert!(!faces[0].bytes.is_empty(), "{family} {script} has an empty face");
         }

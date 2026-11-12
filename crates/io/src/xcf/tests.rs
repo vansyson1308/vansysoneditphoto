@@ -728,8 +728,7 @@ fn gzipped_files_are_recognised_by_name_and_inflated() {
 /// A recognized raster signature wins over a misleading `.xcf` suffix, as with `.kra` and `.svg`.
 #[test]
 fn a_png_with_an_xcf_suffix_opens_by_content() {
-    let img =
-        magicpic_codecs::Image::from_raw(12, 8, magicpic_codecs::ChannelLayout::Rgba, magicpic_codecs::SampleType::U8, vec![90; 12 * 8 * 4]).unwrap();
+    let img = magicpic_codecs::Image::from_raw(12, 8, magicpic_codecs::ChannelLayout::Rgba, magicpic_codecs::SampleType::U8, vec![90; 12 * 8 * 4]).unwrap();
     let png = magicpic_codecs::encode(&img, magicpic_codecs::Format::Png, &Default::default()).unwrap();
     let r = crate::import("renamed.xcf", &png).unwrap();
     assert_eq!((r.document.size.width, r.document.size.height), (12, 8));

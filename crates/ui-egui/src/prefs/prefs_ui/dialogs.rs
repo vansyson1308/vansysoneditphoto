@@ -1,5 +1,5 @@
 use super::shortcuts::shortcut_items;
-use super::{BTreeMap, DialogKind, Map, MagicpicApp, RichText, SECTIONS, Tokens, Value, json, prefs};
+use super::{BTreeMap, DialogKind, MagicpicApp, Map, RichText, SECTIONS, Tokens, Value, json, prefs};
 
 // ------------------------------------------------------------------ menu routing
 

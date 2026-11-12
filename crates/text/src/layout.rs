@@ -17,9 +17,9 @@
 use std::borrow::Cow;
 use std::ops::Range;
 
-use parley::{FontData, FontFamily, FontFeatures, FontStyle, FontVariations, FontWeight, Layout, LayoutContext, PositionedLayoutItem, StyleProperty};
 use magicpic_doc::TextLayer;
 use magicpic_doc::text::{Caps, CharStyle, FontBaseline, Kerning, Orientation, ParagraphStyle, TextShape};
+use parley::{FontData, FontFamily, FontFeatures, FontStyle, FontVariations, FontWeight, Layout, LayoutContext, PositionedLayoutItem, StyleProperty};
 use skrifa::raw::types::Tag;
 
 use crate::fonts::FontDb;

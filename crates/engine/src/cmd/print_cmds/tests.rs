@@ -327,6 +327,7 @@ fn native_rgb_route_preserves_pdf_only_color_and_page_content() {
     page.image.icc = Some(vec![1, 2, 3]);
     assert!(!native_rgb_compatible(&page, "printerManages"), "preserve embedded source ICC in the PDF route");
     assert!(native_rgb_compatible(&page, "magicpicManages"));
+    assert!(native_rgb_compatible(&page, "photocraftManages"), "the value scripts written for the upstream app pass");
     assert!(native_rgb_compatible(&page, "photoshopManages"));
     assert!(!native_rgb_compatible(&page_of(4, vec![0; 8], false), "magicpicManages"));
     assert!(native_rgb_compatible(&page_of(1, vec![0; 2], false), "noColorManagement"));

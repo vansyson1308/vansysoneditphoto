@@ -486,8 +486,7 @@ mod aces_exr_tests {
     fn exr_aces_cg_preference_applies_to_background_opens() {
         use crate::jobs::{OpenSource, Started};
         let image = magicpic_codecs::Image::from_f32(4, 4, magicpic_codecs::ChannelLayout::Rgb, &[0.5; 48]).unwrap();
-        let bytes =
-            std::sync::Arc::new(magicpic_codecs::encode(&image, magicpic_codecs::Format::OpenExr, &magicpic_codecs::EncodeOptions::default()).unwrap());
+        let bytes = std::sync::Arc::new(magicpic_codecs::encode(&image, magicpic_codecs::Format::OpenExr, &magicpic_codecs::EncodeOptions::default()).unwrap());
         let linear = magicpic_cms::Builtin::LinearSrgb.profile().to_bytes();
         let aces = magicpic_cms::Builtin::AcesCg.profile().to_bytes();
         for (on, want) in [(false, &linear), (true, &aces)] {

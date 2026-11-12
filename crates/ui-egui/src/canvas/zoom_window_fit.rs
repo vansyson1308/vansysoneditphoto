@@ -127,15 +127,7 @@ pub fn resize_for(ctx: &Context, window: u64, on: bool, before: &View, after: &V
 /// command would resize the main window instead, and a maximized or full-screen one keeps the
 /// size the user gave it. A window that grows around the whole image also centres it in `after`.
 /// Returns the size asked for.
-pub fn follow(
-    app: &MagicpicApp,
-    ctx: &Context,
-    class: ViewportClass,
-    viewport: ViewportId,
-    window: &DocWindow,
-    after: &mut View,
-    rect: Rect,
-) -> Option<Vec2> {
+pub fn follow(app: &MagicpicApp, ctx: &Context, class: ViewportClass, viewport: ViewportId, window: &DocWindow, after: &mut View, rect: Rect) -> Option<Vec2> {
     if class != ViewportClass::Immediate {
         return None;
     }

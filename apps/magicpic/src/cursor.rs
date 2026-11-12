@@ -17,9 +17,9 @@ pub use platform::service;
 
 #[cfg(target_os = "macos")]
 mod platform {
+    use magicpic_ui_egui::CursorPosFn;
     use objc2::MainThreadMarker;
     use objc2_app_kit::{NSApplication, NSEvent, NSWindow};
-    use magicpic_ui_egui::CursorPosFn;
 
     pub fn service(_cc: &eframe::CreationContext<'_>) -> Option<CursorPosFn> {
         Some(Box::new(|ctx: &egui::Context| in_window_points().map(|(x, y)| egui::pos2(x as f32, y as f32) / ctx.zoom_factor())))

@@ -99,11 +99,7 @@ fn slice_style_fixes_the_ratio_or_the_size() {
     pointer(&mut app, ToolEvent::Up { x: 41.0, y: 41.0 }, m);
     // A press inside a pixel starts the slice on that pixel, still 24 x 16 pixels.
     assert_eq!(draw(&mut app, [10.25, 30.75], [12.5, 31.5]), magicpic_geom::Rect::new(10, 30, 34, 46), "a press inside a pixel");
-    assert_eq!(
-        draw(&mut app, [70.5, 70.5], [60.25, 60.25]),
-        magicpic_geom::Rect::new(47, 55, 71, 71),
-        "and towards the upper left, holding the pressed pixel"
-    );
+    assert_eq!(draw(&mut app, [70.5, 70.5], [60.25, 60.25]), magicpic_geom::Rect::new(47, 55, 71, 71), "and towards the upper left, holding the pressed pixel");
     // A short drag up and to the left inside the pressed pixel goes up and to the left.
     assert_eq!(draw(&mut app, [50.75, 50.75], [50.25, 50.25]), magicpic_geom::Rect::new(27, 35, 51, 51), "up-left within the pixel");
     // A Fixed Size that isn't whole pixels (from a settings file) is rounded, not grown a pixel.

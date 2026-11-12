@@ -382,9 +382,8 @@ fn threaded_inside(kind: FieldKind) -> bool {
 /// fields run on all threads inside `distance_field`, from one window. That is also the window the CPU
 /// compositor computes them from, so a rebuilt field is exactly the one it gives.
 fn field_banded(kind: FieldKind, reach: i32, shape: &[f32], region: Rect, out: Rect, halo: i32) -> Vec<f32> {
-    let [f] = fields_in_windows(threaded_inside(kind), shape, region, out, halo, |s, w, h| {
-        [magicpic_compose::effects::distance_field(kind, s, w, h, reach as f32)]
-    });
+    let [f] =
+        fields_in_windows(threaded_inside(kind), shape, region, out, halo, |s, w, h| [magicpic_compose::effects::distance_field(kind, s, w, h, reach as f32)]);
     f
 }
 

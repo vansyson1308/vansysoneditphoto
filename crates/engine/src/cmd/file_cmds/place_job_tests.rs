@@ -269,8 +269,7 @@ fn noise_png(w: u32, h: u32, layout: magicpic_codecs::ChannelLayout, sample: mag
     let len = w as usize * h as usize * layout.channels() * sample.bytes();
     let data: Vec<u8> = (0..len).map(|i| ((i.wrapping_mul(2_654_435_761) >> 13) ^ (i / 97)) as u8).collect();
     let img = magicpic_codecs::Image::from_raw(w, h, layout, sample, data).unwrap();
-    magicpic_codecs::encode(&img, magicpic_codecs::Format::Png, &magicpic_codecs::EncodeOptions { png_interlaced: interlaced, ..Default::default() })
-        .unwrap()
+    magicpic_codecs::encode(&img, magicpic_codecs::Format::Png, &magicpic_codecs::EncodeOptions { png_interlaced: interlaced, ..Default::default() }).unwrap()
 }
 
 /// A cooperative session whose polls each do one unit of work, so the polls a place needs do not

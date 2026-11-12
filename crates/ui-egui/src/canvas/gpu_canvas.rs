@@ -34,8 +34,8 @@ use eframe::wgpu;
 
 use crate::render_path::CpuReason;
 
-pub use pages::{MAX_PAGE_SIDE, PageUpload};
 pub use magicpic_gpu::{DeviceHealth, Fault};
+pub use pages::{MAX_PAGE_SIDE, PageUpload};
 
 mod budget;
 mod callback;
@@ -65,9 +65,9 @@ use callback::{filter_mode, map_doc_px, tile_screen_aabb};
 use doc_textures::init_buffer;
 #[cfg(test)]
 use doc_textures::{mip_count, mip_damage};
-pub use perf::{GpuInfo, Perf, backend_name, now_ms};
 #[cfg(all(test, windows))]
 use magicpic_engine::memory::detect_physical_memory;
+pub use perf::{GpuInfo, Perf, backend_name, now_ms};
 pub use resources::CanvasStyle;
 use resources::{DocTextures, Resources, identity_lut_bytes, lut_bind_group};
 #[cfg(test)]
