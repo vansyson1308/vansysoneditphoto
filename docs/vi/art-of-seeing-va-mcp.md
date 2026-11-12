@@ -185,6 +185,7 @@ chép lại từng byte của một bức ảnh thật một cách tin cậy.
 
 - Agent chỉ đọc trong `--automation-read-root` và chỉ ghi trong `--automation-write-root`;
   `..`, đường dẫn tuyệt đối ra ngoài và symlink thoát ra ngoài đều bị từ chối (ĐÃ TEST).
+  Thư mục con còn thiếu trong đường dẫn lưu chỉ được tạo bên trong thư mục ghi (ĐÃ TEST).
 - Chỉ ghi đè lên file ảnh/tài liệu; `notes.txt`, mã nguồn, `.env` không bao giờ bị thay (ĐÃ CHẠY).
 - Lưu/xuất chỉ báo thành công sau khi tìm lại file trên đĩa và khớp kích thước (`verified`).
 - Bridge chỉ nghe ở `127.0.0.1`, xác thực bằng token trong file riêng.
@@ -251,9 +252,14 @@ chép lại từng byte của một bức ảnh thật một cách tin cậy.
 - **Preview tối đa 2048 px**; ảnh nguồn trên 64 MP chỉ xem được theo vùng ở chế độ headless.
 - **JPEG hỏng phần đuôi vẫn mở được phần đọc được**, kèm cảnh báo (hành vi có sẵn của
   MagicPic); PNG hỏng và file không phải ảnh thì bị từ chối.
-- **Thư mục đích phải có sẵn.** Bảo agent xuất vào `ket-qua/anh.jpg` khi chưa có thư mục
-  `ket-qua` thì lệnh lưu báo lỗi "No such file or directory", và agent không có công cụ tạo
-  thư mục. Hãy tạo thư mục trước, hoặc bảo agent lưu thẳng vào thư mục đã cấp. (Việc để sau.)
+- **Thư mục con chưa có sẽ được tạo** (đã sửa, 2026-11-12). Bảo agent xuất vào
+  `ket-qua/anh.jpg` khi chưa có thư mục `ket-qua` thì `doc_save`/`doc_export` tự tạo
+  `ket-qua` (và các thư mục cha còn thiếu) **bên trong** `--automation-write-root`, rồi ghi
+  file như thường; ở headless, reply vẫn có `absolutePath`, `bytes`, `verified`. Bridge cũng
+  tạo thư mục như vậy (app ghi qua cùng một hàm; chưa có test riêng cho bridge). Không bao giờ tạo thư mục ngoài thư mục ghi: `..`, đường dẫn tuyệt đối ra ngoài và
+  symlink thoát ra ngoài vẫn bị từ chối; nếu một phần của đường dẫn là file có sẵn (ví dụ
+  `notes.txt/anh.jpg`) thì báo lỗi (ĐÃ TEST). Một lần lưu thất bại sau khi đã tạo thư mục có
+  thể để lại thư mục rỗng đó.
 - Recipe lưu trong ghi chú của tài liệu: ai xóa ghi chú đó thì mất recipe.
 - Không tuyên bố tương đương Photoshop; đây là một lát cắt nhỏ, dùng được, có kiểm chứng.
 

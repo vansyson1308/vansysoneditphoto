@@ -256,9 +256,15 @@ impl AuthorizedWorkspace {
     /// by a handle opened through the root ([`rename_in`]): the same atomic replace, never
     /// outside the root, and never a stranded temporary file.
     ///
-    /// The parent directory must already exist. `cap-std` performs path
-    /// resolution and file creation relative to the held directory handle, so
-    /// a non-existent final target is supported without ambient path access.
+    /// A parent folder that is not there yet is created first, with its missing ancestors, the
+    /// way an export sequence makes its directory ([`ensure_export_dir`]): through the root's
+    /// handle, so only inside the write root. An agent has no tool that makes a folder, and a
+    /// save into `out/picture.jpg` should not need a person to make `out` by hand. The same
+    /// refusals still apply to every component: traversal, absolute paths outside the root, a
+    /// link leading out of it, and a component that exists but is not a folder (a file named
+    /// `out` is an error, never replaced). `cap-std` performs path resolution and file creation
+    /// relative to the held directory handle, so a non-existent final target is supported
+    /// without ambient path access.
     pub fn write(&self, path: &str, bytes: &[u8]) -> Result<(), AutomationError> {
         self.write_stream(path, &mut |w| w.write_all(bytes))
     }
@@ -287,6 +293,17 @@ impl AuthorizedWorkspace {
             )));
         }
         let parent = relative.parent().map(Path::to_path_buf).unwrap_or_default();
+        // Only a parent that is absent is made; one that exists (a folder, or a file in the way,
+        // which the open below then refuses) is left exactly as it is.
+        if !parent.as_os_str().is_empty() && root.dir.metadata(&parent).is_err_and(|e| e.kind() == std::io::ErrorKind::NotFound) {
+            ensure_export_dir(root, &parent).map_err(|e| {
+                let kind = e.kind();
+                AutomationError::Io(format!(
+                    "automation write `{path}` failed: cannot create its folder `{}` inside the write root ({kind:?}): {e}",
+                    parent.display()
+                ))
+            })?;
+        }
         let tmp = parent.join(magicpic_format::atomic::temp_name(&leaf));
         let mut options = OpenOptions::new();
         options.write(true).create_new(true);
@@ -499,7 +516,9 @@ fn delete_on_close(dir: &Dir, name: &Path) -> std::io::Result<()> {
     dir.open_with(name, &options).map(drop)
 }
 
-/// Make `relative` a directory below the write root, with its missing ancestors. Through the
+/// Make `relative` a directory below the write root, with its missing ancestors: an export
+/// sequence's directory, and the folder of a file [`AuthorizedWorkspace::write_stream`] is
+/// about to create. Through the
 /// capability wherever that works; below a Windows UNC root its `create_dir_all` reports
 /// `NotFound` whether or not the directory exists (see [`is_unc_root`]), so there an existing
 /// directory is accepted by opening it through the handle and a missing one is made by
