@@ -47,6 +47,8 @@ pollster = { version = "1", optional = true }
 
 [dev-dependencies]
 magicpic-color = { workspace = true }
+# `gpu_lock()`: one wgpu device at a time when `cargo test` runs the GPU tests on threads.
+magicpic-testkit = { workspace = true }
 magicpic-geom = { workspace = true }
 # Synthetic camera raws (#7789).
 magicpic-raw = { workspace = true, features = ["testgen"] }

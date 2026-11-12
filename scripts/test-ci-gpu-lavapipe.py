@@ -1,5 +1,6 @@
 import importlib.util
 from pathlib import Path
+import tomllib
 import unittest
 
 spec = importlib.util.spec_from_file_location('gpu_check', Path(__file__).with_name('ci-gpu-lavapipe.py'))
@@ -38,6 +39,16 @@ class LogChecks(unittest.TestCase):
         config['profile']['default']['overrides'] = []
         with self.assertRaises(ValueError):
             check.gpu_filter(config)
+
+    def test_the_repository_group_caps_every_package_whose_tests_open_devices(self):
+        # A GPU test outside the group runs beside the four capped ones; the headless backend's
+        # tests were outside it when two of them crashed at exit in CI.
+        root = Path(__file__).resolve().parents[1]
+        with (root / '.config/nextest.toml').open('rb') as source:
+            selected = check.gpu_filter(tomllib.load(source))
+        for package in ['magicpic-gpu', 'magicpic-ui-egui', 'magicpic-automation']:
+            with self.subTest(package=package):
+                self.assertIn(f'package({package})', selected)
 
 
 if __name__ == '__main__':

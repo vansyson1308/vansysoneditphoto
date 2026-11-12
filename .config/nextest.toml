@@ -19,6 +19,14 @@ gpu = { max-threads = 4 }
 filter = 'package(magicpic-gpu) | (package(magicpic-ui-egui) & (kind(test) | test(/canvas|gpu|mip|type_tool|background_redraw::|floating_group_titles|swap_arrow::tests::rendered_glyph/)))'
 test-group = 'gpu'
 
+# The headless GPU backend's tests (`--features gpu`, on in workspace builds through magicpic-cli's
+# default features) open a wgpu device each, like the ones above. Outside the group they ran
+# alongside four capped GPU tests and each other; in one CI gate run two of them passed and then
+# died with SIGSEGV while their processes exited.
+[[profile.default.overrides]]
+filter = 'package(magicpic-automation) & test(/^gpu_backend::/)'
+test-group = 'gpu'
+
 # CI (`--profile ci`, .github/workflows/ci.yml). Collect all failures in one integration run
 # instead of exposing one regression per rebuild. A hanging test still terminates, and every
 # failure is repeated at the end of the log. The default profile's GPU override still applies.
