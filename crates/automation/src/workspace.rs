@@ -23,6 +23,27 @@ struct RootCapability {
     configured_path: PathBuf,
 }
 
+/// Most directory entries one [`AuthorizedWorkspace::list`] call looks at, across all roots.
+const MAX_SCANNED: usize = 20_000;
+
+/// One entry of [`AuthorizedWorkspace::list`]: a path `read` accepts (or a folder to list).
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Listed {
+    /// Relative to its read root, with `/` separators.
+    pub path: String,
+    /// The same file by its full path below that root. A relative path is looked up in the
+    /// roots in launch order, so this is what names the file when two roots hold the same path.
+    pub absolute_path: String,
+    /// `file` or `dir`.
+    pub kind: &'static str,
+    pub bytes: u64,
+    /// Last modification, seconds since the Unix epoch, when the file system reports one.
+    pub modified_unix: Option<u64>,
+    /// Which read root (in launch order) holds it.
+    pub root: usize,
+}
+
 /// Separate directory capabilities for automation reads and writes.
 ///
 /// Root paths are trusted launch-time configuration. Request paths are always
@@ -96,6 +117,96 @@ impl AuthorizedWorkspace {
             Some(error) => Err(file_error("read", path, error)),
             None => Err(path_error(path, "absolute paths must be inside an automation read root")),
         }
+    }
+
+    /// The regular files and folders directly inside `dir` (the roots themselves when `None`)
+    /// of every read root that has it, newest first, at most `limit`; the flag says whether
+    /// more were left out. Names only: nothing is opened. Hidden entries (a leading dot) and
+    /// anything that is not a plain file or folder (links, devices) are left out, so a listed
+    /// path is one `read` accepts.
+    pub fn list(&self, dir: Option<&str>, limit: usize) -> Result<(Vec<Listed>, bool), AutomationError> {
+        if self.read.is_empty() {
+            return Err(AutomationError::BadRequest(format!("{DENIED}: read authority is absent")));
+        }
+        let mut out: Vec<Listed> = Vec::new();
+        let mut found = false;
+        let mut truncated = false;
+        let mut scanned = 0usize;
+        'roots: for (index, root) in self.read.iter().enumerate() {
+            let (entries, prefix) = match dir {
+                None => (root.dir.entries(), String::new()),
+                Some(d) => {
+                    let Some(relative) = scoped_path(d, root)? else { continue };
+                    let prefix = relative.components().map(|c| c.as_os_str().to_string_lossy().into_owned()).collect::<Vec<_>>().join("/");
+                    (root.dir.read_dir(&relative), prefix)
+                }
+            };
+            let entries = match entries {
+                Ok(entries) => entries,
+                // This root has no such folder (or has a file of that name): the next may.
+                Err(error) if matches!(error.kind(), std::io::ErrorKind::NotFound | std::io::ErrorKind::NotADirectory) => continue,
+                Err(error) => return Err(file_error("list", dir.unwrap_or("."), error)),
+            };
+            found = true;
+            for entry in entries {
+                scanned += 1;
+                if scanned > MAX_SCANNED {
+                    truncated = true;
+                    break 'roots;
+                }
+                let Ok(entry) = entry else { continue };
+                let Some(name) = entry.file_name().to_str().map(str::to_owned) else { continue };
+                if name.starts_with('.') {
+                    continue;
+                }
+                // Not followed: a link is neither a file nor a folder here.
+                let Ok(meta) = entry.metadata() else { continue };
+                let kind = if meta.is_file() {
+                    "file"
+                } else if meta.is_dir() {
+                    "dir"
+                } else {
+                    continue;
+                };
+                let modified = meta.modified().ok().and_then(|t| t.into_std().duration_since(std::time::UNIX_EPOCH).ok()).map(|d| d.as_secs());
+                let path = if prefix.is_empty() { name } else { format!("{prefix}/{name}") };
+                // Only what a read request may name: a file called `a:b` or `con.png` exists on
+                // disk but `read` refuses its path, so listing it would promise what cannot open.
+                if relative_path(&path).is_err() {
+                    continue;
+                }
+                let absolute = root.path.join(&path).to_string_lossy().into_owned();
+                out.push(Listed {
+                    path,
+                    absolute_path: absolute,
+                    kind,
+                    bytes: if kind == "file" { meta.len() } else { 0 },
+                    modified_unix: modified,
+                    root: index,
+                });
+            }
+        }
+        if !found {
+            return Err(AutomationError::BadRequest(format!("automation list: no folder `{}` in a read root", dir.unwrap_or("."))));
+        }
+        out.sort_by(|a, b| b.modified_unix.cmp(&a.modified_unix).then_with(|| a.path.cmp(&b.path)));
+        if out.len() > limit {
+            out.truncate(limit);
+            truncated = true;
+        }
+        Ok((out, truncated))
+    }
+
+    /// Where a file just written below the write root is, and its size as the file system now
+    /// reports it: what a save tells its caller, checked against the disk rather than assumed.
+    pub fn written(&self, path: &str) -> Result<(PathBuf, u64), AutomationError> {
+        let relative = request_path(path, self.write.as_ref())?;
+        let root = self.write.as_ref().ok_or_else(|| AutomationError::BadRequest(format!("{DENIED}: write authority is absent")))?;
+        let meta = root.dir.metadata(&relative).map_err(|e| file_error("verify", path, e))?;
+        if !meta.is_file() {
+            return Err(AutomationError::Io(format!("automation verify `{path}` failed: not a regular file after the write")));
+        }
+        Ok((root.path.join(&relative), meta.len()))
     }
 
     /// Load one `.pcraft` document in directory form — the native on-disk layout — below the

@@ -1238,21 +1238,23 @@ async fn bridge_previews_downscale_before_enforcing_the_png_budget() {
     app.abort();
 }
 
+/// A window screenshot never stands in for "document N": `ui_screenshot` has no `index`, and a
+/// bridged `doc_render_preview {index}` asks the app's engine for that document (`seeing.view`)
+/// instead of capturing the window.
 #[tokio::test(flavor = "multi_thread")]
-async fn bridge_previews_reject_document_indices() {
+async fn bridge_previews_never_pass_a_window_screenshot_off_as_a_document_index() {
     let (addr, app) = fake_app().await;
     let client = connect(PhotocraftMcp::bridge(&addr, CONTROL_TOKEN).unwrap()).await;
-    let mut errors = Vec::new();
-    for tool in ["ui_screenshot", "doc_render_preview"] {
-        let args = json!({"index": 0, "max_side": 20}).as_object().unwrap().clone();
-        let result = client.call_tool(CallToolRequestParams::new(tool).with_arguments(args)).await;
-        let error = match result {
-            Err(error) => Some(error.to_string()),
-            Ok(reply) if reply.is_error == Some(true) => Some(text(&reply)),
-            Ok(_) => None,
-        };
-        errors.push((tool, error));
+    let args = json!({"index": 0, "max_side": 20}).as_object().unwrap().clone();
+    let refused = client.call_tool(CallToolRequestParams::new("ui_screenshot").with_arguments(args.clone())).await;
+    assert!(refused.is_err_and(|error| error.to_string().contains("index")));
+    // The fake app answers `engine.execute` without image data, so the tool reports that
+    // rather than falling back to the window.
+    let indexed = client.call_tool(CallToolRequestParams::new("doc_render_preview").with_arguments(args)).await.unwrap();
+    assert_eq!(indexed.is_error, Some(true));
+    assert!(text(&indexed).contains("did not contain image data"), "{}", text(&indexed));
 
+    for tool in ["ui_screenshot", "doc_render_preview"] {
         let reply = call(&client, tool, json!({"max_side": 20})).await;
         assert_ne!(reply.is_error, Some(true), "{tool}: {}", text(&reply));
         let image = reply.content.iter().find_map(|content| content.as_image()).expect("screenshot");
@@ -1264,8 +1266,11 @@ async fn bridge_previews_reject_document_indices() {
     client.cancel().await.unwrap();
     let seen = tokio::time::timeout(std::time::Duration::from_secs(5), app).await.unwrap().unwrap();
 
-    assert!(errors.iter().all(|(_, error)| error.as_ref().is_some_and(|error| error.contains("index"))), "{errors:?}");
-    assert_eq!(seen.iter().filter(|request| request["method"] == "ui.screenshot").count(), 2, "rejected indices must not reach the app");
+    assert_eq!(seen.iter().filter(|request| request["method"] == "ui.screenshot").count(), 2, "an index must not reach the window capture");
+    let views: Vec<&Value> = seen.iter().filter(|request| request["params"]["command"] == "seeing.view").collect();
+    assert_eq!(views.len(), 1, "{seen:?}");
+    assert_eq!(views[0]["params"]["params"]["document"], 0);
+    assert_eq!(views[0]["params"]["params"]["maxSide"], 20);
     assert!(schema["properties"].get("index").is_none(), "{schema:?}");
     assert!(schema["properties"].get("max_side").is_some(), "{schema:?}");
     assert_eq!(schema.get("additionalProperties"), Some(&json!(false)));
@@ -1519,6 +1524,7 @@ async fn convention_tool_hints_match_what_each_tool_does() {
         ("ui_inspect", READ),
         ("ui_screenshot", READ),
         ("jobs_list", READ),
+        ("files_list", READ),
         ("doc_new", ADDS),
         ("doc_open", ADDS),
         ("doc_place", ADDS),

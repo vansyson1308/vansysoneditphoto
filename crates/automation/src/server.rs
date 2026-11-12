@@ -236,17 +236,97 @@ pub struct SaveParams {
     pub index: Option<usize>,
 }
 
+/// A rectangle of the document, in document pixels.
+#[derive(Debug, Clone, Copy, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct RegionParams {
+    pub x: u32,
+    pub y: u32,
+    pub width: u32,
+    pub height: u32,
+}
+
 #[derive(Debug, Default, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PreviewParams {
-    /// Headless mode only: document index (default: the active document).
-    /// Bridge previews capture the app window and reject `index`.
+    /// Document index (default: the active document). In bridge mode, passing it (or `view`,
+    /// `region` or `format`) renders that document instead of capturing the app window.
     #[serde(default)]
     pub index: Option<usize>,
-    /// Longest side of a headless preview (default 1024, maximum 2048).
-    /// Zero requests full size within that ceiling. Bridge mode returns the window screenshot.
+    /// Longest side of the preview (default 1024, maximum 2048).
+    /// Zero requests full size within that ceiling.
     #[serde(default)]
     pub max_side: Option<u32>,
+    /// What to look at: `normal` (the picture as it is) or an observation view that changes
+    /// nothing and is never part of the document or an export: `luminance` (tones only),
+    /// `masses` (strongly defocused colour areas), `shapes` (a few flat tones: figure against
+    /// empty space), `lines` (outlines on white), `color` (hue and saturation at equal
+    /// luminosity).
+    #[serde(default)]
+    pub view: Option<String>,
+    /// Render only this rectangle of the document (never enlarged).
+    #[serde(default)]
+    pub region: Option<RegionParams>,
+    /// How far `masses`, `shapes` and `lines` abstract, 0 to 1 (default 0.5).
+    #[serde(default)]
+    pub strength: Option<f64>,
+    /// Number of flat tones of the `shapes` view, 2 to 8 (default 3).
+    #[serde(default)]
+    pub levels: Option<u32>,
+    /// `png` (default) or `jpeg` (much smaller; transparency shows as white).
+    #[serde(default)]
+    pub format: Option<String>,
+    /// JPEG quality 1 to 100 (default 85).
+    #[serde(default)]
+    pub quality: Option<u8>,
+}
+
+impl PreviewParams {
+    /// Whether the call asks for a document view (`seeing.view`) rather than the plain preview.
+    fn wants_view(&self) -> bool {
+        self.view.is_some() || self.region.is_some() || self.strength.is_some() || self.levels.is_some() || self.format.is_some() || self.quality.is_some()
+    }
+
+    /// The `seeing.view` parameters of this call.
+    fn view_params(&self) -> Value {
+        let mut m = serde_json::Map::new();
+        let side = match self.max_side {
+            None => 1024,
+            Some(0) => MAX_PREVIEW_SIDE,
+            Some(side) => side,
+        };
+        m.insert("maxSide".into(), json!(side));
+        if let Some(v) = &self.view {
+            m.insert("view".into(), json!(v));
+        }
+        if let Some(r) = self.region {
+            m.insert("region".into(), json!({"x": r.x, "y": r.y, "width": r.width, "height": r.height}));
+        }
+        if let Some(v) = self.strength {
+            m.insert("strength".into(), json!(v));
+        }
+        if let Some(v) = self.levels {
+            m.insert("levels".into(), json!(v));
+        }
+        if let Some(v) = &self.format {
+            m.insert("format".into(), json!(v));
+        }
+        if let Some(v) = self.quality {
+            m.insert("quality".into(), json!(v));
+        }
+        Value::Object(m)
+    }
+}
+
+#[derive(Debug, Default, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct FilesListParams {
+    /// Folder to list, relative to a read root (default: the roots themselves).
+    #[serde(default)]
+    pub dir: Option<String>,
+    /// Most entries to return, newest first (default 50, maximum 500).
+    #[serde(default)]
+    pub limit: Option<u32>,
 }
 
 #[derive(Debug, Default, Deserialize, JsonSchema)]
@@ -288,6 +368,17 @@ pub struct RunParams {
     /// with `jobs_list`, stop it with `jobs_cancel`.
     #[serde(default)]
     pub wait: Option<bool>,
+    /// Run only if the active document is still at this `revision` (from `doc_inspect` or
+    /// `session_list`); otherwise nothing runs and the error says what the revision is now. Use
+    /// it when a person may be editing the same document. The command then runs to the end
+    /// (no background job), so it cannot be combined with `wait: false`.
+    #[serde(default)]
+    pub expect_revision: Option<u64>,
+    /// Run only if the active document is the one with this `id` (from `doc_inspect` or
+    /// `session_list`): a revision alone cannot tell two documents apart, and in the app the
+    /// person may have switched tabs. Like `expect_revision`, it makes the command run to the end.
+    #[serde(default)]
+    pub expect_document: Option<u64>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -309,6 +400,20 @@ pub struct BatchParams {
     /// Stop at the first failing step (default true).
     #[serde(default)]
     pub stop_on_error: Option<bool>,
+    /// All or nothing (default false): if a step fails, every earlier step is rolled back and
+    /// the document, its history and its snapshots are exactly as before. The steps then run
+    /// as one engine transaction on the active document: none may open, save, close or switch
+    /// documents or use `wait: false`, and there is no per-step progress.
+    #[serde(default)]
+    pub atomic: Option<bool>,
+    /// With `atomic`: run only if the active document is still at this `revision` (from
+    /// `doc_inspect` or `session_list`); otherwise nothing runs.
+    #[serde(default)]
+    pub expect_revision: Option<u64>,
+    /// With `atomic`: run only if the active document is the one with this `id` (from
+    /// `doc_inspect` or `session_list`); otherwise nothing runs.
+    #[serde(default)]
+    pub expect_document: Option<u64>,
 }
 
 /// One `ui_pointer` event, for the tool schema only: events are forwarded to `ui.pointer` as JSON.
@@ -935,9 +1040,17 @@ impl PhotocraftMcp {
         to_result(b.call_read("engine.execute", json!({"command": "document.inspect", "params": params})).await)
     }
 
-    #[tool(description = "Render the flattened document and return it as a PNG image (bridge mode: window screenshot).")]
+    #[tool(description = "Look at a document: returns an image of it (the model sees it). `view` shows it as it is (`normal`) or \
+        through an observation view that changes nothing (`luminance`, `masses`, `shapes`, `lines`, `color`); `region` renders one \
+        rectangle; `index` picks a document; `format: jpeg` is much smaller. With none of these, headless mode returns the \
+        flattened PNG and bridge mode a screenshot of the app window.")]
     async fn doc_render_preview(&self, Parameters(p): Parameters<PreviewParams>) -> Result<CallToolResult, McpError> {
         let max = p.max_side.unwrap_or(1024);
+        // A view, a region or another format is the engine's `seeing.view`, in either backend;
+        // so is naming a document in bridge mode, where the plain preview is the app window.
+        if p.wants_view() || (p.index.is_some() && self.bridge_client().is_some()) {
+            return Ok(self.document_view(p).await);
+        }
         if let Some(r) = self
             .headless_op(move |h| {
                 let res = h.render_png(p.index, max);
@@ -957,15 +1070,28 @@ impl PhotocraftMcp {
         let Some(b) = self.bridge_client() else {
             return Ok(no_backend());
         };
-        if p.index.is_some() {
-            return Ok(fail("`index` is only supported in headless mode; bridge previews capture the app window"));
-        }
         self.screenshot(b, Some(max)).await
     }
 
-    #[tool(description = "Render a bounded flattened PNG preview (bridge mode: app window screenshot).")]
+    #[tool(description = "Look at a document (same as doc_render_preview): an image of it as it is, of one `region`, or through an \
+        observation `view` (`luminance`, `masses`, `shapes`, `lines`, `color`) that changes nothing. Bridge mode without \
+        `view`, `region`, `index` or `format` returns the app window screenshot.")]
     async fn render_preview(&self, p: Parameters<PreviewParams>) -> Result<CallToolResult, McpError> {
         self.doc_render_preview(p).await
+    }
+
+    #[tool(description = "Headless mode: list the files and folders in a read root (or in `dir` below one), newest first, \
+        with size and modification time. Use it to find a picture the person just saved into the folder, then doc_open its \
+        `path` (or its `absolutePath` when two roots hold the same name).")]
+    async fn files_list(&self, Parameters(p): Parameters<FilesListParams>) -> Result<CallToolResult, McpError> {
+        let limit = p.limit.unwrap_or(50).clamp(1, 500) as usize;
+        match self.headless_op(move |h| h.list_files(p.dir.as_deref().filter(|d| !d.is_empty()), limit)).await {
+            Some(r) => to_result(r),
+            None => Ok(fail(
+                "`files_list` is only available in headless mode: in bridge mode the app owns the folders. Open the picture in the app \
+                 (drag it in, or File > Open), or pass its path to doc_open",
+            )),
+        }
     }
 
     #[tool(description = "Make the document at `index` active.")]
@@ -1016,10 +1142,16 @@ impl PhotocraftMcp {
     #[tool(description = "Run an engine command by id with JSON params (see command_list). Returns the command's JSON result. \
         Long commands (filters, Content-Aware Fill/Scale, Photomerge, brush import) wait to finish unless `wait` is false: \
         then they run as a background job and the result is {job: id} (see jobs_list, jobs_cancel). A waited long \
-        command reports progress, cancelling the request cancels it, and other calls are served meanwhile.")]
+        command reports progress, cancelling the request cancels it, and other calls are served meanwhile. \
+        `expect_revision` and `expect_document` refuse to run if the document changed since that revision or is not the active one.")]
     async fn command_run(&self, Parameters(p): Parameters<RunParams>, context: RequestContext<RoleServer>) -> Result<CallToolResult, McpError> {
+        if (p.expect_revision.is_some() || p.expect_document.is_some()) && p.wait == Some(false) {
+            return Ok(fail("`expect_revision` and `expect_document` run the command to the end; they cannot be combined with `wait: false`"));
+        }
         let mut waiter = Waiter::new(Some(context));
-        to_result(self.step(p.id, p.params.unwrap_or_else(|| json!({})), p.wait.unwrap_or(true), &mut waiter, (0, 1)).await)
+        let (id, params, guarded) = Self::guarded(p.id, p.params.unwrap_or_else(|| json!({})), p.expect_revision, p.expect_document);
+        let result = self.step(id, params, p.wait.unwrap_or(true), &mut waiter, (0, 1)).await;
+        to_result(if guarded { result.map(unwrap_guarded) } else { result })
     }
 
     #[tool(description = "List background jobs: running ones with progress (0-1), message and elapsed time, then the last few \
@@ -1036,7 +1168,9 @@ impl PhotocraftMcp {
 
     #[tool(description = "Run several engine commands in one call, in order (fewer round trips). Returns {completed, failed, \
         results:[{ok, result|error}]}; stops at the first error unless stop_on_error is false. \
-        Not an atomic transaction: earlier successful steps stay applied (no rollback).")]
+        Not an atomic transaction: earlier successful steps stay applied (no rollback). \
+        With `atomic: true` it is one: a failing step rolls every earlier step back, and `expect_revision` / `expect_document` \
+        refuse to run if the document changed since that revision or is not the active one.")]
     async fn command_batch(&self, Parameters(p): Parameters<BatchParams>, context: RequestContext<RoleServer>) -> Result<CallToolResult, McpError> {
         self.batch(p, Waiter::new(Some(context))).await
     }
@@ -1107,11 +1241,76 @@ impl PhotocraftMcp {
     }
 }
 
+/// The command's own result out of a one-step `document.transaction` reply.
+fn unwrap_guarded(mut reply: Value) -> Value {
+    reply.get_mut("results").and_then(Value::as_array_mut).and_then(|r| r.first_mut()).map(Value::take).unwrap_or(reply)
+}
+
 fn bridge_only_headless(name: &str) -> Result<CallToolResult, McpError> {
     Ok(fail(format!("`{name}` is only available in headless mode (in the GUI use the window/tab UI or control_call)")))
 }
 
 impl PhotocraftMcp {
+    /// `seeing.view` of a document as image content, in either backend.
+    async fn document_view(&self, p: PreviewParams) -> CallToolResult {
+        let params = p.view_params();
+        let index = p.index;
+        let reply = match self
+            .headless_op({
+                let params = params.clone();
+                move |h| h.seeing_view(index, params)
+            })
+            .await
+        {
+            Some(r) => r,
+            None => {
+                let mut params = params;
+                if let (Some(i), Some(obj)) = (index, params.as_object_mut()) {
+                    obj.insert("document".into(), json!(i));
+                }
+                match self.bridge_client() {
+                    // A view applies nothing, so one retry on a fresh connection is safe.
+                    Some(b) => b.call_read("engine.execute", json!({"command": "seeing.view", "params": params})).await,
+                    None => return no_backend(),
+                }
+            }
+        };
+        let v = match reply {
+            Ok(v) => v,
+            Err(e) => return fail(e),
+        };
+        let (Some(encoded), Some(mime)) = (v.get("base64").and_then(Value::as_str), v.get("mime").and_then(Value::as_str)) else {
+            return fail("the view reply did not contain image data");
+        };
+        // Base64 is 4 characters per 3 bytes: the same ceiling as a PNG preview.
+        if let Err(error) = check_png(encoded.len() / 4 * 3) {
+            return fail(format!("the image is too large for one reply ({error}); pass a smaller `max_side`, a `region`, or `format: \"jpeg\"`"));
+        }
+        let mut note = v.clone();
+        if let Some(obj) = note.as_object_mut() {
+            obj.remove("base64");
+        }
+        bounded_tool_result(CallToolResult::success(vec![Content::image(encoded.to_string(), mime.to_string()), Content::text(note.to_string())]))
+    }
+
+    /// A command that must only run on a known document at a known revision becomes a one-step
+    /// transaction; the flag says whether the reply then needs unwrapping ([`unwrap_guarded`]).
+    fn guarded(id: String, params: Value, expect_revision: Option<u64>, expect_document: Option<u64>) -> (String, Value, bool) {
+        if expect_revision.is_none() && expect_document.is_none() {
+            return (id, params, false);
+        }
+        let mut transaction = json!({"steps": [{"id": id, "params": params}]});
+        if let Some(obj) = transaction.as_object_mut() {
+            if let Some(revision) = expect_revision {
+                obj.insert("expectRevision".into(), json!(revision));
+            }
+            if let Some(document) = expect_document {
+                obj.insert("expectDocument".into(), json!(document));
+            }
+        }
+        ("document.transaction".into(), transaction, true)
+    }
+
     async fn run_command(&self, id: String, params: Value, wait: bool) -> Result<CallToolResult, McpError> {
         to_result(self.step(id, params, wait, &mut Waiter::new(None), (0, 1)).await)
     }
@@ -1131,6 +1330,12 @@ impl PhotocraftMcp {
         if p.steps.len() > MAX_BATCH_STEPS {
             return Ok(fail(format!("batch contains {} steps; maximum is {MAX_BATCH_STEPS}", p.steps.len())));
         }
+        if p.atomic == Some(true) {
+            return Ok(self.atomic_batch(p, &mut waiter).await);
+        }
+        if p.expect_revision.is_some() || p.expect_document.is_some() {
+            return Ok(fail("`expect_revision` and `expect_document` on a batch need `atomic: true` (or put them on a step)"));
+        }
         let stop = p.stop_on_error.unwrap_or(true);
         let total = p.steps.len();
         let mut results = Vec::new();
@@ -1142,7 +1347,15 @@ impl PhotocraftMcp {
             if waiter.is_cancelled() {
                 break;
             }
-            let response = self.step(s.id, s.params.unwrap_or_else(|| json!({})), s.wait.unwrap_or(true), &mut waiter, (i, total)).await;
+            let response = if (s.expect_revision.is_some() || s.expect_document.is_some()) && s.wait == Some(false) {
+                Err(AutomationError::BadRequest(
+                    "`expect_revision` and `expect_document` run the command to the end; they cannot be combined with `wait: false`".into(),
+                ))
+            } else {
+                let (id, params, guarded) = Self::guarded(s.id, s.params.unwrap_or_else(|| json!({})), s.expect_revision, s.expect_document);
+                let response = self.step(id, params, s.wait.unwrap_or(true), &mut waiter, (i, total)).await;
+                if guarded { response.map(unwrap_guarded) } else { response }
+            };
             let was_error = response.is_err();
             let result = match response {
                 Ok(value) => json!({"ok": true, "result": value}),
@@ -1167,6 +1380,66 @@ impl PhotocraftMcp {
             waiter.report((i + 1) as f64, total as f64, "").await;
         }
         Ok(ok_json(&json!({"completed": results.len() - failed, "failed": failed, "results": results})))
+    }
+
+    /// `command_batch {atomic: true}`: the steps as one `document.transaction`.
+    async fn atomic_batch(&self, p: BatchParams, waiter: &mut Waiter) -> CallToolResult {
+        if p.stop_on_error == Some(false) {
+            return fail("an atomic batch stops and rolls back at the first error; omit `stop_on_error: false`");
+        }
+        if let Some(step) = p.steps.iter().find(|s| s.wait == Some(false) || s.expect_revision.is_some() || s.expect_document.is_some()) {
+            return fail(format!(
+                "step `{}`: an atomic batch runs every step to the end; `wait: false` and a step's own `expect_revision` or `expect_document` are not allowed",
+                step.id
+            ));
+        }
+        let total = p.steps.len();
+        let steps: Vec<Value> = p.steps.into_iter().map(|s| json!({"id": s.id, "params": s.params.unwrap_or_else(|| json!({}))})).collect();
+        let mut params = json!({"steps": steps});
+        if let Some(obj) = params.as_object_mut() {
+            if let Some(revision) = p.expect_revision {
+                obj.insert("expectRevision".into(), json!(revision));
+            }
+            if let Some(document) = p.expect_document {
+                obj.insert("expectDocument".into(), json!(document));
+            }
+        }
+        match self.step("document.transaction".into(), params, true, waiter, (0, 1)).await {
+            Ok(v) => {
+                let results: Vec<Value> =
+                    v.get("results").and_then(Value::as_array).map(|r| r.iter().map(|x| json!({"ok": true, "result": x})).collect()).unwrap_or_default();
+                let reply = json!({"completed": total, "failed": 0, "atomic": true, "outcome": "applied", "revision": v.get("revision"), "document": v.get("document"), "results": results});
+                match json_bytes(&reply) {
+                    Ok(_) => ok_json(&reply),
+                    // The edit is applied; only its results are too large to send back.
+                    Err(_) => ok_json(
+                        &json!({"completed": total, "failed": 0, "atomic": true, "outcome": "applied", "revision": v.get("revision"), "document": v.get("document"),
+                        "results": [], "note": "every step was applied; the step results are too large for one reply (inspect the document)"}),
+                    ),
+                }
+            }
+            Err(error) => {
+                // Only the engine's own message says what happened to the document. Anything
+                // else (a lost or late bridge reply) leaves the outcome unknown, and the reply
+                // must not claim that nothing ran.
+                let text = error.to_string();
+                let outcome = if text.contains("Nothing was run") || text.contains("was not sent") {
+                    "not_run"
+                } else if text.contains("was rolled back") {
+                    "rolled_back"
+                } else {
+                    "unknown"
+                };
+                let known = outcome != "unknown";
+                ok_json(&json!({
+                    "completed": if known { json!(0) } else { Value::Null },
+                    "failed": 1,
+                    "atomic": true,
+                    "outcome": outcome,
+                    "results": [{"ok": false, "error": if known { text } else { format!("{text}; the batch either applied completely or not at all: inspect the document before retrying") }}],
+                }))
+            }
+        }
     }
 
     /// `jobs.list` / `jobs.cancel` in either backend; `read` picks the bridge's retry rule.
@@ -1409,10 +1682,13 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn mcp_command_batch_stopped_by_the_budget_keeps_its_step_results() {
         let mcp = PhotocraftMcp::headless();
-        let step = |id: &str, params: Value| RunParams { id: id.into(), params: Some(params), wait: None };
+        let step = |id: &str, params: Value| RunParams { id: id.into(), params: Some(params), wait: None, expect_revision: None, expect_document: None };
         let mut steps: Vec<RunParams> = (0..MAX_BATCH_STEPS - 1).map(|_| step("command.list", json!({}))).collect();
         steps.push(step("file.new", json!({"width": 8, "height": 8})));
-        let result = mcp.batch(BatchParams { steps, stop_on_error: Some(false) }, Waiter::new(None)).await.unwrap();
+        let result = mcp
+            .batch(BatchParams { steps, stop_on_error: Some(false), atomic: None, expect_revision: None, expect_document: None }, Waiter::new(None))
+            .await
+            .unwrap();
         assert_ne!(result.is_error, Some(true), "{:?}", result.content.first().and_then(|c| c.as_text()).map(|t| &t.text[..200.min(t.text.len())]));
         let text = &result.content.first().and_then(|c| c.as_text()).unwrap().text;
         let reply: Value = serde_json::from_str(text).unwrap();
