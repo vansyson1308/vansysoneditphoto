@@ -26,36 +26,43 @@ Muốn tiết kiệm, hãy bảo agent xem ảnh nhỏ hơn (`max_side` 768) và
 hưởng từ dự án gốc chưa được chạy cho MagicPic (xem [`docs/releasing.md`](../releasing.md)).
 Làm bản phát hành đầu tiên là một quyết định riêng: nó công khai file cài lên GitHub.
 
-## 2. Cách nhanh nhất: nhờ agent trên máy bạn tự cài
+## 2. Prompt chuẩn: dán vào agent trên máy mới
 
-Mở **Claude Code** (hoặc **Codex CLI**) trên máy của bạn, ở một thư mục trống, rồi dán nguyên
-đoạn dưới đây. Agent sẽ hỏi bạn trước những bước cần quyền quản trị.
+Trên một máy mới, mở **Claude Code** hoặc **Codex** ở một thư mục bất kỳ rồi dán nguyên đoạn
+dưới đây. Agent tự cài công cụ (hỏi bạn trước), tải mã nguồn, build, mở app và nối hai server
+MCP vào chính nó. Dán lại đúng đoạn này về sau là **cập nhật** lên bản mới.
 
 ```text
-Cài MagicPic từ mã nguồn trên máy này và nối nó với chính bạn qua MCP. Làm từng bước, kiểm tra
-kết quả từng bước, và hỏi tôi trước khi cài phần mềm hệ thống hoặc chạy gì với quyền quản trị.
+Cài và mở MagicPic trên máy này, rồi nối nó với chính bạn qua MCP để tôi chỉnh ảnh bằng cách
+nói chuyện với bạn.
 
-1. Kiểm tra git, Rust (cargo/rustc 1.95 trở lên). Trên Windows còn cần Visual Studio Build Tools
-   với workload "Desktop development with C++". Thiếu gì thì đề xuất lệnh cài (Windows:
-   winget install Git.Git, Rustlang.Rustup, Microsoft.VisualStudio.2022.BuildTools) và chờ tôi đồng ý.
-2. git clone https://github.com/vansyson1308/vansysoneditphoto magicpic
-3. Trong thư mục magicpic: cargo install --path apps/magicpic-cli --locked
-   (10–40 phút tùy máy; nếu Windows báo "An Application Control policy has blocked this file",
-   dừng lại và đọc mục Smart App Control trong docs/development.md).
-4. Tạo thư mục ảnh riêng: Windows C:\Users\<tên>\Pictures\MagicPic, macOS/Linux ~/Pictures/MagicPic.
-   Chỉ cấp quyền cho đúng thư mục này, không cấp cả ổ đĩa hay thư mục home.
-5. Đăng ký MCP server tên "magicpic" chạy: <đường dẫn magicpic-cli> mcp
-   --automation-read-root <thư mục ảnh> --automation-write-root <thư mục ảnh>
-   Claude Code: claude mcp add --transport stdio --scope user magicpic -- <lệnh và tham số trên>
-   Codex: codex mcp add magicpic -- <lệnh và tham số trên>, rồi trong ~/.codex/config.toml
-   đặt tool_timeout_sec = 300 cho [mcp_servers.magicpic].
-6. Kiểm tra: liệt kê công cụ của server magicpic, rồi gọi files_list. Báo tôi đường dẫn file
-   chạy, thư mục ảnh và lệnh đã dùng để đăng ký.
-Hướng dẫn chi tiết: docs/vi/cai-dat-va-ket-noi.md và docs/vi/art-of-seeing-va-mcp.md trong repo.
+Mã nguồn: https://github.com/vansyson1308/vansysoneditphoto
+Làm đúng theo hướng dẫn dành cho agent:
+https://raw.githubusercontent.com/vansyson1308/vansysoneditphoto/main/docs/agent-setup.md
+Nếu không đọc được trang đó, hãy clone repo theo bước 2 của hướng dẫn rồi đọc
+docs/agent-setup.md trong bản clone.
+
+Hỏi tôi trước khi cài phần mềm hệ thống hoặc dùng quyền quản trị. Chỉ cấp quyền cho một thư mục
+ảnh. Không in token ra màn hình. Nói với tôi bằng tiếng Việt. Cuối cùng báo lại những gì đã làm
+và câu tôi cần nói sau khi khởi động lại bạn.
 ```
 
-Sau khi agent báo xong, **khởi động lại** Claude Code hoặc Codex để nó nạp server mới.
-Với **Claude Desktop** (ứng dụng chat), bạn tự thêm cấu hình ở mục 3.
+Các bước chi tiết nằm trong [`docs/agent-setup.md`](../agent-setup.md), một trang tiếng Anh
+viết cho agent. Prompt ngắn vì mọi chi tiết nằm trong repo: khi hướng dẫn được sửa, prompt vẫn
+giữ nguyên.
+
+Agent xong việc thì:
+
+1. **Khởi động lại** Claude Code hoặc Codex để nó nạp hai server: `magicpic` (chỉnh file trong
+   thư mục ảnh, không cần mở app) và `magicpic-app` (điều khiển cửa sổ MagicPic đang mở, bạn
+   xem trực tiếp).
+2. Chép ảnh vào thư mục ảnh (mặc định `Pictures\MagicPic` trong thư mục người dùng), rồi nói
+   chẳng hạn: *"Mở ảnh mới nhất trong thư mục MagicPic trong app và cho tôi xem."*
+3. Lần sau muốn mở app: chạy launcher mà agent đã tạo (`.magicpic\start-magicpic` trong thư mục
+   người dùng), hoặc nhờ agent mở giúp.
+
+Codex có thể xin phép truy cập mạng để tải mã nguồn: hãy đồng ý. Với **Claude Desktop** (ứng
+dụng chat), agent sẽ đưa bạn đoạn cấu hình để tự dán vào Settings › Developer › Edit Config.
 
 ## 3. Tự cài bằng tay (Windows)
 
