@@ -384,7 +384,8 @@ pub(crate) fn relaunch(was: Option<&Running>) -> Result<String> {
         }
         let family = msix_family(&text).unwrap_or_else(|| DEFAULT_MSIX_FAMILY.into());
         let target = format!(r"shell:AppsFolder\{family}!Claude");
-        spawn_detached(Command::new("explorer.exe").arg(&target).stdout(Stdio::null()).stderr(Stdio::null())).map_err(|e| CliError::Other(format!("could not start Claude ({target}): {e}")))?;
+        spawn_detached(Command::new("explorer.exe").arg(&target).stdout(Stdio::null()).stderr(Stdio::null()))
+            .map_err(|e| CliError::Other(format!("could not start Claude ({target}): {e}")))?;
         Ok(target)
     } else if cfg!(target_os = "macos") {
         Command::new("open").args(["-a", "Claude"]).status().map_err(|e| CliError::Other(format!("open -a Claude: {e}")))?;

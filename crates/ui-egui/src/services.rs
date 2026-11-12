@@ -138,9 +138,25 @@ mod format_choice_tests {
         let base = ExportSettings::default();
         let s = choices.apply(base.clone());
         assert_eq!((s.jpeg_quality, s.webp_quality, s.webp_lossless, s.pcraft_full_composite), (Some(95), Some(95), false, true));
-        assert_eq!(ExportSettings { jpeg_quality: base.jpeg_quality, webp_quality: base.webp_quality, webp_lossless: base.webp_lossless, pcraft_full_composite: base.pcraft_full_composite, ..s }, base, "nothing else changes");
+        assert_eq!(
+            ExportSettings {
+                jpeg_quality: base.jpeg_quality,
+                webp_quality: base.webp_quality,
+                webp_lossless: base.webp_lossless,
+                pcraft_full_composite: base.pcraft_full_composite,
+                ..s
+            },
+            base,
+            "nothing else changes"
+        );
         assert_eq!(FormatChoices::from_params(&json!({}), "app.save").unwrap(), FormatChoices::default());
-        for bad in [json!({"exportQuality": 0}), json!({"exportQuality": 101}), json!({"exportQuality": 9.5}), json!({"exportQuality": "95"}), json!({"pcraftFullComposite": 1})] {
+        for bad in [
+            json!({"exportQuality": 0}),
+            json!({"exportQuality": 101}),
+            json!({"exportQuality": 9.5}),
+            json!({"exportQuality": "95"}),
+            json!({"pcraftFullComposite": 1}),
+        ] {
             assert!(FormatChoices::from_params(&bad, "app.save").is_err(), "{bad}");
         }
         let mut step = json!({});
