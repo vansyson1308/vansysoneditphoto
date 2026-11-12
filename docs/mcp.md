@@ -95,7 +95,14 @@ headless CLI file access.
 
 A client has the full rights of the roots it is given: it can read any file below the read
 root, and `doc_save`, `doc_export` and the export tools can create files anywhere below the
-write root. `doc_save` and `doc_export` replace an existing file only when its extension is an
+write root. A folder in the path that is not there yet is created, with its missing ancestors,
+through the write root's own directory handle: saving to `results/photo.jpg` makes `results`
+inside the write root, since an agent has no tool that makes a folder. That never reaches outside
+the root (`..`, absolute paths elsewhere and links leading out are refused before anything is
+made), and a path component that exists but is not a folder (`notes.txt/out.png`) is an error.
+A save that fails after its folder was made (an encoder error, a full disk) leaves that empty folder.
+Bridge mode behaves the same: the desktop app writes through the same `AuthorizedWorkspace`.
+`doc_save` and `doc_export` replace an existing file only when its extension is an
 image or document format MagicPic writes (PNG, JPEG, TIFF, PSD, PSB, .pcraft, OpenRaster,
 PDF, …) or its bytes are an image; anything else (`src/main.rs`, `.env`) is refused and left
 untouched. The multi-file exports (layers, data sets) never replace a file. An agent reads

@@ -427,7 +427,7 @@ async fn bad_files_and_refused_writes_are_errors_that_keep_the_session() {
     // The session still works.
     json_of(&call(&client, "doc_open", json!({"path": "photo.png"})).await);
     // Exports that may not be written say so and write nothing.
-    for path in ["../out.png", "/tmp/pc-seeing-outside.png", "nodir/out.png", "notes.txt"] {
+    for path in ["../out.png", "/tmp/pc-seeing-outside.png", "notes.txt/out.png", "notes.txt"] {
         let e = error_of(&call(&client, "doc_export", json!({"path": path})).await);
         assert!(!e.contains("verified"), "{path}: {e}");
     }
@@ -443,6 +443,72 @@ async fn bad_files_and_refused_writes_are_errors_that_keep_the_session() {
     assert!(error_of(&call(&client, "doc_export", json!({"path": "second.png"})).await).contains("write authority is absent"));
     assert!(!ws.0.join("second.png").exists());
     client.cancel().await.unwrap();
+}
+
+/// "Export to `ket-qua/phong-canh.jpg` and save the project as `ket-qua/phong-canh.pcraft`":
+/// an agent has no tool that makes a folder, so saving into one that is not there yet makes it
+/// inside the write root, and the reply is verified on disk as for any other save.
+#[tokio::test(flavor = "multi_thread")]
+async fn saves_into_a_new_folder_make_it_inside_the_write_root() {
+    let ws = Workspace::new("new-folder");
+    ws.photo("photo.png");
+    let client = connect(ws.server()).await;
+    json_of(&call(&client, "doc_open", json!({"path": "photo.png"})).await);
+    for (tool, path) in [("doc_export", "new/sub/out.png"), ("doc_save", "new/sub/out.pcraft"), ("doc_export", "ket-qua/phong-canh.jpg")] {
+        let reply = json_of(&call(&client, tool, json!({"path": path})).await);
+        let on_disk = std::fs::metadata(ws.0.join(path)).unwrap_or_else(|e| panic!("{tool} {path}: {e}"));
+        assert!(on_disk.is_file(), "{tool} {path}");
+        assert_eq!(reply["verified"], true, "{tool} {path}: {reply}");
+        assert_eq!(reply["bytes"].as_u64(), Some(on_disk.len()), "{tool} {path}: {reply}");
+        let absolute = std::path::PathBuf::from(reply["absolutePath"].as_str().unwrap());
+        assert!(absolute.is_absolute(), "{reply}");
+        assert_eq!(std::fs::canonicalize(&absolute).unwrap(), std::fs::canonicalize(ws.0.join(path)).unwrap());
+    }
+    let flat = magicpic_codecs::decode(&std::fs::read(ws.0.join("new/sub/out.png")).unwrap()).unwrap();
+    assert_eq!(flat.dimensions(), (120, 80));
+    client.cancel().await.unwrap();
+}
+
+/// Making folders does not widen what may be written: traversal, absolute paths elsewhere and
+/// links out of the root are still refused, a file where a folder should be is an error, and
+/// none of them creates anything.
+#[tokio::test(flavor = "multi_thread")]
+async fn new_folders_are_never_made_outside_the_write_root() {
+    let ws = Workspace::new("folder-escape");
+    ws.photo("photo.png");
+    std::fs::write(ws.0.join("notes.txt"), "keep me").unwrap();
+    let base = ws.0.parent().unwrap().to_path_buf();
+    let escape = format!("pc-seeing-{}-escape", std::process::id());
+    let outside = base.join(format!("pc-seeing-{}-outside", std::process::id()));
+    let _ = std::fs::remove_dir_all(base.join(&escape));
+    let _ = std::fs::remove_dir_all(&outside);
+    std::fs::create_dir_all(&outside).unwrap();
+    let absolute = outside.join("abs/x.png");
+    // Links out of the root, where the platform makes them without extra rights.
+    #[cfg(unix)]
+    let links = {
+        std::os::unix::fs::symlink(&outside, ws.0.join("link")).unwrap();
+        vec!["link/new/x.png", "link/x.png"]
+    };
+    #[cfg(not(unix))]
+    let links: Vec<&str> = Vec::new();
+    let refused: Vec<String> = [format!("../{escape}/x.png"), absolute.to_str().unwrap().to_owned(), "notes.txt/x.png".into(), "notes.txt/sub/x.png".into()]
+        .into_iter()
+        .chain(links.into_iter().map(String::from))
+        .collect();
+    let client = connect(ws.server()).await;
+    json_of(&call(&client, "doc_open", json!({"path": "photo.png"})).await);
+    for path in &refused {
+        for tool in ["doc_export", "doc_save"] {
+            let e = error_of(&call(&client, tool, json!({"path": path})).await);
+            assert!(!e.contains("verified"), "{tool} {path}: {e}");
+        }
+    }
+    assert!(!base.join(&escape).exists(), "a folder was made beside the root");
+    assert_eq!(std::fs::read_dir(&outside).unwrap().count(), 0, "something was made outside the root");
+    assert_eq!(std::fs::read_to_string(ws.0.join("notes.txt")).unwrap(), "keep me");
+    client.cancel().await.unwrap();
+    std::fs::remove_dir_all(&outside).unwrap();
 }
 
 /// An app stand-in for bridge mode: the real handshake, then every control request answered by

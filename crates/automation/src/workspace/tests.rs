@@ -317,12 +317,44 @@ fn read_and_write_authority_are_separate() {
     write_only.write("written.txt", b"ok").unwrap();
 }
 
+/// An agent has no tool that makes a folder, so a save into one that is not there yet makes it
+/// (and its missing ancestors) inside the write root, then writes as usual.
 #[test]
-fn missing_parent_is_a_stable_error_before_any_file_is_created() {
+fn missing_parent_folders_are_created_inside_the_write_root() {
     let (inside, _, workspace) = roots("missing-parent");
-    let error = workspace.write("missing/output.txt", b"x").unwrap_err().to_string();
-    assert!(error.contains("automation write"), "{error}");
-    assert!(!inside.join("missing").exists());
+    workspace.write("missing/deeper/output.png", b"x").unwrap();
+    assert_eq!(std::fs::read(inside.join("missing/deeper/output.png")).unwrap(), b"x");
+    assert!(temp_files(&inside.join("missing/deeper")).is_empty());
+    // An existing folder is used as it is; the streamed route makes folders too.
+    workspace.write_stream("missing/streamed.png", &mut |w| w.write_all(b"streamed")).unwrap();
+    assert_eq!(std::fs::read(inside.join("missing/streamed.png")).unwrap(), b"streamed");
+    // A read-only launch still writes nothing, folders included.
+    let read_only = AuthorizedWorkspace::new(Some(&inside), None).unwrap();
+    assert!(read_only.write("ro-new/out.png", b"x").is_err());
+    assert!(!inside.join("ro-new").exists());
+}
+
+/// A component that exists but is not a folder is an error, never replaced or written through.
+#[test]
+fn a_file_in_place_of_a_parent_folder_is_an_error() {
+    let (inside, _, workspace) = roots("file-parent");
+    std::fs::write(inside.join("notes.txt"), b"keep me").unwrap();
+    for path in ["notes.txt/out.png", "notes.txt/sub/out.png"] {
+        let error = workspace.write(path, b"x").unwrap_err().to_string();
+        assert!(error.contains("automation write"), "{path}: {error}");
+    }
+    assert_eq!(std::fs::read(inside.join("notes.txt")).unwrap(), b"keep me");
+}
+
+/// Making a folder never follows a link out of the root: nothing appears outside it.
+#[cfg(unix)]
+#[test]
+fn missing_folders_behind_a_symlink_out_of_the_root_are_not_created() {
+    let (inside, outside, workspace) = roots("symlink-mkdir");
+    std::os::unix::fs::symlink(&outside, inside.join("link")).unwrap();
+    assert!(workspace.write("link/new/out.png", b"blocked").is_err());
+    assert!(workspace.write("link/out.png", b"blocked").is_err());
+    assert_eq!(std::fs::read_dir(&outside).unwrap().count(), 0);
 }
 
 #[cfg(unix)]
@@ -411,9 +443,10 @@ fn windows_unc_root_writes_and_exports_when_supported() {
     workspace.write_stream("sub/streamed.png", &mut |w| w.write_all(&[7u8; 1 << 20])).unwrap();
     assert_eq!(std::fs::metadata(inside.join("sub/streamed.png")).unwrap().len(), 1 << 20);
     assert!(temp_files(&inside.join("sub")).is_empty());
-    // A missing parent is still an error, with nothing left behind, as on every other root.
-    assert!(workspace.write("missing/out.png", b"no parent").is_err());
-    assert!(!inside.join("missing").exists());
+    // A missing parent is made through the pinned walk, as on every other root.
+    workspace.write("missing/deeper/out.png", b"new folder").unwrap();
+    assert_eq!(std::fs::read(inside.join("missing/deeper/out.png")).unwrap(), b"new folder");
+    assert!(temp_files(&inside.join("missing/deeper")).is_empty());
 
     let mut export = workspace.export_sequence("frames/nested").unwrap();
     export.write("clip_0000.png", b"frame").unwrap();
