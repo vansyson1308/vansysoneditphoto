@@ -23,7 +23,10 @@ if [ $# -ge 1 ]; then
 else
   bins=$t/fake
   mkdir -p "$bins"
+  # The stand-ins expand their variables when they run, not here: single quotes on purpose.
+  # shellcheck disable=SC2016
   printf '#!/bin/sh\necho magicpic "$@"\n' > "$bins/magicpic"
+  # shellcheck disable=SC2016
   printf '#!/bin/sh\nprintf "{\\"fake\\":true,\\"home\\":\\"%%s\\"}\\n" "$MAGICPIC_HOME"\n' > "$bins/magicpic-cli"
   real=
 fi
@@ -33,7 +36,7 @@ grep -q "  magicpic-$platform.tar.gz\$" "$t/release/SHA256SUMS" || fail "SHA256S
 (cd "$t/release" && if command -v sha256sum >/dev/null 2>&1; then sha256sum -c SHA256SUMS; else shasum -a 256 -c SHA256SUMS; fi) >/dev/null || fail "SHA256SUMS does not verify"
 
 # 1. A good archive installs both programs; stdout is JSON.
-export HOME=$t/home
+export HOME="$t/home"
 mkdir -p "$HOME"
 MAGICPIC_HOME=$t/home/.magicpic sh "$here/install.sh" --from "$t/release" --photos "$t/home/My Photos" > "$t/out.json" 2> "$t/err.txt" || { cat "$t/err.txt" >&2; fail "install failed"; }
 for b in magicpic magicpic-cli; do [ -x "$t/home/.magicpic/bin/$b" ] || fail "$b not installed"; done

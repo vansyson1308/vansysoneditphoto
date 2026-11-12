@@ -52,7 +52,10 @@ New-Item -ItemType Directory -Force -Path $bin | Out-Null
 # Older .NET defaults refuse GitHub's TLS 1.2; setting it is refused in Constrained Language
 # Mode, where curl.exe is used anyway.
 try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor 3072 } catch { }
-$curl = Get-Command curl.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+# Windows' own curl.exe and tar.exe (System32), not whatever PATH finds first: Git for Windows'
+# GNU tar reads `C:\…` as a remote host ("Cannot connect to C: resolve failed").
+$system32 = Join-Path $env:SystemRoot 'System32'
+$curl = Get-Item -LiteralPath (Join-Path $system32 'curl.exe') -ErrorAction SilentlyContinue
 
 function Fetch([string]$Name) {
     $target = Join-Path $work $Name
@@ -66,7 +69,7 @@ function Fetch([string]$Name) {
     else { $url = "https://github.com/$Repo/releases/download/$Version/$Name" }
     Say "downloading $url"
     if ($curl) {
-        & $curl.Source -fsSL --retry 3 -o $target $url
+        & $curl.FullName -fsSL --retry 3 -o $target $url
         if ($LASTEXITCODE -ne 0) { Fail "download failed: $url" }
     } else {
         try { Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $target } catch { Fail "download failed: $url ($_)" }
@@ -89,13 +92,16 @@ Say "checksum ok ($actual)"
 
 $unpacked = Join-Path $work 'x'
 New-Item -ItemType Directory -Force -Path $unpacked | Out-Null
-$tar = Get-Command tar.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+$tar = Get-Item -LiteralPath (Join-Path $system32 'tar.exe') -ErrorAction SilentlyContinue
+$unpackedOk = $false
 if ($tar) {
-    & $tar.Source -xf $zip -C $unpacked
-    if ($LASTEXITCODE -ne 0) { Fail "could not unpack $archive" }
-} else {
-    Expand-Archive -Force -Path $zip -DestinationPath $unpacked
+    & $tar.FullName -xf $zip -C $unpacked
+    $unpackedOk = ($LASTEXITCODE -eq 0)
 }
+if (-not $unpackedOk) {
+    try { Expand-Archive -Force -Path $zip -DestinationPath $unpacked; $unpackedOk = $true } catch { }
+}
+if (-not $unpackedOk) { Fail "could not unpack $archive" }
 
 foreach ($name in @('magicpic.exe', 'magicpic-cli.exe')) {
     $source = Join-Path $unpacked $name
