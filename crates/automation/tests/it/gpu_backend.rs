@@ -1,5 +1,8 @@
 //! Tests for the headless GPU backend, capability isolation, cache mutation, and CPU/GPU parity.
 
+// Every test here opens a wgpu device, so each takes `gpu_lock()` first (`cargo test` runs them on
+// threads of one process) and `.config/nextest.toml` puts them in the capped `gpu` group (nextest
+// runs each in its own process). See `magicpic_testkit::gpu`.
 #[cfg(all(feature = "gpu", not(target_arch = "wasm32")))]
 mod tests {
     use std::fs;
@@ -27,6 +30,7 @@ mod tests {
 
     #[test]
     fn headless_with_gpu_renders_png_full_and_scaled() {
+        let _gpu = magicpic_testkit::gpu_lock();
         let mut h = Headless::trusted_local().with_gpu();
         let doc = make_test_doc(120, 80, SampleType::U8);
         h.session.open_document(doc, None);
@@ -53,6 +57,7 @@ mod tests {
 
     #[test]
     fn capability_scoped_writes_preserved_with_gpu() {
+        let _gpu = magicpic_testkit::gpu_lock();
         let dir = std::env::temp_dir().join(format!("magicpic-cap-test-{}", std::process::id()));
         let _ = fs::create_dir_all(&dir);
         let workspace = AuthorizedWorkspace::new(Some(&dir), Some(&dir)).expect("authorized workspace");
@@ -76,6 +81,7 @@ mod tests {
 
     #[test]
     fn cache_invalidation_across_mutations_and_distinct_docs() {
+        let _gpu = magicpic_testkit::gpu_lock();
         let mut h = Headless::trusted_local().with_gpu();
 
         // 1. Render Doc 1
@@ -121,6 +127,7 @@ mod tests {
 
     #[test]
     fn cpu_gpu_direct_parity_and_matrix_verification() {
+        let _gpu = magicpic_testkit::gpu_lock();
         let mut gpu_renderer = match GpuRenderer::new() {
             Ok(r) => r,
             Err(e) => {
@@ -186,6 +193,7 @@ mod tests {
 
     #[test]
     fn high_depth_exports_fall_back_to_the_cpu_compositor() {
+        let _gpu = magicpic_testkit::gpu_lock();
         let mut gpu_renderer = match GpuRenderer::new() {
             Ok(r) => r,
             Err(e) => {
@@ -208,6 +216,7 @@ mod tests {
 
     #[test]
     fn gpu_renderer_diagnostics_and_bounded_storage() {
+        let _gpu = magicpic_testkit::gpu_lock();
         let mut r = match GpuRenderer::new() {
             Ok(r) => r,
             Err(e) => {
@@ -233,6 +242,7 @@ mod tests {
 
     #[test]
     fn gpu_renderer_preserves_sink_errors_and_cancellation() {
+        let _gpu = magicpic_testkit::gpu_lock();
         let mut gpu_renderer = match GpuRenderer::new() {
             Ok(r) => r,
             Err(e) => {
@@ -255,6 +265,7 @@ mod tests {
 
     #[test]
     fn gpu_renderer_bounded_readback_staging() {
+        let _gpu = magicpic_testkit::gpu_lock();
         let mut gpu_renderer = match GpuRenderer::new() {
             Ok(r) => r,
             Err(e) => {

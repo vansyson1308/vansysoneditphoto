@@ -4269,6 +4269,7 @@ dependencies = [
  "magicpic-psd",
  "magicpic-raster",
  "magicpic-raw",
+ "magicpic-testkit",
  "pollster 1.0.1",
  "rmcp",
  "rustix 1.1.5",
