@@ -84,7 +84,9 @@ Hai chế độ của MagicPic:
 
 ## 4. Cài đặt trên Windows
 
-Chưa có bản cài sẵn cho nhánh này, nên cần build từ mã nguồn một lần (khoảng 20–40 phút).
+Chưa có bản cài sẵn, nên cần build từ mã nguồn một lần (10–40 phút tùy máy). Nên cài về máy hay
+dùng phiên trên cloud, cách tải mã nguồn, đoạn lời nhắn để Claude Code hoặc Codex tự cài, và cách
+cập nhật: xem [`cai-dat-va-ket-noi.md`](cai-dat-va-ket-noi.md).
 
 1. Cài **Rust** theo [hướng dẫn của Microsoft](https://learn.microsoft.com/en-us/windows/dev-environment/rust/setup):
    Visual Studio Build Tools với workload *Desktop development with C++*, rồi `rustup`.

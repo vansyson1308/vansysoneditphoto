@@ -104,6 +104,31 @@ Setup for Claude Code, Claude Desktop and Codex, and example prompts, are in
 
 ## Get started
 
+### With an agent
+
+On a new machine, paste this into Claude Code or Codex. The agent installs what is missing
+(asking first), builds MagicPic, opens it and connects it to itself; pasting it again later
+updates.
+
+```text
+Install and open MagicPic on this machine, then connect it to yourself over MCP so I can edit
+photos by talking to you.
+
+Source: https://github.com/vansyson1308/vansysoneditphoto
+Follow the agent instructions exactly:
+https://raw.githubusercontent.com/vansyson1308/vansysoneditphoto/main/docs/agent-setup.md
+If you cannot read that page, clone the repository as in step 2 there and read
+docs/agent-setup.md in the clone.
+
+Ask me before installing system software or using administrator rights. Grant only one photo
+folder. Never print the token. At the end, tell me what you did and what to say after I
+restart you.
+```
+
+The steps it follows are in [`docs/agent-setup.md`](docs/agent-setup.md).
+
+### By hand
+
 You need Rust (stable) and, on Linux, the windowing and GTK development packages listed in
 [`docs/development.md`](docs/development.md#prerequisites).
 
@@ -128,6 +153,7 @@ magicpic-cli --help
 
 | Read | For |
 |---|---|
+| [`docs/vi/cai-dat-va-ket-noi.md`](docs/vi/cai-dat-va-ket-noi.md) | Installing in Vietnamese: local install or a cloud session, a prompt that has Claude Code or Codex install it, updating |
 | [`docs/vi/art-of-seeing-va-mcp.md`](docs/vi/art-of-seeing-va-mcp.md) | User guide in Vietnamese: Seeing, connecting Claude and Codex, example prompts, what was verified |
 | [`docs/seeing.md`](docs/seeing.md) | The observation views, frames, variants, recipes and transactions |
 | [`docs/mcp.md`](docs/mcp.md) | The MCP tools, folders and permissions, guarded and atomic edits |

@@ -70,10 +70,37 @@ Codex vào rồi nói điều bạn muốn bằng lời thường.
 - **Chế độ bridge** sửa chính tài liệu đang mở trong app: bạn thấy ngay và chen vào được.
 - Chỉ đọc và ghi trong thư mục bạn cấp; chỉ báo "đã lưu" sau khi tìm thấy file trên đĩa.
 
-Hướng dẫn cài cho Claude Code, Claude Desktop và Codex, cùng các câu lệnh mẫu, nằm ở
+Cài về máy và nối với Claude hoặc Codex (kèm một đoạn lời nhắn để agent tự cài):
+[`docs/vi/cai-dat-va-ket-noi.md`](docs/vi/cai-dat-va-ket-noi.md). Cấu hình cho Claude Code,
+Claude Desktop và Codex, cùng các câu lệnh mẫu:
 [`docs/vi/art-of-seeing-va-mcp.md`](docs/vi/art-of-seeing-va-mcp.md).
 
 ## Bắt đầu
+
+### Nhờ agent cài
+
+Trên máy mới, dán đoạn này vào Claude Code hoặc Codex. Agent sẽ cài thứ còn thiếu (có hỏi bạn
+trước), build MagicPic, mở app và tự nối nó vào chính agent. Về sau, dán lại đúng đoạn này là
+cập nhật.
+
+```text
+Cài và mở MagicPic trên máy này, rồi nối nó với chính bạn qua MCP để tôi chỉnh ảnh bằng cách
+nói chuyện với bạn.
+
+Mã nguồn: https://github.com/vansyson1308/vansysoneditphoto
+Làm đúng theo hướng dẫn dành cho agent:
+https://raw.githubusercontent.com/vansyson1308/vansysoneditphoto/main/docs/agent-setup.md
+Nếu không đọc được trang đó, hãy clone repo theo bước 2 của hướng dẫn rồi đọc
+docs/agent-setup.md trong bản clone.
+
+Hỏi tôi trước khi cài phần mềm hệ thống hoặc dùng quyền quản trị. Chỉ cấp quyền cho một thư mục
+ảnh. Không in token ra màn hình. Nói với tôi bằng tiếng Việt. Cuối cùng báo lại những gì đã làm
+và câu tôi cần nói sau khi khởi động lại bạn.
+```
+
+Giải thích và cách cài bằng tay: [`docs/vi/cai-dat-va-ket-noi.md`](docs/vi/cai-dat-va-ket-noi.md).
+
+### Tự cài
 
 Cần Rust (stable); trên Linux cần thêm các gói phát triển nêu trong
 [`docs/development.md`](docs/development.md#prerequisites).
