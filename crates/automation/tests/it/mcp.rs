@@ -42,9 +42,12 @@ fn text(r: &CallToolResult) -> String {
     r.content.iter().filter_map(|c| c.as_text()).map(|t| t.text.clone()).collect::<Vec<_>>().join("\n")
 }
 
+/// The tool's result: its first text block. `command_run` adds a second block naming the
+/// document the command left active (checked in the crate's `server::agent_tests`).
 fn json_of(r: &CallToolResult) -> Value {
     assert_ne!(r.is_error, Some(true), "tool error: {}", text(r));
-    serde_json::from_str(&text(r)).unwrap_or_else(|e| panic!("not JSON ({e}): {}", text(r)))
+    let first = r.content.iter().find_map(|c| c.as_text()).map(|t| t.text.clone()).unwrap_or_default();
+    serde_json::from_str(&first).unwrap_or_else(|e| panic!("not JSON ({e}): {}", text(r)))
 }
 
 fn tmp(name: &str) -> std::path::PathBuf {
@@ -351,22 +354,32 @@ async fn preview_budget_failure_preserves_the_mcp_session() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn bridge_doc_save_rejects_headless_only_options_instead_of_saving_with_defaults() {
-    // Bridge mode forwards only the path to the running app: quality/format/tiffLayers/index
-    // must be refused up front (no bridge connection needed for that) rather than silently
-    // saving with the app's current settings.
+    // Bridge mode forwards this save's answers to the app (quality, TIFF layers, the .pcraft full
+    // composite, the document), so those reach the connection, which is not there. DPX bits, PDF
+    // spot plates and a `format` the path's extension contradicts are refused up front (no bridge
+    // connection needed for that) rather than silently saving with other settings.
     let server = MagicpicMcp::bridge("127.0.0.1:1", &"a".repeat(64)).unwrap();
     let client = connect(server).await;
+    for (params, expected) in [
+        (json!({"path": "out.dpx", "dpxBits": 10}), "headless"),
+        (json!({"path": "out.pdf", "pdfSpotPlates": false}), "headless"),
+        (json!({"path": "out.png", "format": "jpg"}), "extension of `path` picks the format"),
+        (json!({"format": "png"}), "extension of `path` picks the format"),
+    ] {
+        let r = call(&client, "doc_save", params.clone()).await;
+        assert_eq!(r.is_error, Some(true), "{params}: {:?}", text(&r));
+        assert!(text(&r).contains(expected), "{params}: {}", text(&r));
+    }
     for params in [
         json!({"path": "out.jpg", "quality": 50}),
         json!({"path": "out.png", "format": "png"}),
         json!({"path": "out.tif", "tiffLayers": true}),
-        json!({"path": "out.pcraft", "pcraftFullComposite": true}),
         json!({"path": "out.pcraft", "pcraftFullComposite": false}),
         json!({"path": "out.pcraft", "index": 0}),
     ] {
         let r = call(&client, "doc_save", params.clone()).await;
         assert_eq!(r.is_error, Some(true), "{params}: {:?}", text(&r));
-        assert!(text(&r).contains("headless"), "{params}: {}", text(&r));
+        assert!(text(&r).contains("MagicPic app is not running"), "{params}: forwarded, so it needs the app: {}", text(&r));
     }
 }
 
@@ -1518,6 +1531,7 @@ async fn convention_tool_hints_match_what_each_tool_does() {
     let expected = [
         ("command_list", READ),
         ("doc_inspect", READ),
+        ("doc_histogram", READ),
         ("session_list", READ),
         ("render_preview", READ),
         ("doc_render_preview", READ),

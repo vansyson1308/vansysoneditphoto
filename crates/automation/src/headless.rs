@@ -208,6 +208,7 @@ impl Headless {
         warnings.extend(magicpic_engine::type_extra_cmds::missing_font_warnings(&d.doc));
         Ok(json!({
             "index": index,
+            "id": d.doc.id.0,
             "name": d.doc.name,
             "width": d.doc.size.width,
             "height": d.doc.size.height,

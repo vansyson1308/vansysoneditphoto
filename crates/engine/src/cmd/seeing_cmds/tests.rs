@@ -558,3 +558,123 @@ fn misspelt_parameters_are_errors() {
     }
     assert_eq!(s.documents().len(), 1);
 }
+
+/// `layer` / `solo` (agent setup report, P1.9): one layer seen alone, or with what is below it,
+/// without the visibility or blend-mode toggling (and the undo steps) agents used before.
+#[test]
+fn a_layer_is_seen_alone_or_with_the_layers_below_and_nothing_changes() {
+    let mut s = picture(8);
+    // A hidden Screen layer holding one white square, and an opaque green layer above it all.
+    s.execute("layer.new.layer", json!({"name": "Stars"})).unwrap();
+    s.execute("layer.new.layer", json!({"name": "Cover"})).unwrap();
+    s.edit("Test Layers", |doc, _| {
+        let fmt = doc.pixel_format();
+        let b = doc.bounds();
+        let (w, h) = (b.width() as usize, b.height() as usize);
+        let mut stars = Vec::new();
+        let mut cover = Vec::new();
+        for y in 0..h {
+            for x in 0..w {
+                let star = (40..48).contains(&x) && (20..28).contains(&y);
+                stars.extend(magicpic_raster::from_rgba(&fmt, if star { [1.0, 1.0, 1.0, 1.0] } else { [0.0, 0.0, 0.0, 0.0] }));
+                cover.extend(magicpic_raster::from_rgba(&fmt, [0.0, 1.0, 0.0, 1.0]));
+            }
+        }
+        let n = doc.layers.len();
+        let star_layer = doc.layers.get_mut(n - 2).ok_or(EngineError::NoDocument)?;
+        star_layer.visible = false;
+        star_layer.blend = magicpic_color::BlendMode::Screen;
+        crate::pixels_mut(star_layer)?.write_region(b, &stars);
+        let cover_layer = doc.layers.get_mut(n - 1).ok_or(EngineError::NoDocument)?;
+        crate::pixels_mut(cover_layer)?.write_region(b, &cover);
+        Ok(())
+    })
+    .unwrap();
+    let stars = s.documents()[0].doc.layers[1].id.0;
+    let before = fingerprint(&s, 0);
+    let journal = s.journal.len();
+    let at = |v: &Value, x: usize, y: usize| -> [u8; 4] {
+        let px = decode(v).to_rgba8();
+        let i = (y * 96 + x) * 4;
+        [px[i], px[i + 1], px[i + 2], px[i + 3]]
+    };
+
+    let alone = s.execute("seeing.view", json!({"layer": stars, "maxSide": 96})).unwrap();
+    assert_eq!(alone["layer"], json!({"id": stars, "name": "Stars", "solo": true}));
+    assert_eq!(at(&alone, 44, 24), [255, 255, 255, 255], "the star, though the layer is hidden");
+    assert_eq!(at(&alone, 80, 50)[3], 0, "nothing else: transparent");
+
+    let below = s.execute("seeing.view", json!({"layer": stars, "solo": false, "maxSide": 96})).unwrap();
+    assert_eq!(at(&below, 80, 50), [217, 217, 217, 255], "the background below, not the green cover above");
+    assert_eq!(at(&below, 44, 24), [255, 255, 255, 255], "Screen white over the picture");
+
+    assert_eq!(fingerprint(&s, 0), before, "a layer view edited the document");
+    assert_eq!(s.journal.len(), journal);
+    let layer = &s.documents()[0].doc.layers[1];
+    assert!(!layer.visible && layer.blend == magicpic_color::BlendMode::Screen, "visibility and blend mode kept");
+
+    for bad in [json!({"layer": 999_999}), json!({"layer": "Stars"}), json!({"solo": true}), json!({"layer": stars, "solo": "yes"})] {
+        assert!(s.execute("seeing.view", bad.clone()).is_err(), "{bad}");
+    }
+}
+
+/// `document.histogram` (agent setup report, P1.10): exact counts and percentiles, so Levels
+/// thresholds come from numbers instead of rounds of guessing.
+#[test]
+fn the_histogram_counts_every_pixel_and_reports_percentiles() {
+    let mut s = picture(8);
+    let before = fingerprint(&s, 0);
+    let h = s.execute("document.histogram", json!({})).unwrap();
+    assert_eq!(h["pixels"], 96 * 64);
+    assert_eq!(h["transparent"], 0);
+    let red = &h["channels"]["red"];
+    // 16×16 red square at 0.9, the rest grey at 0.15 (left) or 0.85 (right).
+    let bins: Vec<u64> = red["bins"].as_array().unwrap().iter().map(|v| v.as_u64().unwrap()).collect();
+    assert_eq!(bins.len(), 256);
+    assert_eq!(bins.iter().sum::<u64>(), 96 * 64);
+    assert_eq!(bins[230], 256, "the red square, 0.9 × 255 rounds to 230");
+    assert_eq!(bins[38] + bins[217], 96 * 64 - 256);
+    // An 8-bit document stores whole levels: 0.15 is 38, 0.9 is 230.
+    assert_eq!(red["min"], 38.0);
+    assert_eq!(red["max"], 230.0);
+    assert_eq!(red["percentiles"]["p99.9"], 230);
+    assert_eq!(red["median"], red["percentiles"]["p50"]);
+    let lum = &h["channels"]["luminosity"];
+    assert!(lum["p90"].is_null() && lum["percentiles"]["p90"].as_u64().is_some());
+    assert_eq!(h["channels"]["alpha"]["min"], 255.0);
+
+    // One channel, one region.
+    let h = s.execute("document.histogram", json!({"channel": "green", "region": {"x": 10, "y": 10, "width": 16, "height": 16}})).unwrap();
+    assert_eq!(h["channels"].as_object().unwrap().len(), 1);
+    assert_eq!(h["channels"]["green"]["max"], 26.0);
+
+    // A layer alone: transparent pixels stay out of the colour channels.
+    s.execute("layer.new.layer", json!({"name": "Dot"})).unwrap();
+    s.edit("Test Dot", |doc, _| {
+        let fmt = doc.pixel_format();
+        let layer = doc.layers.last_mut().ok_or(EngineError::NoDocument)?;
+        crate::pixels_mut(layer)?.write_region(Rect::new(0, 0, 2, 2), &magicpic_raster::from_rgba(&fmt, [1.0, 1.0, 1.0, 1.0]).repeat(4));
+        Ok(())
+    })
+    .unwrap();
+    let dot = s.documents()[0].doc.layers[1].id.0;
+    let before = fingerprint(&s, 0);
+    let h = s.execute("document.histogram", json!({"layer": dot, "channel": "luminosity"})).unwrap();
+    assert_eq!(h["transparent"], 96 * 64 - 4);
+    assert_eq!(h["channels"]["luminosity"]["count"], 4);
+    assert_eq!(h["channels"]["luminosity"]["min"], 255.0);
+    assert_eq!(h["layer"]["solo"], true);
+    assert_eq!(fingerprint(&s, 0), before, "a histogram changed the document");
+
+    for bad in [
+        json!({"channel": "cyan"}),
+        json!({"layer": 999_999}),
+        json!({"solo": false}),
+        json!({"region": {"x": 90, "y": 0, "width": 20, "height": 4}}),
+        json!({"document": 3}),
+        json!({"bins": 64}),
+    ] {
+        assert!(s.execute("document.histogram", bad.clone()).is_err(), "{bad}");
+    }
+    let _ = before;
+}

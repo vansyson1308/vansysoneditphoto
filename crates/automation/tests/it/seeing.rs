@@ -43,9 +43,11 @@ fn text(r: &CallToolResult) -> String {
     r.content.iter().filter_map(|c| c.as_text()).map(|t| t.text.clone()).collect::<Vec<_>>().join("\n")
 }
 
+/// The tool's result: its first text block (`command_run` adds a second naming the document).
 fn json_of(r: &CallToolResult) -> Value {
     assert_ne!(r.is_error, Some(true), "tool error: {}", text(r));
-    serde_json::from_str(&text(r)).unwrap_or_else(|e| panic!("not JSON ({e}): {}", text(r)))
+    let first = r.content.iter().find_map(|c| c.as_text()).map(|t| t.text.clone()).unwrap_or_default();
+    serde_json::from_str(&first).unwrap_or_else(|e| panic!("not JSON ({e}): {}", text(r)))
 }
 
 fn error_of(r: &CallToolResult) -> String {
@@ -596,7 +598,7 @@ async fn a_bridge_without_an_app_fails_instead_of_editing_another_session() {
     ] {
         let r = call(&client, tool, args).await;
         let message = text(&r);
-        assert!(message.contains("cannot connect") && message.contains("not sent"), "{tool}: {message}");
+        assert!(message.contains("MagicPic app is not running") && message.contains("not sent"), "{tool}: {message}");
         if tool == "command_batch" {
             assert_eq!(json_of(&r)["outcome"], "not_run", "nothing was sent, so nothing ran");
         }

@@ -11,7 +11,9 @@ pub(crate) const SAVE_OPTIONS_OPEN: &str = "Answer the TIFF, Targa, DDS or JPEG 
 /// `"jpegFormat"`), TIFF Options (`"tiffCompression"`, `"tiffTransparency"`, `"tiffPyramid"`,
 /// `"tiffLayers"`) and a PSD/PSB's Maximize Compatibility (`"maximizeCompatibility"`). `None`
 /// asks in Save As and takes the default in automation saves, which never prompt (Maximize
-/// Compatibility: Preferences › File Handling decides).
+/// Compatibility: Preferences › File Handling decides). Automation saves (`app.save`) also take
+/// `"exportQuality"` (1–100: JPEG quality, and a lossy WebP at that quality) and
+/// `"pcraftFullComposite"`, for that one save; preferences are never changed.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct FormatChoices {
     pub tga_bits: Option<magicpic_io::TgaBits>,
@@ -19,6 +21,9 @@ pub struct FormatChoices {
     pub jpeg: Option<jpeg_options_ui::JpegChoice>,
     pub tiff: Option<tiff_options_ui::TiffChoice>,
     pub maximize_compatibility: Option<bool>,
+    /// JPEG and lossy WebP quality on the 1–100 scale (the MCP `quality`).
+    pub export_quality: Option<u8>,
+    pub pcraft_full_composite: Option<bool>,
 }
 
 impl FormatChoices {
@@ -30,6 +35,8 @@ impl FormatChoices {
             jpeg: jpeg_options_ui::choice_param(params, cmd)?,
             tiff: tiff_options_ui::choice_param(params, cmd)?,
             maximize_compatibility: maximize_param(params, cmd)?,
+            export_quality: export_quality_param(params, cmd)?,
+            pcraft_full_composite: bool_choice(params, "pcraftFullComposite", cmd)?,
         })
     }
 
@@ -42,6 +49,8 @@ impl FormatChoices {
             jpeg: jpeg_options_ui::recorded_choice(params, cmd)?,
             tiff: tiff_options_ui::choice_param(params, cmd)?,
             maximize_compatibility: maximize_param(params, cmd)?,
+            export_quality: export_quality_param(params, cmd)?,
+            pcraft_full_composite: bool_choice(params, "pcraftFullComposite", cmd)?,
         })
     }
 
@@ -57,10 +66,15 @@ impl FormatChoices {
             Some(t) => t.apply(settings),
             None => settings,
         };
-        match self.jpeg {
+        let settings = match self.jpeg {
             Some(j) => j.apply(settings),
             None => settings,
-        }
+        };
+        let settings = match self.export_quality {
+            Some(q) => ExportSettings { jpeg_quality: Some(q), webp_quality: Some(q), webp_lossless: false, ..settings },
+            None => settings,
+        };
+        ExportSettings { pcraft_full_composite: self.pcraft_full_composite.unwrap_or(settings.pcraft_full_composite), ..settings }
     }
 
     /// Adds the answers to a recorded save step.
@@ -80,6 +94,58 @@ impl FormatChoices {
         if let Some(maximize) = self.maximize_compatibility {
             step["maximizeCompatibility"] = maximize.into();
         }
+        if let Some(q) = self.export_quality {
+            step["exportQuality"] = q.into();
+        }
+        if let Some(full) = self.pcraft_full_composite {
+            step["pcraftFullComposite"] = full.into();
+        }
+    }
+}
+
+/// `"exportQuality"`: a whole number from 1 to 100, or absent.
+fn export_quality_param(params: &Value, cmd: &str) -> Result<Option<u8>, String> {
+    match params.get("exportQuality") {
+        None | Some(Value::Null) => Ok(None),
+        Some(v) => v
+            .as_u64()
+            .filter(|q| (1..=100).contains(q))
+            .and_then(|q| u8::try_from(q).ok())
+            .map(Some)
+            .ok_or_else(|| format!("{cmd}: `exportQuality` must be a whole number from 1 to 100, got {v}")),
+    }
+}
+
+/// An optional boolean answer named `key`.
+fn bool_choice(params: &Value, key: &str, cmd: &str) -> Result<Option<bool>, String> {
+    match params.get(key) {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::Bool(b)) => Ok(Some(*b)),
+        Some(v) => Err(format!("{cmd}: `{key}` must be true or false, got {v}")),
+    }
+}
+
+#[cfg(test)]
+mod format_choice_tests {
+    use super::*;
+    use serde_json::json;
+
+    /// MCP `doc_export {quality}` in bridge mode (#8 of the agent setup report): one save at that
+    /// quality, nothing else changed.
+    #[test]
+    fn export_quality_applies_to_one_save() {
+        let choices = FormatChoices::from_params(&json!({"exportQuality": 95, "pcraftFullComposite": true}), "app.save").unwrap();
+        let base = ExportSettings::default();
+        let s = choices.apply(base.clone());
+        assert_eq!((s.jpeg_quality, s.webp_quality, s.webp_lossless, s.pcraft_full_composite), (Some(95), Some(95), false, true));
+        assert_eq!(ExportSettings { jpeg_quality: base.jpeg_quality, webp_quality: base.webp_quality, webp_lossless: base.webp_lossless, pcraft_full_composite: base.pcraft_full_composite, ..s }, base, "nothing else changes");
+        assert_eq!(FormatChoices::from_params(&json!({}), "app.save").unwrap(), FormatChoices::default());
+        for bad in [json!({"exportQuality": 0}), json!({"exportQuality": 101}), json!({"exportQuality": 9.5}), json!({"exportQuality": "95"}), json!({"pcraftFullComposite": 1})] {
+            assert!(FormatChoices::from_params(&bad, "app.save").is_err(), "{bad}");
+        }
+        let mut step = json!({});
+        choices.record(&mut step);
+        assert_eq!((&step["exportQuality"], &step["pcraftFullComposite"]), (&json!(95), &json!(true)));
     }
 }
 
