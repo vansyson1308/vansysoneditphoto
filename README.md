@@ -128,6 +128,7 @@ magicpic-cli --help
 
 | Read | For |
 |---|---|
+| [`docs/vi/cai-dat-va-ket-noi.md`](docs/vi/cai-dat-va-ket-noi.md) | Installing in Vietnamese: local install or a cloud session, a prompt that has Claude Code or Codex install it, updating |
 | [`docs/vi/art-of-seeing-va-mcp.md`](docs/vi/art-of-seeing-va-mcp.md) | User guide in Vietnamese: Seeing, connecting Claude and Codex, example prompts, what was verified |
 | [`docs/seeing.md`](docs/seeing.md) | The observation views, frames, variants, recipes and transactions |
 | [`docs/mcp.md`](docs/mcp.md) | The MCP tools, folders and permissions, guarded and atomic edits |

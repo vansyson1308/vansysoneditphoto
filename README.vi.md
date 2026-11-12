@@ -70,7 +70,9 @@ Codex vào rồi nói điều bạn muốn bằng lời thường.
 - **Chế độ bridge** sửa chính tài liệu đang mở trong app: bạn thấy ngay và chen vào được.
 - Chỉ đọc và ghi trong thư mục bạn cấp; chỉ báo "đã lưu" sau khi tìm thấy file trên đĩa.
 
-Hướng dẫn cài cho Claude Code, Claude Desktop và Codex, cùng các câu lệnh mẫu, nằm ở
+Cài về máy và nối với Claude hoặc Codex (kèm một đoạn lời nhắn để agent tự cài):
+[`docs/vi/cai-dat-va-ket-noi.md`](docs/vi/cai-dat-va-ket-noi.md). Cấu hình cho Claude Code,
+Claude Desktop và Codex, cùng các câu lệnh mẫu:
 [`docs/vi/art-of-seeing-va-mcp.md`](docs/vi/art-of-seeing-va-mcp.md).
 
 ## Bắt đầu
