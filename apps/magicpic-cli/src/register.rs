@@ -11,7 +11,7 @@
 
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
 use serde_json::{Map, Value, json};
@@ -378,12 +378,13 @@ pub(crate) fn relaunch(was: Option<&Running>) -> Result<String> {
         let path = was.and_then(|r| r.path.clone());
         let text = path.as_ref().map(|p| p.to_string_lossy().into_owned()).unwrap_or_default();
         if let Some(p) = path.as_ref().filter(|_| !text.to_ascii_lowercase().contains("\\windowsapps\\")) {
-            spawn_detached(&mut Command::new(p)).map_err(|e| CliError::Other(format!("could not start {}: {e}", p.display())))?;
+            spawn_detached(Command::new(p).stdout(Stdio::null()).stderr(Stdio::null()))
+                .map_err(|e| CliError::Other(format!("could not start {}: {e}", p.display())))?;
             return Ok(p.to_string_lossy().into_owned());
         }
         let family = msix_family(&text).unwrap_or_else(|| DEFAULT_MSIX_FAMILY.into());
         let target = format!(r"shell:AppsFolder\{family}!Claude");
-        spawn_detached(Command::new("explorer.exe").arg(&target)).map_err(|e| CliError::Other(format!("could not start Claude ({target}): {e}")))?;
+        spawn_detached(Command::new("explorer.exe").arg(&target).stdout(Stdio::null()).stderr(Stdio::null())).map_err(|e| CliError::Other(format!("could not start Claude ({target}): {e}")))?;
         Ok(target)
     } else if cfg!(target_os = "macos") {
         Command::new("open").args(["-a", "Claude"]).status().map_err(|e| CliError::Other(format!("open -a Claude: {e}")))?;
@@ -452,7 +453,9 @@ fn desktop_write(a: &crate::args::ClientArgs, paths: &[PathBuf], entries: Option
     }
     std::fs::create_dir_all(magicpic_home()?).map_err(|e| CliError::Other(e.to_string()))?;
     let mut child = Command::new(crate::setup::current_cli());
-    child.args(args_for_child).arg("--detached-wait");
+    // No inherited stdout/stderr: the caller's pipe would stay open while the helper waits, and
+    // an agent's tool call would hang until Claude Desktop quits. The helper logs to a file.
+    child.args(args_for_child).arg("--detached-wait").stdout(Stdio::null()).stderr(Stdio::null());
     let pid = spawn_detached(&mut child).map_err(|e| CliError::Other(format!("could not start the waiting helper: {e}")))?.id();
     Ok(json!({
         "status": "waiting",

@@ -22,9 +22,14 @@ cloud**, và cài thế nào. Cách dùng hằng ngày, lời nhắn mẫu và g
 1024 px tốn cỡ một nghìn token (ước tính theo cách Anthropic tính ảnh, chưa đo trên MagicPic).
 Muốn tiết kiệm, hãy bảo agent xem ảnh nhỏ hơn (`max_side` 768) và chỉ xem lại khi cần.
 
-**Còn một cách nhẹ hơn nữa là tải file cài sẵn, nhưng hiện chưa có.** Quy trình đóng gói thừa
-hưởng từ dự án gốc chưa được chạy cho MagicPic (xem [`docs/releasing.md`](../releasing.md)).
-Làm bản phát hành đầu tiên là một quyết định riêng: nó công khai file cài lên GitHub.
+**Cách nhanh nhất là tải bản dựng sẵn**: không cần Rust, không build, chỉ một lệnh (mục 3).
+Quy trình `agent-binaries` đã sẵn sàng: mỗi khi người duy trì gắn thẻ phiên bản (`v…`) và công
+bố bản phát hành, GitHub đính kèm file nén cho Windows x64, macOS (Apple Silicon và Intel),
+Linux x64, file `SHA256SUMS` và hai trình cài đặt. **Hiện chưa có bản nào được công bố**: cho
+tới lúc đó, lệnh cài báo lỗi 404 và agent tự chuyển sang build từ mã nguồn
+([`docs/agent-setup-source.md`](../agent-setup-source.md)). Công bố bản đầu tiên là quyết định
+của người duy trì: nó công khai file cài lên GitHub. File chưa được ký số, nên Windows hoặc macOS
+có thể hỏi lại (xem [`docs/agent-troubleshooting.md`](../agent-troubleshooting.md#unsigned-binaries)).
 
 ## 2. Prompt chuẩn: dán vào agent trên máy mới
 
@@ -39,7 +44,7 @@ nói chuyện với bạn.
 Mã nguồn: https://github.com/vansyson1308/vansysoneditphoto
 Làm đúng theo hướng dẫn dành cho agent:
 https://raw.githubusercontent.com/vansyson1308/vansysoneditphoto/main/docs/agent-setup.md
-Nếu không đọc được trang đó, hãy clone repo theo bước 2 của hướng dẫn rồi đọc
+Nếu không đọc được trang đó, hãy chạy `git clone --depth 1` với mã nguồn ở trên rồi đọc
 docs/agent-setup.md trong bản clone.
 
 Hỏi tôi trước khi cài phần mềm hệ thống hoặc dùng quyền quản trị. Chỉ cấp quyền cho một thư mục
@@ -61,10 +66,45 @@ Agent xong việc thì:
 3. Lần sau muốn mở app: chạy launcher mà agent đã tạo (`.magicpic\start-magicpic` trong thư mục
    người dùng), hoặc nhờ agent mở giúp.
 
-Codex có thể xin phép truy cập mạng để tải mã nguồn: hãy đồng ý. Với **Claude Desktop** (ứng
-dụng chat), agent sẽ đưa bạn đoạn cấu hình để tự dán vào Settings › Developer › Edit Config.
+Codex có thể xin phép truy cập mạng để tải file: hãy đồng ý. Với **Claude Desktop** (ứng dụng
+chat), agent chạy `mcp register --client claude-desktop --restart` rồi nhờ bạn **thoát hẳn**
+Claude Desktop (biểu tượng ở khay hệ thống › Quit): MagicPic ghi cấu hình rồi tự mở lại Claude
+sau vài giây. Claude Desktop ghi đè cấu hình khi đang chạy, nên không sửa file lúc nó đang mở.
 
-## 3. Tự cài bằng tay (Windows)
+## 3. Tự cài bằng tay
+
+**Từ bản dựng sẵn (khi đã có bản phát hành), bốn lệnh.** Windows, trong PowerShell:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://github.com/vansyson1308/vansysoneditphoto/releases/latest/download/install.ps1 | iex"
+```
+
+macOS và Linux:
+
+```sh
+curl -fsSL https://github.com/vansyson1308/vansysoneditphoto/releases/latest/download/install.sh | sh
+```
+
+Lệnh in ra một đoạn JSON có đường dẫn `cli` (ví dụ `C:\Users\<bạn>\.magicpic\bin\magicpic-cli.exe`).
+Rồi chạy, với đường dẫn đó:
+
+```powershell
+magicpic-cli launch
+```
+
+```powershell
+magicpic-cli mcp register --client claude-code
+```
+
+(`--client codex`, hoặc `--client claude-desktop --restart`.)
+
+```powershell
+magicpic-cli doctor
+```
+
+`doctor` phải báo `"ok": true`; nếu không, mục `problems` ghi lỗi và lệnh sửa.
+
+**Từ mã nguồn (Windows):**
 
 1. **Cài công cụ**, mỗi lệnh chạy một lần trong PowerShell:
 
@@ -81,31 +121,22 @@ dụng chat), agent sẽ đưa bạn đoạn cấu hình để tự dán vào Se
    ```
 
    Mở một cửa sổ PowerShell **mới**, kiểm tra `cargo --version` (cần 1.95 trở lên).
-2. **Tải mã nguồn và build CLI** (10–40 phút tùy máy):
+2. **Tải mã nguồn và build cả hai chương trình một lần** (15–40 phút tùy máy):
 
    ```powershell
-   git clone https://github.com/vansyson1308/vansysoneditphoto magicpic
+   git clone --depth 1 https://github.com/vansyson1308/vansysoneditphoto magicpic
    ```
 
    ```powershell
-   cd magicpic; cargo install --path apps/magicpic-cli --locked
+   cd magicpic; cargo build --release --locked -p magicpic -p magicpic-cli
    ```
 
-   File chạy nằm ở `%USERPROFILE%\.cargo\bin\magicpic-cli.exe`. Nếu Windows 11 chặn với lỗi
-   *An Application Control policy has blocked this file*, đó là Smart App Control: xem
-   [`docs/development.md`](../development.md#windows-source-builds).
-3. **Tạo thư mục ảnh**, ví dụ `C:\Users\<bạn>\Pictures\MagicPic`. Agent chỉ đọc và ghi trong
-   thư mục này, kể cả thư mục con nó tự tạo khi lưu.
-4. **Đăng ký với client.** Cấu hình cho Claude Code, Claude Desktop và Codex (kèm chế độ bridge
-   để agent sửa ảnh đang mở trong app) nằm ở
-   [`art-of-seeing-va-mcp.md` mục 4](art-of-seeing-va-mcp.md#4-cài-đặt-trên-windows).
-5. **App desktop** (chỉ cần nếu muốn xem cửa sổ MagicPic hoặc dùng bridge):
-
-   ```powershell
-   cargo build --release -p magicpic
-   ```
-
-   App nằm ở `target\release\magicpic.exe`.
+   Nếu Windows 11 chặn với lỗi *An Application Control policy has blocked this file*, đó là
+   Smart App Control: xem [`docs/development.md`](../development.md#windows-source-builds).
+3. **Chép hai file** `target\release\magicpic.exe` và `target\release\magicpic-cli.exe` vào
+   `%USERPROFILE%\.magicpic\bin\`. Sau đó có thể chạy `cargo clean` để lấy lại dung lượng.
+4. **Chạy `magicpic-cli setup`** (tạo thư mục ảnh `Pictures\MagicPic`, launcher và cấu hình),
+   rồi `launch`, `mcp register` và `doctor` như phần bản dựng sẵn ở trên.
 
 macOS và Linux: cài Rust bằng [rustup](https://rustup.rs); Linux cần thêm các gói liệt kê ở
 [`docs/development.md`](../development.md#prerequisites). Các lệnh còn lại như trên, đường dẫn
@@ -123,17 +154,13 @@ không có công cụ MagicPic: khởi động lại client, rồi kiểm tra `/
 
 ## 5. Cập nhật lên bản mới
 
-Trong thư mục `magicpic`, chạy hai lệnh sau rồi khởi động lại Claude/Codex:
+Bản dựng sẵn: chạy lại lệnh cài ở mục 3. Nó thay hai chương trình trong `.magicpic\bin` và
+giữ nguyên thư mục ảnh, launcher và đăng ký; thoát MagicPic trước (file đang chạy không thay
+được). Hoặc dán lại prompt ở mục 2.
 
-```powershell
-git pull
-```
-
-```powershell
-cargo install --path apps/magicpic-cli --locked --force
-```
-
-Build lần sau nhanh hơn lần đầu nhiều nếu không xóa thư mục `target`.
+Từ mã nguồn: trong thư mục `magicpic`, `git pull`, build lại như mục 3, chép lại hai file vào
+`.magicpic\bin`, rồi khởi động lại Claude/Codex. Build lần sau nhanh hơn nhiều nếu chưa xóa
+thư mục `target`.
 
 ## 6. Đã kiểm chứng tới đâu
 
@@ -151,3 +178,8 @@ Build lần sau nhanh hơn lần đầu nhiều nếu không xóa thư mục `ta
   - Phiên Codex và Claude Desktop thật chưa chạy.
 
   Nếu một bước báo lỗi, hướng dẫn dặn agent dừng lại và báo bạn.
+- **Cách cài mới (2026-11-12):** `install.sh`, `magicpic-cli setup`, `mcp register` (Claude Code,
+  Codex, Claude Desktop qua file chỉ định) và `doctor` đã chạy trên Linux, cả với chương trình
+  giả lẫn CLI thật; CI chạy `install.ps1` trong Windows PowerShell 5.1 và cài thử trên Windows,
+  macOS, Linux từ chính các file nén vừa build. Phần `--restart` của Claude Desktop (chờ thoát,
+  mở lại qua `shell:AppsFolder`) chưa chạy trên một máy Windows thật.

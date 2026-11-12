@@ -79,8 +79,9 @@ Hai chế độ của MagicPic:
   không cần mở app. Phù hợp "đưa ảnh, nhận ảnh".
 - **Bridge** (`magicpic --control …` rồi `magicpic-cli mcp --bridge …`): agent sửa đúng
   tài liệu **đang mở trong app** của bạn; bạn thấy thay đổi ngay và có thể sửa tay xen kẽ.
-  Nếu app chưa chạy, mọi lệnh báo lỗi "cannot connect … not sent"; server **không** tự chuyển
-  sang headless để rồi sửa nhầm một phiên khác (ĐÃ TEST).
+  Nếu app chưa chạy, mọi lệnh báo lỗi "MagicPic app is not running … not sent" kèm cách mở app;
+  server **không** tự chuyển sang headless để rồi sửa nhầm một phiên khác (ĐÃ TEST). Server do
+  `magicpic-cli mcp register` đăng ký có thêm `--start-app-if-needed`: nó tự mở app khi cần.
 
 ## 4. Cài đặt trên Windows
 

@@ -1423,10 +1423,16 @@ impl MagicpicMcp {
     }
 }
 
-/// An `app.open` reply with the opened (now active) document's `index`, `id`, size and layers.
+/// An `app.open` reply with the opened (now active) document's `index`, `id` and size. Only when
+/// the active document carries the opened name: a preset file (brushes, gradients) opens no
+/// document, and another document's id must not be reported as the file's.
 fn merge_active(mut opened: Value, session: &Value) -> Value {
     let active = session.get("active").and_then(Value::as_u64);
-    let doc = session.get("documents").and_then(Value::as_array).and_then(|d| d.iter().find(|d| d.get("index").and_then(Value::as_u64) == active));
+    let doc = session
+        .get("documents")
+        .and_then(Value::as_array)
+        .and_then(|d| d.iter().find(|d| d.get("index").and_then(Value::as_u64) == active))
+        .filter(|d| opened.get("name").is_some_and(|name| d.get("name") == Some(name)));
     if let (Some(obj), Some(doc)) = (opened.as_object_mut(), doc) {
         for key in ["index", "id", "width", "height"] {
             if let Some(v) = doc.get(key) {

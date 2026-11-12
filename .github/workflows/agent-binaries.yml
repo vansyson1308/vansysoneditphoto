@@ -10,11 +10,11 @@
 # Pull requests that change the installers run only the installer tests (no Rust build).
 name: Agent binaries
 
+# Tags only (also those a published release creates): `release: published` as well would build
+# everything twice for one release.
 on:
   push:
     tags: ["v*"]
-  release:
-    types: [published]
   pull_request:
     paths:
       - .github/workflows/agent-binaries.yml
@@ -139,7 +139,7 @@ jobs:
           cli=target/${{ matrix.target }}/release/magicpic-cli
           "$cli" --version
           # A BOM-prefixed, CRLF handshake, as Windows PowerShell pipes it, answers initialize.
-          printf '\357\273\277{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}\r\n' | "$cli" mcp | grep -q '"id":1,"result"'
+          printf '\357\273\277{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}\r\n' | "$cli" mcp | grep -q '"protocolVersion"'
       - name: Package
         shell: bash
         run: sh packaging/install/package.sh ${{ matrix.platform }} target/${{ matrix.target }}/release dist
@@ -235,7 +235,7 @@ jobs:
   publish:
     name: attach to the release
     needs: [assemble, install-test]
-    if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -252,7 +252,7 @@ jobs:
       - name: Upload (a tag without a release gets a draft)
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.event.release.tag_name || github.ref_name }}
+          TAG: ${{ github.ref_name }}
         run: |
           set -eu
           if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
