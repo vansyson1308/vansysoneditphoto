@@ -9,7 +9,7 @@
 # Downloads magicpic-windows-x86_64.zip and SHA256SUMS, refuses an archive whose checksum does
 # not match, installs magicpic.exe and magicpic-cli.exe into %USERPROFILE%\.magicpic\bin, then runs
 # `magicpic-cli setup`, which writes the photo folder, the launcher and config.json. Progress goes
-# to the host; the output is setup's JSON with the absolute paths.
+# to stderr; stdout is setup's JSON with the absolute paths.
 #
 # Written for Windows PowerShell 5.1 in Constrained Language Mode: no New-Object, no .NET
 # property setters or encodings, no script-written files. curl.exe and tar.exe (built into
@@ -26,7 +26,12 @@ param(
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-function Say([string]$Text) { Write-Host "magicpic install: $Text" }
+# Progress goes to stderr, so stdout holds only the JSON an agent reads: Write-Host lands on stdout
+# when Windows PowerShell's output is redirected. Constrained Language Mode may refuse [Console];
+# then the line goes to the host as before, ahead of the JSON.
+function Say([string]$Text) {
+    try { [Console]::Error.WriteLine("magicpic install: $Text") } catch { Write-Host "magicpic install: $Text" }
+}
 # `throw`, not `exit`: under `irm | iex` an exit would close the caller's PowerShell session.
 function Fail([string]$Text) { throw "magicpic install: error: $Text" }
 
