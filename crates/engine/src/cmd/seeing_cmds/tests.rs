@@ -648,6 +648,8 @@ fn the_histogram_counts_every_pixel_and_reports_percentiles() {
     assert_eq!(h["channels"].as_object().unwrap().len(), 1);
     assert_eq!(h["channels"]["green"]["max"], 26.0);
 
+    assert_eq!(fingerprint(&s, 0), before, "the histograms changed the document");
+
     // A layer alone: transparent pixels stay out of the colour channels.
     s.execute("layer.new.layer", json!({"name": "Dot"})).unwrap();
     s.edit("Test Dot", |doc, _| {
@@ -676,5 +678,4 @@ fn the_histogram_counts_every_pixel_and_reports_percentiles() {
     ] {
         assert!(s.execute("document.histogram", bad.clone()).is_err(), "{bad}");
     }
-    let _ = before;
 }
