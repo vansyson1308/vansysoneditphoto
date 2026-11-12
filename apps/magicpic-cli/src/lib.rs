@@ -12,10 +12,13 @@ mod actions;
 mod args;
 mod automation;
 mod batch;
+mod doctor;
 mod document;
 mod error;
 mod gpu;
 mod output;
+mod register;
+mod setup;
 
 pub use actions::{ActionsError, Steps, load_actions, load_actions_file, parse_actions};
 use args::{Command, parse};
@@ -57,8 +60,16 @@ where
         Command::Batch(a) => batch(a, out, err),
         Command::Droplet(a) => droplet(a, out, err),
         Command::Commands(a) => commands(a, out),
-        Command::Mcp(a) => mcp(a, err),
+        Command::Mcp(a) => match &a.action {
+            Some(args::McpAction::Register(r)) => register::register(r, out),
+            Some(args::McpAction::Unregister(r)) => register::unregister(r, out),
+            Some(args::McpAction::Status(r)) => register::status(r, out),
+            None => mcp(a, err),
+        },
         Command::Serve(a) => serve(a, err),
+        Command::Setup(a) => setup::setup(a, out, err),
+        Command::Launch(a) => setup::launch(a, out, err),
+        Command::Doctor(a) => doctor::doctor(a, out),
     };
     match result {
         Ok(()) => 0,

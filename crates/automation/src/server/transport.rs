@@ -34,6 +34,23 @@ async fn bounded_line<R: tokio::io::AsyncRead + Unpin>(source: &mut BufReader<R>
     }
 }
 
+/// The UTF-8 byte order mark. Windows PowerShell 5.1 writes one at the start of what it pipes
+/// into a native program's stdin, so the first JSON-RPC line arrives as `EF BB BF {…}`.
+const BOM: &[u8] = b"\xEF\xBB\xBF";
+
+/// Drop byte order marks before the first byte of a line. A BOM is never part of a JSON text
+/// (RFC 8259 §8.1 lets a parser ignore it); without this, `initialize` is rejected as a parse
+/// error and the client's next notification fails the handshake.
+fn strip_bom(line: &mut Vec<u8>) {
+    let mut start = 0;
+    while line.get(start..start + BOM.len()) == Some(BOM) {
+        start += BOM.len();
+    }
+    if start > 0 {
+        line.drain(..start);
+    }
+}
+
 impl MagicpicMcp {
     /// Serve a JSON-lines stream. A malformed line receives -32700/id:null; the next line
     /// is still handled. A single writer serializes parse errors and SDK responses.
@@ -47,7 +64,8 @@ impl MagicpicMcp {
         let (errors, mut error_rx) = tokio::sync::mpsc::channel::<String>(16);
         let reader = tokio::spawn(async move {
             let mut lines = BufReader::new(input);
-            while let Some(line) = bounded_line(&mut lines, MAX_REQUEST_BYTES).await? {
+            while let Some(mut line) = bounded_line(&mut lines, MAX_REQUEST_BYTES).await? {
+                strip_bom(&mut line);
                 if std::str::from_utf8(&line).is_ok_and(|text| text.trim().is_empty()) {
                     continue;
                 }
@@ -152,6 +170,47 @@ mod tests {
     async fn next_reply(replies: &mut tokio::io::Lines<BufReader<tokio::io::DuplexStream>>) -> Value {
         let line = tokio::time::timeout(std::time::Duration::from_secs(5), replies.next_line()).await.expect("a reply in time").unwrap().expect("a reply line");
         serde_json::from_str(&line).unwrap()
+    }
+
+    #[test]
+    fn strip_bom_removes_only_leading_marks() {
+        for (input, expected) in [
+            (&b"\xEF\xBB\xBF{}"[..], &b"{}"[..]),
+            (b"\xEF\xBB\xBF\xEF\xBB\xBF{}", b"{}"),
+            (b"{}", b"{}"),
+            (b"{\"a\":\"\xEF\xBB\xBF\"}", b"{\"a\":\"\xEF\xBB\xBF\"}"),
+            (b"\xEF\xBB", b"\xEF\xBB"),
+            (b"", b""),
+        ] {
+            let mut line = input.to_vec();
+            strip_bom(&mut line);
+            assert_eq!(line, expected, "{input:?}");
+        }
+    }
+
+    /// PowerShell 5.1 pipes `EF BB BF` before the first line, and agents' hand-written pipes add
+    /// blank lines. Before the fix the BOM line got -32700 and the handshake failed with
+    /// "expect initialized request, but received Notification".
+    #[tokio::test]
+    async fn a_bom_before_initialize_and_blank_lines_do_not_break_the_handshake() {
+        let initialize = json!({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
+            "protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "bom-test", "version": "1"}
+        }});
+        let mut input = b"\xEF\xBB\xBF".to_vec();
+        input.extend_from_slice(format!("{initialize}\r\n\r\n   \n").as_bytes());
+        input.extend_from_slice(b"\xEF\xBB\xBF{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}\n\n");
+        input.extend_from_slice(format!("{}\n", json!({"jsonrpc": "2.0", "id": 2, "method": "tools/list"})).as_bytes());
+        let (output, replies) = tokio::io::duplex(1 << 20);
+        let server = MagicpicMcp::headless();
+        let session = tokio::spawn(server.serve_io(std::io::Cursor::new(input), output));
+        let mut replies = BufReader::new(replies).lines();
+        let init = next_reply(&mut replies).await;
+        assert_eq!(init["id"], 1, "{init}");
+        assert!(init.get("error").is_none(), "{init}");
+        let tools = next_reply(&mut replies).await;
+        assert_eq!(tools["id"], 2, "{tools}");
+        assert!(tools["result"]["tools"].as_array().is_some_and(|t| !t.is_empty()), "{tools}");
+        session.await.unwrap().unwrap();
     }
 
     #[tokio::test]

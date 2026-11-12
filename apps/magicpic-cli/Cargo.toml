@@ -41,9 +41,14 @@ clap = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+# `setup`'s config.json (MIT OR Apache-2.0).
+serde = { workspace = true }
+# Backup and log timestamps for `mcp register` (MIT OR Apache-2.0).
+chrono = { workspace = true }
+# Edits Codex's config.toml keeping its comments and layout (MIT OR Apache-2.0).
+toml_edit = "0.25"
 
 [dev-dependencies]
-serde = { workspace = true }
 tempfile = "3"
 # Reading back a saved PSD's merged-image flag (#8064).
 magicpic-psd = { workspace = true }

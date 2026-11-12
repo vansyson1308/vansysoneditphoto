@@ -78,8 +78,14 @@ pub(crate) fn mcp(a: &McpArgs, err: &mut dyn Write) -> Result {
                     "magicpic-cli: MAGICPIC_CONTROL_PORT is set; bridging to the app on {addr} instead of a headless engine (unset it to run headless)"
                 );
             }
-            let token = security::client_token(a.control.control_token.as_deref(), a.control.control_token_file.as_deref())?;
-            MagicpicMcp::bridge(&addr.to_string(), &token)?
+            let client = match (a.control.control_token.as_deref(), a.control.control_token_file.as_deref()) {
+                // The file is read on the first call, not now: the app may start after this
+                // server (agents restart before the person opens the app).
+                (None, Some(path)) => magicpic_automation::BridgeClient::with_token_file(addr.to_string(), path)?,
+                (supplied, file) => magicpic_automation::BridgeClient::new(addr.to_string(), security::client_token(supplied, file)?)?,
+            };
+            let client = crate::setup::bridge_hints(client, a.start_app_if_needed);
+            MagicpicMcp::with_backend(magicpic_automation::Backend::Bridge(std::sync::Arc::new(client)))
         }
         None => {
             let mut h = Headless::with_workspace(a.automation.workspace()?);
