@@ -11,7 +11,7 @@ cloud**, và cài thế nào. Cách dùng hằng ngày, lời nhắn mẫu và g
 
 | | Cài về máy, nối Claude/Codex trên máy | Phiên Claude Code trên cloud |
 |---|---|---|
-| Chuẩn bị | Build một lần: đo được 10,5 phút và 1,6 GB thư mục build trên máy Linux 4 nhân; máy yếu hơn hoặc Windows có thể 20–40 phút | Mỗi phiên mới là một máy mới: tải mã nguồn và build lại (đo được khoảng 6 phút trên máy 4 nhân, chưa kể cài thư viện) |
+| Chuẩn bị | Build một lần: trên máy Linux 4 nhân đo được 10 phút cho CLI và thêm 15 phút cho app (3,4 GB thư mục build); máy yếu hơn hoặc Windows có thể lâu hơn | Mỗi phiên mới là một máy mới: tải mã nguồn và build lại (đo được khoảng 6 phút trên máy 4 nhân, chưa kể cài thư viện) |
 | Ảnh của bạn | Nằm yên trên máy bạn | Phải tải lên máy cloud, rồi tải kết quả về |
 | Nhìn thấy app | Có: cửa sổ MagicPic trên màn hình, xem agent sửa trực tiếp (chế độ bridge) | Không: máy cloud không có màn hình, chỉ có ảnh chụp |
 | Token của model | Chỉ cho việc chỉnh ảnh | Cộng thêm phần agent điều khiển việc build và chuyển file |
@@ -137,9 +137,17 @@ Build lần sau nhanh hơn lần đầu nhiều nếu không xóa thư mục `ta
 
 ## 6. Đã kiểm chứng tới đâu
 
-- **ĐÃ CHẠY** (Linux, máy cloud): đúng lệnh `cargo install` ở trên (10,5 phút), rồi qua MCP:
-  `files_list`, `doc_open`, xem trước và xuất vào một thư mục con chưa có (`ket-qua/`); trước đó
-  là một phiên Claude Code thật qua server `magicpic`. Trên Windows, CI của repo build và chạy toàn bộ test.
-- **CHƯA KIỂM CHỨNG:** đoạn lời nhắn ở mục 2 chưa được chạy trên một máy Windows thật, và các
-  lệnh `winget` chưa được thử; nếu một bước báo lỗi, đoạn lời nhắn đã dặn agent dừng lại và báo
-  bạn. Phiên Codex và Claude Desktop thật cũng chưa chạy.
+- **ĐÃ CHẠY trên một máy Linux sạch ở cloud (2026-11-12):** làm đúng từng bước của
+  [`docs/agent-setup.md`](../agent-setup.md): clone, build CLI (10 phút) và app (15 phút), tạo
+  thư mục ảnh và launcher. App mở lần đầu thì tự tạo token (quyền `600`, không in ra log), và
+  `claude mcp list` báo cả `magicpic` lẫn `magicpic-app` là *Connected*. Sau đó một phiên Claude
+  Code thật, chỉ được dùng hai server này, nhận câu *"Mở ảnh mới nhất trong thư mục MagicPic
+  trong app và cho tôi xem"*: nó tìm ảnh, mở trong cửa sổ app và mô tả đúng bức ảnh.
+- **Chưa chạy:**
+  - Các bước trên do tôi tự làm theo hướng dẫn, chưa có agent nào nhận nguyên prompt trên một
+    máy mới: môi trường thử không cho chạy một agent con có quyền chạy lệnh tùy ý.
+  - Windows (`winget`, launcher PowerShell, `Test-NetConnection`) và macOS chưa thử. Trên
+    Windows, CI của repo build và chạy toàn bộ test.
+  - Phiên Codex và Claude Desktop thật chưa chạy.
+
+  Nếu một bước báo lỗi, hướng dẫn dặn agent dừng lại và báo bạn.

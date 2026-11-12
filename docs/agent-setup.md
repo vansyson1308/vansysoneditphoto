@@ -85,8 +85,9 @@ If `rustc --version` is older than 1.95, run `rustup update stable`.
 
 ## 3. Build
 
-In the checkout, run both. Each takes several minutes; the first build of the CLI took about
-10 minutes on a 4-core machine, and a slower machine or Windows can take 20–40 minutes.
+In the checkout, run both. On a 4-core Linux machine the first builds took 10 minutes for the CLI
+and 15 more for the app, with 3.4 GB in `target`; a slower machine or Windows can take longer.
+A tool call may time out before a build ends: run it in the background and check on it.
 
 ```sh
 cargo install --path apps/magicpic-cli --locked --force
@@ -185,7 +186,8 @@ Report, briefly and in their language:
 
 - where the checkout, the photo folder and the launcher are, and that the app window is open;
 - that they must **restart you** (quit and reopen Claude Code or Codex), so that the two
-  servers load;
+  servers load; start the app with the launcher before you use `magicpic-app`, because its
+  server reads the token when it starts;
 - how to open the app later: run the launcher. On Windows, offer to put a desktop shortcut
   to `powershell -ExecutionPolicy Bypass -File "<launcher>"`, and make it only if they agree;
 - what to say after the restart. For example: *"Mở ảnh mới nhất trong thư mục MagicPic trong
@@ -200,6 +202,9 @@ Report, briefly and in their language:
 The server's own instructions explain the tools: `files_list`, `doc_open`, `render_preview`,
 `command_list`, `command_run` and `command_batch`, then `doc_save` and `doc_export`. In short:
 
+- `files_list` exists only on `magicpic`. To work in the open window, find the photo with
+  `magicpic`'s `files_list`, then open it in the app with `magicpic-app`'s `doc_open` and its
+  `absolutePath`.
 - Look before and after each edit.
 - Prefer adjustment layers and masks.
 - Use `command_batch` with `atomic: true` for several steps.
