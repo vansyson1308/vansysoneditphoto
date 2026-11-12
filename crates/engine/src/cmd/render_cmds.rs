@@ -464,7 +464,9 @@ fn run_bokeh(s: &mut Session, p: &Value) -> Result<Value> {
     let area = region(CMD, s, p)?;
     let short = area.width().min(area.height()) as f32;
     let count = number(CMD, p, "count", 40.0, 0.0, 5_000.0)?.round() as usize;
-    let (r0, r1) = span(CMD, p, "sizeRange", ((short * 0.015).max(2.0), (short * 0.06).max(4.0)), 1.0, 2_000.0)?;
+    // Proportional to the image, with no pixel floor: the Filter dialog previews on a reduced
+    // proxy, and a floor there would draw relatively bigger discs than OK applies.
+    let (r0, r1) = span(CMD, p, "sizeRange", ((short * 0.015).max(0.25), (short * 0.06).max(0.5)), 1.0, 2_000.0)?;
     let softness = number(CMD, p, "softness", 0.3, 0.0, 1.0)?;
     let opacity = number(CMD, p, "opacity", 0.35, 0.0, 1.0)?;
     let seed = seed(CMD, p)?;
