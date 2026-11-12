@@ -124,11 +124,26 @@ protocol messages. For `serve`, explicit credential flags require `--port` (or
 - `command_batch`: ordered `steps`, optional `stop_on_error` (default true); stops at the first
   error unless false. Not an atomic transaction: earlier successful steps stay applied, with
   no rollback. Existing per-step results and reply budgets are preserved.
+  With `atomic: true` it is a transaction (see [Guarded and atomic edits](#guarded-and-atomic-edits)).
 - `doc_inspect`: layer tree, history and selection; an empty session returns `document:null`.
   Every layer (including groups and nested children) reports raster-only `hasMask`,
   `hasVectorMask` for vector mask presence, and `vectorMaskEnabled` (`true`/`false` when
   present, `null` when absent). A disabled vector mask still has `hasVectorMask:true`.
-- `render_preview`: bounded PNG content; `index` and `max_side` (default 1024, maximum 2048).
+- `render_preview`: bounded image content; `index` and `max_side` (default 1024, maximum 2048).
+  `view` shows the document as it is (`normal`) or through an observation view that changes
+  nothing and is never part of the document or an export (`luminance`, `masses`, `shapes`,
+  `lines`, `color`; `strength` and `levels` tune them); `region {x, y, width, height}` renders
+  one rectangle at its own size (reduced only if larger than `max_side`); `format: "jpeg"`
+  (with `quality`) is far smaller than PNG.
+  A call with any of these is the engine's `seeing.view` in both modes, with a JSON note
+  beside the image (`view`, `analysisOnly`, size, `region`, the document's `id`, name, size
+  and `revision`). See [Seeing](seeing.md).
+- `files_list`: headless only. The files and folders directly inside a read root, or inside
+  `dir` below one, newest first: `{dir, entries: [{path, absolutePath, kind, bytes,
+  modifiedUnix, root}], truncated}`; `limit` (default 50, maximum 500). Hidden entries, links
+  and names a read request may not use are left out. `path` is relative; when two roots hold
+  the same relative path it opens the first root's file, and `absolutePath` names exactly
+  the listed one. It is how a client finds the picture a person just saved into the folder.
 - `ui_inspect` and `ui_screenshot`: live app state/window in bridge mode.
 
 Existing document/session/job/UI tools remain listed, including the documented
@@ -147,7 +162,44 @@ do not necessarily add one history entry each. For undoable edits, use `command_
 as you recover. Undo does not roll back files written to disk. If a reply-budget error says
 the current step may have completed, inspect its effects before retrying or undoing it.
 
-Before experiments, use `command_run` with `image.duplicate` and `{}` params, or
+## Guarded and atomic edits
+
+An agent and a person can edit the same document, and a batch can fail halfway. Two options
+cover both, in headless and bridge mode alike, through the engine command
+`document.transaction` (see [Seeing › Transactions](seeing.md#transactions-documenttransaction)):
+
+- `command_run {…, expect_document: id, expect_revision: n}` and
+  `command_batch {…, atomic: true, expect_document: id, expect_revision: n}` run only if the
+  active document is the one with that `id`, still at revision `n` (`doc_inspect` and
+  `session_list` report both; so does the note beside a `render_preview` view). Otherwise
+  nothing runs and the error says what is active and at which revision: inspect again and
+  plan against what is there. Pass both: fresh documents all start at the same revision.
+- `command_batch {steps, atomic: true}` applies every step or none. The reply always has
+  `outcome`:
+  - `applied`: `{completed, failed: 0, atomic: true, outcome, revision, document, results}`.
+  - `rolled_back`: a step failed and every open document is exactly as before;
+    `results[0].error` names the step.
+  - `not_run`: refused before anything ran (a stale guard, a step a transaction cannot
+    contain, an app that is not running).
+  - `unknown`: the reply was lost or late (`completed` is `null`). The batch applied
+    completely or not at all; inspect before retrying. It is never sent twice.
+
+Limits: the steps run inside one engine command, so there is no per-step progress and no
+cancellation, a guarded `command_run` does not run as a background job, `wait: false` is
+refused, and steps may not open, save, close, duplicate or switch documents or change
+session-wide settings. Undo and redo steps are allowed in a batch made of nothing else
+(`{steps: [{id: "edit.undo"}, {id: "edit.undo"}], atomic: true, expect_document, expect_revision}`
+is the guarded way to go back two steps), and a single guarded `command_run` of `edit.undo`
+works the same way. Headless, other calls wait while a transaction
+runs; in the app the window does not respond until it ends, and a long filter on a very
+large document can outlast the bridge's 55 s reply window (`outcome: "unknown"`).
+
+`doc_save` and `doc_export` in headless mode with a write root report `absolutePath`,
+`bytes` and `verified: true` only after the written file was looked up again below the write
+root and its size matched what was written; a mismatch is an error.
+
+Before experiments, use `seeing.variant` (a copy with a stored, repeatable recipe; see
+[Seeing](seeing.md)), or `command_run` with `image.duplicate` and `{}` params, or
 `history.newDocument` and `{}` params (copies the current state by default). Both create a
 new active document, leaving the source unchanged; run experimental edits on that copy.
 The optional `state` parameter of `history.newDocument` selects a retained historical state.

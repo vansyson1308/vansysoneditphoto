@@ -68,3 +68,10 @@ that are waited on report progress and stop when the request is cancelled, headl
 bridge mode (where they may also outlast the bridge's reply timeout), and direct headless
 Render Video does too, using the granted write root; see
 [`docs/mcp.md`](../../../docs/mcp.md) for arguments, cleanup and transport behavior.
+
+`render_preview` can also show a document through an observation `view` (tones, colour
+masses, shapes, lines, colour without tone) or one `region` of it, without changing anything;
+`files_list` finds the newest picture in a read root; and `command_batch {atomic: true}` with
+`expect_document` / `expect_revision` applies an edit completely or not at all, and only if
+the document is still the one, at the state, the client last saw. See
+[`docs/seeing.md`](../../../docs/seeing.md).
