@@ -6,7 +6,7 @@ verified: 0.8.2
 
 MagicPic is a free, open-source image editor with layers, masks, adjustment layers, layer styles, type, vector shapes and brushes. It is an alternative to Adobe Photoshop: the menus, panels, tools and shortcuts follow Photoshop's layout, so Photoshop users find things where they expect them.
 
-It is a native app written in Rust that draws the canvas on your graphics card, works offline, and opens and saves layered PSD files. It runs on macOS, Windows, Linux and FreeBSD, and a web version runs in the browser. MagicPic is in early alpha: much of Photoshop's feature surface exists, but it is not yet a Photoshop replacement for daily professional work. See [Can MagicPic replace Photoshop?](faq/replace-photoshop.md).
+It is a native app written in Rust that draws the canvas on your graphics card, works offline, and opens and saves layered PSD files. Its code targets macOS, Windows, Linux, FreeBSD and the browser; MagicPic itself has so far been built and run on Linux only. MagicPic is in early alpha: much of Photoshop's feature surface exists, but it is not yet a Photoshop replacement for daily professional work. See [Can MagicPic replace Photoshop?](faq/replace-photoshop.md).
 
 ## Start here
 
@@ -16,10 +16,10 @@ It is a native app written in Rust that draws the canvas on your graphics card, 
 - [Troubleshooting](troubleshooting/index.md)
 - [FAQ](faq/index.md)
 
-## Part of the Craft App Suite
+## Where MagicPic comes from
 
-MagicPic is one of the Crafting Apps from the ArtCraft team, next to VectorCraft, FilmCraft and the other Craft apps. You can install and update them from [ArtCraft Launcher](https://getartcraft.com/docs/craft-launcher).
+MagicPic is a fork of [PhotoCraft](https://github.com/storytold/photocraft) by the ArtCraft team, with tools for looking at a picture before editing it and for editing it together with an AI agent. This guide was inherited from PhotoCraft and renamed: where a page mentions downloads, installers or version numbers, it describes the upstream releases, because MagicPic has no releases of its own yet (see [Install MagicPic](getting-started/install.md)).
 
 ## Get help
 
-Ask in [Discord](https://discord.gg/artcraft) or open an issue in the [issue tracker](https://github.com/storytold/photocraft/issues). In MagicPic, **Help › Report an Issue…** opens the same issue tracker.
+Open an issue in the [issue tracker](https://github.com/vansyson1308/vansysoneditphoto/issues). In MagicPic, **Help › Report an Issue…** opens the same issue tracker.

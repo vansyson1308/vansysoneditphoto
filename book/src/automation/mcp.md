@@ -38,13 +38,13 @@ The release packages ship `magicpic-cli` alongside the desktop app, so no build 
 
 | Install | CLI |
 |---|---|
-| Windows (MSI) | `%LOCALAPPDATA%\Programs\ArtCraft\MagicPic\magicpic-cli.exe` by default (`C:\Program Files\ArtCraft\MagicPic\magicpic-cli.exe` for an all-users install, under `Program Files (x86)` instead for the 32-bit build, or wherever you installed it otherwise), not on `PATH` |
+| Windows (MSI) | `%LOCALAPPDATA%\Programs\MagicPic\MagicPic\magicpic-cli.exe` by default (`C:\Program Files\MagicPic\MagicPic\magicpic-cli.exe` for an all-users install, under `Program Files (x86)` instead for the 32-bit build, or wherever you installed it otherwise), not on `PATH` |
 | Linux (deb, rpm) | `/usr/bin/magicpic-cli` |
 | macOS | the separate `magicpic-cli-<version>-macos-<arch>.zip` release asset (the `.app` holds only the desktop app) |
 
 ```sh
 # Windows (PowerShell), default install folder
-claude mcp add magicpic -- "$env:LOCALAPPDATA\Programs\ArtCraft\MagicPic\magicpic-cli.exe" mcp --automation-read-root <dir> --automation-write-root <dir>
+claude mcp add magicpic -- "$env:LOCALAPPDATA\Programs\MagicPic\MagicPic\magicpic-cli.exe" mcp --automation-read-root <dir> --automation-write-root <dir>
 # Linux, or macOS with the CLI unzipped onto PATH
 claude mcp add magicpic -- magicpic-cli mcp --automation-read-root <dir> --automation-write-root <dir>
 ```

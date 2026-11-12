@@ -251,6 +251,9 @@ chép lại từng byte của một bức ảnh thật một cách tin cậy.
 - **Preview tối đa 2048 px**; ảnh nguồn trên 64 MP chỉ xem được theo vùng ở chế độ headless.
 - **JPEG hỏng phần đuôi vẫn mở được phần đọc được**, kèm cảnh báo (hành vi có sẵn của
   MagicPic); PNG hỏng và file không phải ảnh thì bị từ chối.
+- **Thư mục đích phải có sẵn.** Bảo agent xuất vào `ket-qua/anh.jpg` khi chưa có thư mục
+  `ket-qua` thì lệnh lưu báo lỗi "No such file or directory", và agent không có công cụ tạo
+  thư mục. Hãy tạo thư mục trước, hoặc bảo agent lưu thẳng vào thư mục đã cấp. (Việc để sau.)
 - Recipe lưu trong ghi chú của tài liệu: ai xóa ghi chú đó thì mất recipe.
 - Không tuyên bố tương đương Photoshop; đây là một lát cắt nhỏ, dùng được, có kiểm chứng.
 
@@ -270,6 +273,12 @@ trên Windows và macOS.**
 | F. Phiên chỉnh ảnh thật trên client | **Claude Code 2.1.322** (Linux): headless 3 lượt (60 lệnh, 20 ảnh xem trước, 0 lỗi) và bridge 2 lượt (18 lệnh) | ĐÃ CHẠY với Claude Code; ở lần chạy lại, đo trên file xuất: vùng mặt sáng hơn 11–12,5 mức (thang 255), nền tối hơn khoảng 4 mức và độ rực màu của nền giảm từ 13,2 xuống 7,7 (xem ghi chú bên dưới về lần chạy đầu). **Codex CLI 0.167.2**: `codex mcp add` nhận cấu hình (ĐÃ CHẠY), nhưng chưa chạy được phiên thật vì chưa đăng nhập: **CHƯA KIỂM CHỨNG**. **Claude Desktop**: **CHƯA KIỂM CHỨNG** (cần Windows/macOS) |
 | G. Lỗi giữa batch, mất phản hồi, kết nối lại, input sai, xuất không có quyền | Kịch bản MCP thật + test tự động (app giả lập ngắt kết nối giữa chừng) | ĐÃ CHẠY + ĐÃ TEST: đạt; không lần nào phá tài liệu, không ghi ra ngoài thư mục, không gửi lại lệnh sửa |
 | H. Tính năng từ PDF gọi được qua MCP và dùng trong app | 5 view × 5 ảnh qua MCP; menu **View › Seeing** trong app thật | ĐÃ CHẠY: đạt; sáu mục menu có mặt và bấm được |
+
+**Sau khi đổi tên thành MagicPic** (2026-11-12) các kịch bản được chạy lại với `magicpic-cli`
+và app `magicpic`: A, B, C, D, G, H và phép đo 24 MP qua MCP thật, E với app thật dưới màn
+hình ảo, và một lượt F với Claude Code 2.1.322 (12 lệnh, 4 ảnh xem trước, 0 lỗi; file JPEG và
+`.pcraft` lưu ra mở lại đúng, hai lớp điều chỉnh còn nguyên): tất cả đạt. Một project `.pcraft`
+do bản trước khi đổi tên lưu vẫn mở được.
 
 Thời gian đo trên ảnh 24 MP (6000×4000), bản build `dev` nên bản `release` sẽ nhanh hơn; đây
 là số đo, không phải cam kết: mở ảnh 0,2 s; mỗi chế độ quan sát ở 1024 px 0,1–0,3 s; xem một

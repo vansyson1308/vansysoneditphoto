@@ -5,10 +5,10 @@ order: 10
 verified: 0.8.2
 ---
 
-Yes. MagicPic is one of the Crafting Apps, which the project describes as free, open-source creative tools. The code is licensed under MIT or Apache 2.0, your choice, and is on [GitHub](https://github.com/storytold/photocraft).
+Yes. MagicPic is free and open source. The code is licensed under MIT or Apache 2.0, your choice, and is on [GitHub](https://github.com/vansyson1308/vansysoneditphoto). It is a fork of [PhotoCraft](https://github.com/storytold/photocraft) by the ArtCraft team, which is under the same licenses.
 
 MagicPic works offline. Its smart selection tools run on your computer, with no cloud and no account.
 
-The ArtCraft logos in the repository are not open source.
+The ArtCraft name and logos belong to the ArtCraft Team and are not part of MagicPic.
 
-See [Install MagicPic](../getting-started/install.md) to download it.
+See [Install MagicPic](../getting-started/install.md) to build it.

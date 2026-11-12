@@ -5,6 +5,23 @@ signed installers for macOS, Windows, Linux and the web, plus a FreeBSD tarball,
 or updates a **draft** GitHub Release named `MagicPic v<version>`. Nobody sees a draft until a
 maintainer publishes it.
 
+> **Status for MagicPic: inherited and not yet run.** This pipeline came with the fork from
+> PhotoCraft. No MagicPic release has been cut with it, and it needs its own pass first:
+>
+> - The workflows in `.github/workflows/` are upstream's, unchanged: they call
+>   `storytold/craft-common-actions` with upstream's inputs, secrets and the old package names,
+>   and GitHub Actions is not enabled on this repository. Making CI MagicPic's own is a separate
+>   task (`AGENTS.md`, house rule 11).
+> - In-app updates look for releases of `vansyson1308/vansysoneditphoto`, so nothing is offered
+>   until one is published. The `craft-update` library that installs an update still assumes
+>   upstream's identity (bundle ids of the form `ai.storyteller.<id>`, upstream's Apple signer):
+>   installing an update on macOS or as a Flatpak cannot work until that library accepts
+>   MagicPic's id `io.github.vansyson1308.magicpic` and signer. It fails closed: an update it
+>   cannot verify is refused, never installed.
+> - The macOS disk image's background and layout were regenerated for MagicPic
+>   (`packaging/macos/dmg/generate.py`) but have never been opened in Finder.
+> - Signing needs the releaser's own certificates; none are configured.
+
 User-facing names say **MagicPic**. Files, binaries and ids stay lowercase (`magicpic-<version>-<platform>-<arch>.<ext>`, `io.github.vansyson1308.magicpic`).
 
 ## In-app update checks
@@ -143,7 +160,7 @@ goes in `CARGO_TARGET_<TRIPLE>_RUSTFLAGS`, so host build scripts aren't affected
   (build dependency `0.1`). They only do this when targeting Windows. Elsewhere each
   script is a no-op, even if `MAGICPIC_REQUIRE_WINRES` is set, and the web build
   doesn't touch that crate. Both set ProductName to MagicPic, CompanyName to
-  Learning Machines LLC and the same copyright line. The GUI description is
+  MagicPic contributors and the same copyright line. The GUI description is
   "MagicPic image editor" (`magicpic.exe`). The CLI description is
   "MagicPic command-line interface", with OriginalFilename `magicpic-cli.exe`
   and InternalName `magicpic-cli`. Version strings are the Cargo package version,
@@ -155,10 +172,10 @@ goes in `CARGO_TARGET_<TRIPLE>_RUSTFLAGS`, so host build scripts aren't affected
 - Release builds use the GUI subsystem, so Start Menu launches don't open a console window.
   The CLI stays console subsystem 3 so its output reaches the terminal.
 - `magicpic.wxs` (WiX v5) is a dual-scope package (Microsoft "Single Package Authoring"):
-  it installs per-user by default, without a UAC prompt, into `%LOCALAPPDATA%\Programs\ArtCraft\MagicPic`
+  it installs per-user by default, without a UAC prompt, into `%LOCALAPPDATA%\Programs\MagicPic\MagicPic`
   (Windows Installer redirects the ProgramFiles folder in a per-user install); the setup
   wizard's "Everyone on this computer" option, or `msiexec ... ALLUSERS=1`, installs per-machine into
-  `Program Files\ArtCraft\MagicPic` (`Program Files (x86)` for the 32-bit build). It installs an advertised Start Menu shortcut associated with the
+  `Program Files\MagicPic\MagicPic` (`Program Files (x86)` for the 32-bit build). It installs an advertised Start Menu shortcut associated with the
   `MagicpicExe` file component. MagicPic
   becomes the default app for `.pcraft` and is listed under "Open with" for PSD/PSB and image
   files (in a per-user install those registrations and the `InstallDir` record live under
@@ -186,7 +203,7 @@ goes in `CARGO_TARGET_<TRIPLE>_RUSTFLAGS`, so host build scripts aren't affected
 - **Portable zip:** it ships `packaging/windows/portable.txt` beside `magicpic.exe`. That
   marker (or a `MagicPic.portable` file) switches on portable mode: preferences, presets,
   recovery autosaves and the GPU startup marker go to `MagicPicData\` next to the exe instead
-  of `%APPDATA%\Magicpic`. If that folder isn't writable the app warns and uses `%APPDATA%`.
+  of `%APPDATA%\MagicPic`. If that folder isn't writable the app warns and uses `%APPDATA%`.
   The MSI has no marker. The logic is in `apps/magicpic/src/app_dirs.rs` and works the same
   on macOS and Linux.
 - **Symbols zip:** `magicpic.pdb` and `magicpic_cli.pdb` from the same release build, plus
@@ -397,12 +414,12 @@ the run shows a `::warning::`.
 
 | Secret | Used for |
 |---|---|
-| `APPLE_CERTIFICATE` | base64 `.p12` with "Developer ID Application: Learning Machines LLC (DJ6XS33FX8)" |
+| `APPLE_CERTIFICATE` | base64 `.p12` with the releaser's own "Developer ID Application" certificate |
 | `APPLE_CERTIFICATE_PASSWORD` | password for that `.p12` |
 | `KEYCHAIN_PASSWORD` | password for the temporary CI keychain (random if unset) |
 | `APPLE_ID` | Apple ID used by `notarytool` |
 | `APPLE_PASSWORD` | app-specific password for that Apple ID |
-| `APPLE_TEAM_ID` | `DJ6XS33FX8` |
+| `APPLE_TEAM_ID` | the Apple team id of that certificate |
 | `WINDOWS_CERTIFICATE` | base64 `.pfx` code-signing certificate |
 | `WINDOWS_CERTIFICATE_PASSWORD` | password for that `.pfx` |
 | `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` | service principal for Azure Trusted Signing (an alternative to the `.pfx`) |
@@ -418,9 +435,8 @@ The keychain is deleted at the end of the job.
 
 ## Icons
 
-`assets/app-icon/magicpic.svg` is the canonical icon: the owner's ArtCraft drawing of a
-nine-tailed kitsune, vectorised (MIT OR Apache-2.0, see `LICENSE.txt` there; palette and
-geometry in `README.md`). `packaging/icons.sh` regenerates the 1024 px PNG, the `.icns`, the `.ico` (packed by
+`assets/app-icon/magicpic.svg` is the canonical icon: a picture frame with two sparkles, written
+by hand as SVG (MIT OR Apache-2.0, see `LICENSE.txt` there; palette and geometry in `README.md`). `packaging/icons.sh` regenerates the 1024 px PNG, the `.icns`, the `.ico` (packed by
 `cargo xtask ico`) and the hicolor PNGs from it. It needs `resvg`, plus `iconutil` on macOS.
 The outputs are committed, so packaging never needs those tools.
 

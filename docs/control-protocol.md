@@ -306,9 +306,9 @@ keyboard shortcuts, hidden and coloured menu items, autosave interval and crash 
 log text file. GPU on/off and the GPU tile size apply at the next launch.
 
 The desktop app stores them in `preferences.json` in the platform config directory (macOS
-`~/Library/Application Support/Magicpic`, Windows `%APPDATA%\Magicpic`, Linux
+`~/Library/Application Support/MagicPic`, Windows `%APPDATA%\MagicPic`, Linux
 `$XDG_CONFIG_HOME/magicpic`; override with `MAGICPIC_CONFIG_DIR`); autosaves go to its
-`Recovery` folder (on Windows to `%LOCALAPPDATA%\Magicpic\Recovery`, out of the roaming
+`Recovery` folder (on Windows to `%LOCALAPPDATA%\MagicPic\Recovery`, out of the roaming
 profile, and on Linux to `$XDG_STATE_HOME/magicpic/Recovery`, by default
 `~/.local/state/magicpic/Recovery`, out of the config folder; autosaves left by earlier
 versions move there at startup), and the window size and

@@ -1,468 +1,185 @@
 <p align="center">
-  <a href="https://getartcraft.com/">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="docs/brand/artcraft-logo-white.svg">
-      <img alt="ArtCraft" src="docs/brand/artcraft-logo.svg" width="200">
-    </picture>
-  </a>
-</p>
-
-<p align="center">
-  <img src="assets/app-icon/hicolor/256x256/apps/io.github.vansyson1308.magicpic.png" width="128" height="128" alt="MagicPic icon: an engraved nine-tailed fox on a blue tile">
+  <img src="assets/app-icon/hicolor/256x256/apps/io.github.vansyson1308.magicpic.png" width="128" height="128" alt="MagicPic icon: a picture frame with two sparkles on a violet-to-pink tile">
 </p>
 
 <h1 align="center">MagicPic</h1>
 
 <p align="center">
-  <b>Image editing; an open-source, clean-room reimplementation of Adobe Photoshop, rebuilt in pure Rust.</b><br>
-  Layers, masks, adjustment layers, layer styles, type, vectors, brushes and real PSD files,<br>
-  in a native app written entirely in Rust. Open source, offline, and yours.
+  A native, layered image editor written in Rust, built so that you <em>and</em> an AI agent<br>
+  can look at a picture, edit it, look again and export it.
 </p>
 
 <p align="center">
   <img alt="100% Rust" src="https://img.shields.io/badge/100%25-Rust-b7410e?style=flat-square&logo=rust">
-  <img alt="macOS · Windows · Linux · FreeBSD · Web" src="https://img.shields.io/badge/macOS%20%C2%B7%20Windows%20%C2%B7%20Linux%20%C2%B7%20FreeBSD%20%C2%B7%20Web-native-2f7bf5?style=flat-square">
   <img alt="License: MIT OR Apache-2.0" src="https://img.shields.io/badge/license-MIT%20%2F%20Apache--2.0-3a3a3a?style=flat-square">
   <img alt="Status: early alpha" src="https://img.shields.io/badge/status-early%20alpha-d69e2e?style=flat-square">
-  <br>
-  <a href="https://sonarcloud.io/project/overview?id=storytold_magicpic"><img alt="Scanned by SonarCloud" src="https://img.shields.io/badge/Scanned_by-SonarCloud-4b9fd5?style=flat-square&logo=sonarqubecloud&logoColor=white"></a>
-  <a href="https://coderabbit.ai"><img alt="Reviewed by CodeRabbit" src="https://img.shields.io/coderabbit/prs/github/storytold/photocraft?style=flat-square&label=Reviewed%20by%20CodeRabbit&logo=coderabbit"></a>
 </p>
+
+<p align="center"><a href="README.vi.md">Tiếng Việt</a></p>
 
 <p align="center">
-  <a href="https://discord.gg/artcraft"><img alt="Join the ArtCraft community on Discord" src="https://img.shields.io/badge/Join%20us%20on%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" height="40"></a>
+  <img src="docs/images/magicpic-demo.jpg" alt="MagicPic editing Bierstadt's Among the Sierra Nevada: two adjustment layers above the picture in the Layers panel" width="100%">
 </p>
+
+> **Status: early alpha.** MagicPic is a fork of [PhotoCraft](https://github.com/storytold/photocraft)
+> by the ArtCraft team. It is built and tested from source on Linux; nothing here has been
+> run on Windows or macOS yet, and there are no installers or releases. See
+> [What is verified](#what-is-verified).
+
+## What MagicPic is
+
+- **A real editor.** Layers, groups, masks, adjustment layers, smart objects with smart
+  filters, type, vector shapes, a brush engine, filters, selections, history with snapshots.
+  RGB, Grayscale, CMYK and Lab documents at 8, 16 and 32 bits per channel, with ICC colour
+  management. PSD/PSB, layered TIFF, PNG, JPEG, WebP, OpenEXR and more; its own layered
+  format is `.pcraft`.
+- **Everything is a command.** Every menu item, tool and dialog runs one of over 1,000
+  commands from a single registry. The app, the command line and the agent interface all call
+  the same commands, so anything you can click, an agent can do, and nothing is done twice in
+  two different ways.
+- **Native.** egui on wgpu, no webview and no JavaScript. The same Rust also compiles to
+  WebAssembly.
+
+<h4>🧰 69 tools</h4>
+Move · Artboard · Rectangular and Elliptical Marquee · Single Row Marquee · Single Column Marquee · Lasso · Polygonal Lasso · Magnetic Lasso · Object Selection · Quick Selection · Magic Wand · Crop · Perspective Crop · Slice · Slice Select · Frame · Eyedropper · Color Sampler · Ruler · Note · Count · Remove · Spot Healing Brush · Healing Brush · Patch · Content-Aware Move · Red Eye · Brush · Pencil · Mixer Brush · Color Replacement · Clone Stamp · Pattern Stamp · History Brush · Art History Brush · Eraser · Background Eraser · Magic Eraser · Gradient · Paint Bucket · Blur · Sharpen · Smudge · Dodge · Burn · Sponge · Pen · Freeform Pen · Curvature Pen · Add Anchor Point · Delete Anchor Point · Convert Point · Horizontal and Vertical Type · Horizontal and Vertical Type Mask · Path Selection · Direct Selection · Rectangle · Ellipse · Triangle · Polygon · Star · Line · Custom Shape · Hand · Rotate View · Zoom
+
+<sub>A test keeps this list equal to the tools the app offers.</sub>
+
+## What MagicPic adds
+
+### Seeing: look before you edit
 
 <p align="center">
-  <a href="https://getartcraft.com/apps/photocraft"><b>MagicPic on getartcraft.com</b></a> ·
-  <a href="https://getartcraft.com/">ArtCraft</a> ·
-  <a href="https://getartcraft.com/apps">All Crafting Apps</a>
+  <img src="docs/images/magicpic-seeing.jpg" alt="One painting through MagicPic's observation views: as it is, tones only, colour masses, shapes, lines, and colour without tone" width="100%">
 </p>
 
-<br>
+Five observation views show one visual property of a picture at a time: its **tones**, its
+**colour masses**, its **shapes** against empty space, its **lines**, and its **colour
+without tone**. A view is only something to look through. It is never written into the
+document, so it cannot end up in an export.
 
-<p align="center">
-  <img src="docs/images/magicpic-demo.jpg" alt="MagicPic editing Hokusai's The Great Wave: a caption card with a drop shadow, Title and Credit type layers, Vibrance and Curves adjustment layers, and the Curves editor drawn over the image's histogram" width="100%">
-  <br>
-  <sub>A caption card with a drop shadow, live type, and Vibrance and Curves adjustment layers, with the Curves editor open.<br>
-  <i>The Great Wave off Kanagawa</i>, Katsushika Hokusai, c. 1831</sub>
-</p>
+- **View › Seeing** opens a view beside your picture as a separate study.
+- **Chance frames** pick places to look at from a seed, not from habit, and the same seed
+  finds them again.
+- **Variants** try an idea on a copy: more or less exposure, camera movement, defocus, a
+  different frame. Your picture is never touched. Each variant stores its **recipe**, and
+  replaying the recipe gives the same pixels.
+- Nothing scores your picture or picks a winner. You can record your own reaction on a
+  variant, in your own words.
 
-> [!NOTE]
-> **ArtCraft is a community of artists from all walks of life.** Digital, generative, music,
-> games &mdash; if you make things, you're one of us. **[Come say hi on Discord](https://discord.gg/artcraft).**
+How these came from a text about learning to see, and what was deliberately left out, is in
+[`docs/seeing.md`](docs/seeing.md).
 
-<p align="center">
-  <a href="#features">Features</a> ·
-  <a href="#everything-in-the-box">Everything in the box</a> ·
-  <a href="#psd-without-compromise">PSD</a> ·
-  <a href="#built-for-agents">Agents</a> ·
-  <a href="#under-the-hood">Under the hood</a> ·
-  <a href="#get-started">Get started</a> ·
-  <a href="#downloads">Downloads</a> ·
-  <a href="#the-crafting-apps">Crafting Apps</a> ·
-  <a href="https://discord.gg/artcraft">Discord</a>
-</p>
+### An editor an agent can use safely
 
-<br>
+`magicpic-cli mcp` is an [MCP](https://modelcontextprotocol.io) server. Connect Claude or
+Codex to it and say what you want in plain language.
 
-<table>
-  <tr>
-    <td width="25%" valign="top">
-      <h3>🎛️ Familiar by design</h3>
-      The menus, shortcuts, panels and tools are where your hands expect them, from ⌘J to ⇧⌘D. If you know Photoshop, you already know MagicPic.
-    </td>
-    <td width="25%" valign="top">
-      <h3>⚡ Native and fast</h3>
-      A GPU compositor on wgpu (Metal, Vulkan, DX12, WebGPU), copy-on-write tiles and multithreaded filters. No Electron, no web view, no waiting.
-    </td>
-    <td width="25%" valign="top">
-      <h3>🗂️ Real PSD files</h3>
-      Open, edit and save layered Photoshop documents. Re-saving keeps the render of 307 of the 309 psd-tools test files.
-    </td>
-    <td width="25%" valign="top">
-      <h3>🤖 Agent-ready</h3>
-      Every action is a command, so you can drive the same engine from the UI, the CLI, a JSON control channel or an MCP server.
-    </td>
-  </tr>
-</table>
-
-<br>
-
-## Features
-
-Every screenshot here is the real app at work on public-domain art, rendered offscreen through its control channel.
-
-<table>
-  <tr>
-    <td width="50%" valign="top">
-      <img src="docs/images/magicpic-adjustments.jpg" alt="Monet's Impression, Sunrise with Levels and Vibrance adjustment layers; the Levels editor and the Histogram panel with mean, standard deviation and median are open on the right" width="100%">
-      <br>
-      <sub>Levels and Vibrance adjustment layers, with the live Histogram panel.<br><i>Impression, Sunrise</i>, Claude Monet, 1872</sub>
-      <h3>Edit without regret</h3>
-      Adjustment layers keep every edit live. Stack Levels, Curves, Vibrance, Hue/Saturation and a dozen more, mask them to an area, reorder them, or turn them off, and your original pixels never change.
-      <br><br>
-      <b>16 adjustment layers</b> that also apply directly to pixels, including Curves with per-channel editing, Levels with a live histogram, Black &amp; White, Channel Mixer, Gradient Map, Photo Filter, Selective Color and Color Lookup (.cube, .3dl, .look). Plus Shadows/Highlights, Replace Color, Match Color, HDR Toning, Desaturate and Equalize.
-    </td>
-    <td width="50%" valign="top">
-      <img src="docs/images/magicpic-layer-styles.jpg" alt="The Layer Style dialog editing an Outer Glow on the EARTHRISE type layer, with Stroke also enabled, over the Apollo 8 Earthrise photograph" width="100%">
-      <br>
-      <sub>Outer Glow and Stroke on a live type layer, in the Layer Style dialog.<br><i>Earthrise</i>, William Anders / NASA, 1968</sub>
-      <h3>Styles that sell the shot</h3>
-      Drop Shadow, Inner Shadow, Outer and Inner Glow, Bevel &amp; Emboss, Satin, Stroke, and Color, Gradient and Pattern Overlay, live on any layer, including type. Patterns come from a library (built-ins, Edit › Define Pattern, <code>.pat</code> import/export) and PSD <code>Patt</code> blocks.
-      <br><br>
-      Copy and paste styles between layers, hide all effects at once, and open styles straight from your PSDs, rendered to match Photoshop.
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-      <img src="docs/images/magicpic-masks.jpg" alt="Vermeer's Girl with a Pearl Earring: an elliptical selection around the face, and a Hue/Saturation layer with an elliptical mask that turns everything outside the face gray" width="100%">
-      <br>
-      <sub>An elliptical selection becomes the mask of a Hue/Saturation layer, so only the face keeps its color.<br><i>Girl with a Pearl Earring</i>, Johannes Vermeer, c. 1665</sub>
-      <h3>Selections that understand your image</h3>
-      Marquees, lassos and the Magic Wand for precision; Quick Selection, Object Selection and Select Subject when you want the computer to do the tracing; Select and Mask to refine hair-fine edges.
-      <br><br>
-      Feather, expand, contract, smooth, grow, reselect. Turn any selection into a layer mask, a vector path or a shape. Smart selection runs on your machine, with no cloud and no account.
-    </td>
-    <td width="50%" valign="top">
-      <img src="docs/images/magicpic-type.jpg" alt="Bierstadt's Among the Sierra Nevada with the headline SIERRA NEVADA being edited on the canvas in Georgia, a byline, and a paragraph caption; the Character and Paragraph controls are open" width="100%">
-      <br>
-      <sub>A headline edited in place, with a byline and a paragraph of body text.<br><i>Among the Sierra Nevada, California</i>, Albert Bierstadt, 1868</sub>
-      <h3>Type that sets beautifully</h3>
-      Point and paragraph text, edited right on the canvas, with full Character and Paragraph controls: font, weight, size, leading, tracking, alignment and colour. The <a href="docs/color-picker.md">full Type Color Picker</a> also supports screen sampling with a pixel loupe.
-      <br><br>
-      Type layers stay editable, take layer styles, and round-trip through PSD.
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-      <img src="docs/images/magicpic-vector.jpg" alt="A lotus badge built from shape layers (Lotus, Water, Sun, Badge and Dotted Ring) over Monet's Water Lilies, with the lotus path's anchor points selected" width="100%">
-      <br>
-      <sub>A badge made of shape layers: a gradient-filled lotus, a star and a dotted ring.<br><i>Water Lilies</i>, Claude Monet, 1906</sub>
-      <h3>Pixel-perfect vectors</h3>
-      Rectangle, Ellipse, Triangle, Polygon, Line and the Pen, Freeform Pen and Curvature Pen tools, with resolution-independent shape layers, gradient fills, and dashed, aligned strokes.
-      <br><br>
-      Combine shapes (unite, subtract, intersect, exclude), keep paths in the Paths panel, use them as vector masks, or stroke and fill them. 116 of 116 shape layers in our PSD corpus match Photoshop's pixels.
-    </td>
-    <td width="50%" valign="top">
-      <img src="docs/images/magicpic-filters.jpg" alt="The Twirl filter dialog at a 320 degree angle, previewing live inside an elliptical selection on Van Gogh's The Starry Night" width="100%">
-      <br>
-      <sub>Twirl previews live on the canvas, only inside the selection.<br><i>The Starry Night</i>, Vincent van Gogh, 1889</sub>
-      <h3>See it before you commit</h3>
-      Every filter dialog previews live on the canvas, through your selection. Blurs (Gaussian, Box, Motion, Radial, Surface, Smart, Lens, Shape, and the Blur Gallery: Tilt-Shift, Iris, Field, Spin, Path), sharpening, Reduce Noise, distortions (Twirl, Wave, Ripple, Displace, Shear, Zig Zag…), Pixelate, Stylize (Oil Paint, Wind, Extrude…), Render (Clouds, Fibers, Lens Flare, Lighting Effects) and more.
-      <br><br>
-      Run filters on a smart object and they stay editable: change, hide, reorder or mask them at any time.
-      <br><br>
-      Large-radius blurs use running-sum box passes across all cores: a radius-180 Gaussian on 3.6 MP takes under a second.
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-      <img src="docs/images/magicpic-transform.jpg" alt="Free Transform handles around a rotated copy of Ansel Adams' The Tetons and the Snake River, with the History panel listing Open, Duplicate Layer, Free Transform and other steps" width="100%">
-      <br>
-      <sub>Free Transform on a rotated print, with every step listed in History.<br><i>The Tetons and the Snake River</i>, Ansel Adams, 1942</sub>
-      <h3>Shape it any way you like</h3>
-      Free Transform with scale, rotate, skew, distort and perspective; exact 90° and 180° rotations and flips; Transform Again. Layers, type, shapes, masks and selections all transform together.
-      <br><br>
-      Full history, Toggle Last State and the History Brush mean every step can be undone, even one brush stroke at a time.
-    </td>
-    <td width="50%" valign="top">
-      <img src="docs/images/magicpic-export-light.jpg" alt="The Export As dialog in the light theme over Klimt's The Kiss: JPG at quality 90, scaled to 50 percent, with a preview and an estimated size of about 684K" width="100%">
-      <br>
-      <sub>Export As in the light theme, with a preview and a file-size estimate.<br><i>The Kiss</i>, Gustav Klimt, 1907–1908</sub>
-      <h3>Ship it anywhere</h3>
-      Export As with format, quality, transparency and scale, plus a preview and an instant file-size estimate. Quick Export to PNG in one click.
-      <br><br>
-      Choose a dark Pro theme, the airy Studio themes, or a Classic look.
-    </td>
-  </tr>
-</table>
-
-<br>
-
-## Everything in the box
-
-<table>
-  <tr>
-    <td width="33%" valign="top">
-      <h4>🧰 69 tools</h4>
-      Move · Artboard · Rectangular and Elliptical Marquee · Single Row Marquee · Single Column Marquee · Lasso · Polygonal Lasso · Magnetic Lasso · Object Selection · Quick Selection · Magic Wand · Crop · Perspective Crop · Slice · Slice Select · Frame · Eyedropper · Color Sampler · Ruler · Note · Count · Remove · Spot Healing Brush · Healing Brush · Patch · Content-Aware Move · Red Eye · Brush · Pencil · Mixer Brush · Color Replacement · Clone Stamp · Pattern Stamp · History Brush · Art History Brush · Eraser · Background Eraser · Magic Eraser · Gradient · Paint Bucket · Blur · Sharpen · Smudge · Dodge · Burn · Sponge · Pen · Freeform Pen · Curvature Pen · Add Anchor Point · Delete Anchor Point · Convert Point · Horizontal and Vertical Type · Horizontal and Vertical Type Mask · Path Selection · Direct Selection · Rectangle · Ellipse · Triangle · Polygon · Star · Line · Custom Shape · Hand · Rotate View · Zoom
-    </td>
-    <td width="33%" valign="top">
-      <h4>🖌️ A real brush engine</h4>
-      Shape Dynamics, Scattering, Texture, Dual Brush, Color Dynamics, Transfer, Brush Pose, Wet Edges, Build-up and Smoothing (including Pulled String), driven by pen pressure, tilt, rotation and direction. Brush presets, Define Brush from Selection, and deterministic, replayable strokes.
-    </td>
-    <td width="33%" valign="top">
-      <h4>🗃️ Layers, done properly</h4>
-      Groups, clipping masks, pixel and vector masks, fill layers (solid, gradient and pattern), adjustment layers, live smart objects with smart filters and lossless transforms and warps, multi-layer selection with align, distribute and link, alpha channels and Quick Mask, 27 Photoshop blend modes plus six Paint.NET variants, opacity and fill, locks, colour labels, a layer kind filter, merge, flatten, rasterize, Layer via Copy/Cut, Paste Into.
-    </td>
-  </tr>
-  <tr>
-    <td width="33%" valign="top">
-      <h4>🎨 Any colour, any depth</h4>
-      RGB, Grayscale, CMYK and Lab documents at 8, 16 and 32 bits per channel. Bit depth and colour model are runtime data, so every tool works at every depth.
-      <br><br>
-      Real ICC colour management in pure Rust: embedded profiles, Assign and Convert to Profile with all four rendering intents and black point compensation, soft proofing (⌘Y) and Gamut Warning (⇧⌘Y) on the GPU.
-    </td>
-    <td width="33%" valign="top">
-      <h4>🗂️ Formats</h4>
-      PSD and PSB, layered TIFF (Photoshop's layer data in the TIFF, read and written in either byte order), <a href="docs/pdn.md">Paint.NET PDN3 (read, with editable layers and all 14 blend modes)</a>, <a href="docs/ora.md">OpenRaster (read and write, with layers, groups and blend modes, for Krita, MyPaint and GIMP)</a>, <a href="docs/xcf.md">GIMP XCF (read, with layers, groups, masks, blend modes, channels and the selection)</a>, <a href="docs/kra.md">Krita .kra (read, with paint layers, groups, blend modes and transparency masks)</a>, SVG (opens as shape layers, places as a vector Smart Object), plus flat PNG, JPEG, TIFF, WebP (lossy and lossless), GIF, BMP, TGA, ICO, QOI, PNM, OpenEXR, Radiance HDR and FITS (astronomy images: 8/16-bit and 32-bit float, gray or RGB, header kept), and the native <code>.pcraft</code> format. Flat formats retain the depths they support: PNG keeps 8/16-bit samples, TIFF keeps 8/16-bit and 32-bit float samples, and OpenEXR keeps half/float samples; JPEG, WebP and the other 8-bit formats reduce higher-depth samples with an export warning. See the <a href="crates/codecs/README.md#capability-matrix-default-build">codec capability matrix</a> for each format. HEIC photos from iPhone and Mac are read-only (included in official builds; optional <code>--features heif</code> for source builds). AVIF is write-only with the optional <code>avif</code> build feature; AVIF decoding and JPEG XL are unavailable. Affinity documents (<code>.af</code>, <code>.afdesign</code>, <code>.afphoto</code>, <code>.afpub</code>) open natively, read only, with artboards, layers, vectors, text, images and masks; effects, adjustments and other unsupported parts are listed in a warning, and Affinity export is unavailable.
-    </td>
-    <td width="33%" valign="top">
-      <h4>🪄 The everyday essentials</h4>
-      Auto Tone, Contrast and Color · Equalize · Image and Canvas Size · Crop and Trim · Reveal All · Edit › Fill and Stroke · Copy Merged · Paste in Place · guides, rulers, grid and snapping · Actions record and replay · a command palette (⌘F).
-    </td>
-  </tr>
-</table>
-
-<br>
-
-## PSD without compromise
-
-MagicPic's PSD support is a standalone crate written from Adobe's public specification and tested against a corpus of real-world files.
-
-- **Faithful round trips:** opening and re-saving a document renders the same for 307 of the 309 files in the psd-tools test set and 169 of 170 in our mixed ag-psd/psd-tools set (`crates/io/tests/it/corpus.rs`; fetch the psd-tools set with `cargo xtask corpus --psd-tools`), and anything we don't model yet (raw blocks, descriptors, extras) is carried over instead of being dropped. A re-saved file is not byte-identical to its source: MagicPic rewrites image resources, layer records and the composite. Only the standalone `magicpic-psd` crate, parsing and writing a file without the document model, reproduces every parseable corpus file byte for byte (`crates/psd/tests/it/corpus.rs`).
-- **Pixels that match:** a composite oracle compares our render with Photoshop's own merged image, covering gradient interpolation (Classic, Perceptual and Linear), layer effects, shape strokes, clipping and fill opacity.
-- **Large documents:** PSB, 16 and 32-bit files, and CMYK and Lab documents open natively.
-
-## Built for agents
-
-Every menu item, tool and dialog runs a command from one registry of 500+ commands. The UI, the CLI, the JSON control channel and the MCP server all call the same commands, so anything you can click, a script or an AI agent can do too.
+- The agent **sees** the document: the whole picture, one region at full size, or any of the
+  observation views.
+- It edits with the editor's own commands, preferring adjustment layers, masks and smart
+  filters, so the result stays editable.
+- **All or nothing:** a batch of edits either applies completely or leaves every open
+  document exactly as it was.
+- **No overwriting your work:** an edit can be tied to the document and the state the agent
+  last saw. If you changed something by hand in the meantime, the agent's edit is refused.
+- **Bridge mode** edits the document that is open in the app, so you watch it happen and can
+  step in.
+- It reads and writes only inside the folders you grant, and a save is reported only after
+  the file is found on disk.
 
 ```sh
-# Headless: open, edit, save
-magicpic-cli run wave.psd \
-  --cmd filter.sharpen.smartSharpen     --params '{"amount":80}' \
-  --cmd layer.newAdjustmentLayer.curves --params '{"points":[[0,0],[64,48],[192,212],[255,255]]}' \
-  --out wave-final.png
+# Headless: the agent opens, edits and exports files in one folder
+magicpic-cli mcp --automation-read-root /path/to/photos --automation-write-root /path/to/photos
 
-# Apply one action list to a folder of images
-magicpic-cli batch --actions grade.json --in ./raw --out ./graded
-
-# Every subcommand explains itself
-magicpic-cli batch --help
-
-# Let an agent drive it over MCP (headless, or bridged to the running app)
-magicpic-cli mcp
+# Bridge: the agent edits what is open in the running app
+magicpic --control 7878 --control-token-file /path/to/control.token \
+  --automation-read-root /path/to/photos --automation-write-root /path/to/photos
+magicpic-cli mcp --bridge 127.0.0.1:7878 --control-token-file /path/to/control.token
 ```
 
-The desktop app also offers an authenticated, loopback-only control channel (`magicpic --control`) for inspecting UI state, driving tools with pointer events, and taking offscreen screenshots. Every image in this README was rendered that way. See [`docs/control-protocol.md`](docs/control-protocol.md).
-
-## Under the hood
-
-- **Engine first:** a pure-data document model and a command engine, with a thin egui UI on top. Layering is enforced at build time across 24 crates.
-- **Two compositors:** a CPU compositor serves as the reference oracle, and a wgpu compositor puts the canvas on the GPU. They are tested against each other.
-- **Copy-on-write tiles:** 256² sparse tiles make undo cheap and huge canvases light, and effect maps are cached per layer state.
-- **Runs in the browser:** the whole engine and UI compile to WebAssembly.
-- **Clean-room:** implemented from public specs and observed behaviour only. No proprietary code, shaders or assets.
-- **Tested:** more than 1,700 tests, including PSD round trips, synthetic generators, compositor oracles and multi-depth checks.
+Setup for Claude Code, Claude Desktop and Codex, and example prompts, are in
+[`docs/vi/art-of-seeing-va-mcp.md`](docs/vi/art-of-seeing-va-mcp.md) (Vietnamese) and
+[`docs/mcp.md`](docs/mcp.md).
 
 ## Get started
 
+You need Rust (stable) and, on Linux, the windowing and GTK development packages listed in
+[`docs/development.md`](docs/development.md#prerequisites).
+
 ```sh
-git clone https://github.com/storytold/photocraft
+git clone https://github.com/vansyson1308/vansysoneditphoto magicpic
 cd magicpic
-cargo run --release -p magicpic -- image.psd   # the desktop app
-cargo test --workspace                           # the test suite
+cargo run --release -p magicpic -- picture.jpg     # the desktop app
+cargo install --path apps/magicpic-cli --locked    # the command line and MCP server
 ```
 
-Japanese fonts for the UI and Type tool come from [craft-fonts](https://github.com/storytold/craft-fonts), an optional build input (desktop release builds always include it). Without it MagicPic uses your system's CJK fonts:
-
 ```sh
-git clone https://github.com/storytold/craft-fonts ../craft-fonts
-CRAFT_FONTS_DIR="$PWD/../craft-fonts" cargo run --release -p magicpic
-```
+# Headless editing without an agent
+magicpic-cli run in.jpg \
+  --cmd layer.newAdjustmentLayer.curves --params '{"points":[[0,0],[64,48],[192,212],[255,255]]}' \
+  --out out.png
 
-New contributors and AI agents: start with [`AGENTS.md`](AGENTS.md), then [`docs/`](docs/).
-
-Installers for macOS, Windows, Linux, FreeBSD and the web are attached to each [GitHub release](https://github.com/storytold/photocraft/releases). On Linux you can pick an AppImage, a `.deb`, an `.rpm`, a tarball or a Flatpak bundle. The bundle needs the freedesktop runtime from [Flathub](https://flathub.org/setup), which `flatpak` offers to install along with it:
-
-```sh
-flatpak install --user magicpic-<version>-linux-x86_64.flatpak   # or -linux-aarch64
-flatpak run io.github.vansyson1308.magicpic
-```
-
-The Flatpak prints through the host's CUPS socket (File › Print talks IPP to it directly, no `lp` needed); without CUPS, or without a printer, File › Print opens the system print dialog through the print portal. See [printing](docs/printing.md).
-
-The AppImage needs no install: the first run registers its launcher icon and menu entry in `~/.local/share` so the dock shows MagicPic's icon on Wayland. Set `MAGICPIC_NO_DESKTOP_INTEGRATION=1` to skip that, and see [`docs/releasing.md`](docs/releasing.md) › Linux to undo it.
-
-To use the bundled CLI, run `./magicpic-<version>-linux-x86_64.AppImage --cli --help`, or `--cli mcp` to start the MCP server on stdio. CLI launches skip desktop integration. A symlink named `magicpic-cli` also selects the CLI; see [`docs/development.md`](docs/development.md#headless-cli).
-
-On a Wayland session, files dropped on the window don't open yet: winit 0.30, the windowing library under egui, has no Wayland drag and drop (#386). Use File › Open, or copy the image in your file manager and paste it with Ctrl+V. To drag and drop, start MagicPic under XWayland: `WAYLAND_DISPLAY= magicpic`, `WAYLAND_DISPLAY= ./magicpic-<version>-linux-x86_64.AppImage`, or `flatpak run --nosocket=wayland --socket=x11 io.github.vansyson1308.magicpic`. On Wayland, MagicPic shows the command for your install in a notice until you dismiss it. Preferences › Performance › Linux display server = X11 does the same on every launch. With a fractional display scale (125%, 150%, 175%) an XWayland window is drawn at a lower resolution and enlarged by the compositor, so the interface is blurred there; native Wayland stays sharp (#1072).
-
-On macOS, the command-line tool comes as `magicpic-cli-<version>-macos-universal.zip`. The binary is signed with the same Developer ID as the app and notarized by Apple. A bare binary can't carry a stapled notarization ticket the way the DMG does, so the first time you run it macOS checks the notarization online. You can confirm it yourself:
-
-```sh
-ditto -x -k magicpic-cli-<version>-macos-universal.zip .
-spctl --assess --type install -vv magicpic-cli-<version>-macos-universal/magicpic-cli
-# ... accepted, source=Notarized Developer ID
-```
-
-On FreeBSD 14 (x86_64), the release has a tarball laid out like `/usr/local`. Install the runtime libraries, then unpack it there:
-
-```sh
-pkg install libxkbcommon wayland libX11 libXcursor libXrandr libXi libxcb mesa-libs vulkan-loader gtk3 fontconfig freetype2 alsa-lib
-tar -xzf magicpic-<version>-freebsd-x86_64.tar.gz --strip-components 1 -C /usr/local
-magicpic
-```
-
-Maintainers: [`docs/releasing.md`](docs/releasing.md) explains how releases are built, signed and published.
-
-> [!IMPORTANT]
-> **Status:** MagicPic is in early alpha, and we want to be straight about where it stands: much of Photoshop's feature surface exists in some form, but **it is not yet a Photoshop replacement for daily professional work**. The biggest gaps are AI/generative features, 15 missing tools, depth in typography and pro workflows, and plug-in compatibility. Every Photoshop menu item is wired to a command ([`docs/parity-checklist.md`](docs/parity-checklist.md)), but that measures wiring, not behaviour. The honest, dimension-by-dimension picture and where we're going next are in the [roadmap](ROADMAP.md) and [parity assessment](docs/target-app-parity.md). Expect rough edges, and please file issues (include your OS, document size, layer count and a screenshot). You can also tell us what broke on [Discord](https://discord.gg/artcraft).
-
-## Community packages
-
-These installers are maintained by community members, not by the MagicPic team.
-
-On Gentoo, the [::snakebyte overlay](https://github.com/switch87/snakebyte-overlay) packages the Linux release as `media-gfx/magicpic-bin`:
-
-```sh
-eselect repository add snakebyte git https://github.com/switch87/snakebyte-overlay.git
-emaint sync -r snakebyte
-echo 'media-gfx/magicpic-bin ~amd64' >> /etc/portage/package.accept_keywords/magicpic
-emerge --ask media-gfx/magicpic-bin
+# Every subcommand explains itself
+magicpic-cli --help
 ```
 
 ## Documentation
 
-Developer, architecture, automation, format, and security documentation is maintained in the [MagicPic documentation book](book/).
-
-To self-host the browser version with Docker, see [Docker web hosting](packaging/web/README.md#docker).
-
-## Security
-
-Security architecture, threat modeling, parser hardening, fuzzing, and vulnerability reporting are covered in the [security documentation](book/src/security/) and the repository [security policy](SECURITY.md).
-
-## Test corpora
-
-MagicPic is tested against real files: our own Photoshop-authored oracle PSDs in
-[photocraft-corpus](https://github.com/storytold/photocraft-corpus) plus the psd-tools, ag-psd and PngSuite sets, pinned and
-sha256-verified. Fetch them with `cargo xtask corpus --all` and run the tests with
-`cargo xtask test-corpus` (details in [docs/development.md](docs/development.md#test-corpora)).
-
-## Downloads
-
-**New to MagicPic?** Download it from the [MagicPic page on getartcraft.com](https://getartcraft.com/apps/photocraft). That's the easiest way to install it.
-
-**Want a specific build or format?** On GitHub, the [latest release](https://github.com/storytold/photocraft/releases/latest) has every build listed below, and [all releases](https://github.com/storytold/photocraft/releases) have earlier versions and their notes. `<ver>` in the file names is the version number, and `SHA256SUMS.txt` lists a checksum for every file.
-
-### Windows
-
-| Build | Installer | Portable |
-|---|---|---|
-| x64 (64-bit Intel/AMD) | `magicpic-<ver>-windows-x64.msi` | `magicpic-<ver>-windows-x64-portable.zip` |
-| arm64 (Snapdragon and other ARM PCs) | `magicpic-<ver>-windows-arm64.msi` | `magicpic-<ver>-windows-arm64-portable.zip` |
-| x86 (32-bit) | `magicpic-<ver>-windows-x86.msi` | `magicpic-<ver>-windows-x86-portable.zip` |
-
-Installers and executables are code-signed.
-
-### macOS
-
-| Build | File | Notes |
-|---|---|---|
-| App, universal (Apple silicon + Intel) | `magicpic-<ver>-macos-universal.dmg` | Signed and notarized |
-| Command-line tool, universal | `magicpic-cli-<ver>-macos-universal.zip` | Signed and notarized |
-
-### Linux
-
-| Format | x86_64 | aarch64 (ARM64) | Notes |
-|---|---|---|---|
-| AppImage | `magicpic-<ver>-linux-x86_64.AppImage` | `magicpic-<ver>-linux-aarch64.AppImage` | Runs anywhere; updates itself with [AppImageUpdate](https://github.com/AppImageCommunity/AppImageUpdate) (`.zsync` files) |
-| Flatpak | `magicpic-<ver>-linux-x86_64.flatpak` | `magicpic-<ver>-linux-aarch64.flatpak` | Sandboxed; `flatpak install --user <file>` |
-| Debian/Ubuntu | `magicpic-<ver>-linux-x86_64.deb` | `magicpic-<ver>-linux-aarch64.deb` | |
-| Fedora/RHEL/openSUSE | `magicpic-<ver>-linux-x86_64.rpm` | `magicpic-<ver>-linux-aarch64.rpm` | |
-| Tarball | `magicpic-<ver>-linux-x86_64.tar.gz` | `magicpic-<ver>-linux-aarch64.tar.gz` | Unpack anywhere |
-
-RISC-V (riscv64): `magicpic-<ver>-linux-riscv64.tar.gz` only, built against Ubuntu 24.04 (needs glibc 2.39+).
-
-### FreeBSD
-
-| Build | File |
+| Read | For |
 |---|---|
-| x86_64 | `magicpic-<ver>-freebsd-x86_64.tar.gz` |
+| [`docs/vi/art-of-seeing-va-mcp.md`](docs/vi/art-of-seeing-va-mcp.md) | User guide in Vietnamese: Seeing, connecting Claude and Codex, example prompts, what was verified |
+| [`docs/seeing.md`](docs/seeing.md) | The observation views, frames, variants, recipes and transactions |
+| [`docs/mcp.md`](docs/mcp.md) | The MCP tools, folders and permissions, guarded and atomic edits |
+| [`docs/control-protocol.md`](docs/control-protocol.md) | The control channel behind bridge mode |
+| [`docs/architecture.md`](docs/architecture.md), [`docs/development.md`](docs/development.md) | How the code is laid out, building, testing |
+| [`AGENTS.md`](AGENTS.md) | Rules for contributors and AI agents working on this code |
+| [`docs/target-app-parity.md`](docs/target-app-parity.md), [`docs/gaps.md`](docs/gaps.md) | Where the editor stands against Photoshop, and what is missing |
 
-### Web (WebAssembly)
+## What is verified
 
-| Build | File | Notes |
-|---|---|---|
-| Static site | `magicpic-web-<ver>.zip` | Runs in a modern browser; host it on any static server |
+Checked on Linux (x86-64, software rendering), from source:
 
-## The Crafting Apps
+- The engine, command-line, MCP and UI test suites.
+- An end-to-end run through the MCP server: import, tone edit, preview, export and reopening
+  the export; a local edit through a mask; variants with replayed recipes; undo and redo;
+  saving and reopening a project; failing batches, bad files and forbidden writes.
+- Bridge mode against the running desktop app.
+- A real editing session with Claude Code, headless and through the bridge.
 
-MagicPic is one of the **Crafting Apps**: free, open-source creative tools from the
-[ArtCraft](https://getartcraft.com/) team, each written from scratch in Rust and each able to
-stand on its own.
+Not verified:
 
-| | App | What it's for | Code | Learn more |
-|:-:|---|---|---|---|
-| <img src="https://raw.githubusercontent.com/storytold/photocraft/main/assets/app-icon/hicolor/64x64/apps/io.github.vansyson1308.magicpic.png" alt="" width="32" height="32"> | **MagicPic** | Image editing: layers, masks, type and real PSD files | [GitHub](https://github.com/storytold/photocraft) | [Website](https://getartcraft.com/apps/photocraft) |
-| <img src="https://raw.githubusercontent.com/storytold/vectorcraft/main/assets/app-icon/hicolor/64x64/apps/ai.storyteller.vectorcraft.png" alt="" width="32" height="32"> | **VectorCraft** | Vector illustration | [GitHub](https://github.com/storytold/vectorcraft) | [Website](https://getartcraft.com/apps/vectorcraft) |
-| <img src="https://raw.githubusercontent.com/storytold/filmcraft/main/assets/app-icon/hicolor/64x64/apps/ai.storyteller.filmcraft.png" alt="" width="32" height="32"> | **FilmCraft** | Video editing, color and sound | [GitHub](https://github.com/storytold/filmcraft) | [Website](https://getartcraft.com/apps/filmcraft) |
-| <img src="https://raw.githubusercontent.com/storytold/lightcraft/main/assets/app-icon/hicolor/64x64/apps/ai.storyteller.lightcraft.png" alt="" width="32" height="32"> | **LightCraft** | Photo library and raw development | [GitHub](https://github.com/storytold/lightcraft) | [Website](https://getartcraft.com/apps/lightcraft) |
-| <img src="https://raw.githubusercontent.com/storytold/pdfcraft/main/assets/app-icon/hicolor/64x64/apps/ai.storyteller.pdfcraft.png" alt="" width="32" height="32"> | **PdfCraft** | Reading, organizing and protecting PDFs | [GitHub](https://github.com/storytold/pdfcraft) | [Website](https://getartcraft.com/apps/pdfcraft) |
-| <img src="https://raw.githubusercontent.com/storytold/effectcraft/main/assets/app-icon/hicolor/64x64/apps/ai.storyteller.effectcraft.png" alt="" width="32" height="32"> | **EffectCraft** | Motion graphics and visual effects | [GitHub](https://github.com/storytold/effectcraft) | [Website](https://getartcraft.com/apps/effectcraft) |
-| <img src="https://raw.githubusercontent.com/storytold/designcraft/main/assets/app-icon/hicolor/64x64/apps/ai.storyteller.designcraft.png" alt="" width="32" height="32"> | **DesignCraft** | Page layout and publishing | [GitHub](https://github.com/storytold/designcraft) | [Website](https://getartcraft.com/apps/designcraft) |
-| <img src="https://raw.githubusercontent.com/storytold/figcraft/main/assets/app-icon/hicolor/64x64/apps/ai.storyteller.figcraft.png" alt="" width="32" height="32"> | **FigCraft** | Interface design and prototyping | [GitHub](https://github.com/storytold/figcraft) | [Website](https://getartcraft.com/apps/figcraft) |
-| <img src="https://raw.githubusercontent.com/storytold/wordcraft/main/assets/app-icon/hicolor/64x64/apps/ai.storyteller.wordcraft.png" alt="" width="32" height="32"> | **WordCraft** | Word processing and documents | [GitHub](https://github.com/storytold/wordcraft) | [Website](https://getartcraft.com/apps/wordcraft) |
-| <img src="https://raw.githubusercontent.com/storytold/soundcraft/main/assets/app-icon/hicolor/64x64/apps/ai.storyteller.soundcraft.png" alt="" width="32" height="32"> | **SoundCraft** | Audio recording and editing | [GitHub](https://github.com/storytold/soundcraft) | [Website](https://getartcraft.com/apps/soundcraft) |
-| <img src="https://raw.githubusercontent.com/storytold/deckcraft/main/assets/app-icon/hicolor/64x64/apps/ai.storyteller.deckcraft.png" alt="" width="32" height="32"> | **DeckCraft** | Presentations and slide decks | [GitHub](https://github.com/storytold/deckcraft) | [Website](https://getartcraft.com/apps/deckcraft) |
-| <img src="https://raw.githubusercontent.com/storytold/cadcraft/main/assets/app-icon/hicolor/64x64/apps/ai.storyteller.cadcraft.png" alt="" width="32" height="32"> | **CADCraft** | Computer-aided design | [GitHub](https://github.com/storytold/cadcraft) | [Website](https://getartcraft.com/apps/cadcraft) |
-| <img src="https://raw.githubusercontent.com/storytold/gridcraft/main/assets/app-icon/hicolor/64x64/apps/ai.storyteller.gridcraft.png" alt="" width="32" height="32"> | **GridCraft** | Spreadsheets and data | [GitHub](https://github.com/storytold/gridcraft) | [Website](https://getartcraft.com/apps/gridcraft) |
-| <img src="https://raw.githubusercontent.com/storytold/texturecraft/main/assets/app-icon/hicolor/64x64/apps/ai.storyteller.texturecraft.png" alt="" width="32" height="32"> | **TextureCraft** | 3D texture painting | [GitHub](https://github.com/storytold/texturecraft) | [Website](https://getartcraft.com/apps/texturecraft) |
-| <img src="https://raw.githubusercontent.com/storytold/craft-anything/main/assets/app-icon/hicolor/64x64/apps/ai.storyteller.craft-anything.png" alt="" width="32" height="32"> | **Craft Anything** | See how any software works, then build your own | [GitHub](https://github.com/storytold/craft-anything) | [Website](https://getartcraft.com/apps/craft-anything) |
-| <img src="https://raw.githubusercontent.com/tangency-labs/solidcraft/main/assets/icons/app/linux/exports/hicolor/64x64/apps/io.tangencylabs.solidcraft.png" alt="" width="32" height="32"> | **SolidCraft** | Parametric 3D CAD by Tangency Labs (community app) | [GitHub](https://github.com/tangency-labs/solidcraft) | |
+- **Windows and macOS.** The code is cross-platform and inherited the upstream packaging
+  scripts under `packaging/`, but MagicPic has not been built, run or packaged there.
+- **Installers, signing and automatic updates.** There are no MagicPic releases. The
+  packaging scripts and the CI workflows are inherited and still assume the upstream
+  project's infrastructure; they need their own pass before a first release.
+- **Codex and Claude Desktop sessions.** The server follows the MCP standard and Codex
+  accepts its configuration, but a full session with those clients has not been run.
+- **Translations.** The interface is English unless built with the upstream translation
+  catalogues (`CRAFT_I18N_DIR`, see [`docs/localization.md`](docs/localization.md)); the build
+  then puts MagicPic's name into them. The texts MagicPic added, such as the Seeing menu, are
+  English in every language.
 
-And [**ArtCraft**](https://getartcraft.com/) itself, our AI image and video studio for artists who want real control.
+## Where MagicPic comes from
 
-The Crafting Apps share the same conventions: clean-room and pure Rust, native on macOS, Windows and Linux, in the browser via WebAssembly, and fully drivable by agents.
+MagicPic is a modified version of [PhotoCraft](https://github.com/storytold/photocraft),
+Copyright (c) 2026 ArtCraft Team and the PhotoCraft contributors, used under the MIT and
+Apache-2.0 licenses. The editor core, the PSD support, the compositors and the user interface
+are their work; MagicPic renames the product and adds the seeing tools and the agent-safety
+features described above. MagicPic is not made, sponsored or endorsed by the ArtCraft Team,
+and does not use the ArtCraft name or logos.
 
-<br>
+Links in the documentation and source to `storytold/photocraft` issues and pull requests are
+kept on purpose: they are the history of this code. MagicPic continues PhotoCraft's version
+numbers, so a version below 0.23 in a document or comment is a PhotoCraft release. MagicPic
+still opens what PhotoCraft saved: `.pcraft` projects, droplets and Camera Raw sidecars.
 
-<p align="center">
-  <a href="https://discord.gg/artcraft"><img alt="Join the ArtCraft community on Discord" src="https://img.shields.io/badge/Join%20us%20on%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" height="40"></a>
-</p>
+The people who wrote this code are credited in the app under
+**Help › About MagicPic › Contributors**.
 
-<h3 align="center">Come make things with us</h3>
+## License
 
-<p align="center">
-  Our Discord is where artists of every kind hang out: people who paint, shoot, draw, cut film,
-  set type, and people still figuring out what they like to make. Share what you're working on,
-  ask for help, tell us what's broken, or tell us what you wish these tools could do.
-  Whatever your medium and however long you've been at it, you're welcome here.
-</p>
-
-<p align="center">
-  <a href="https://discord.gg/artcraft"><b>discord.gg/artcraft</b></a> ·
-  <a href="https://getartcraft.com/">getartcraft.com</a> ·
-  <a href="https://getartcraft.com/apps">The Crafting Apps</a> ·
-  <a href="https://getartcraft.com/apps/photocraft">MagicPic</a>
-</p>
-
----
-
-## License and credits
-
-MagicPic is dual-licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option.
-Copyright (c) 2026 ArtCraft Team and the PhotoCraft contributors. Required notices are in [NOTICE](NOTICE).
-
-Bundled fonts, icons, images and other assets keep their own open licenses; each one is listed
-with its author, source and license in [ATTRIBUTION.md](ATTRIBUTION.md).
-
-Every artwork shown is in the public domain (Wikimedia Commons, NASA, U.S. National Archives); sources are listed in [`docs/images/SOURCES.md`](docs/images/SOURCES.md).
-
-The ArtCraft name, wordmark and logos in [`docs/brand/`](docs/brand/) are trademarks of the
-ArtCraft Team and are not covered by this license. They may be used only unmodified, and only as
-part of this repository and MagicPic, under [`docs/brand/LICENSE-brand.txt`](docs/brand/LICENSE-brand.txt).
-Forks and modified versions must remove them.
-
-<sub>Adobe, Photoshop, Illustrator, Premiere Pro, Lightroom, Acrobat, After Effects and InDesign are trademarks or registered trademarks of Adobe Inc. in the United States and/or other countries. MagicPic is an independent, open-source project and is not affiliated with, sponsored by or endorsed by Adobe Inc.; these names are used only to describe the workflows it is compatible with.</sub>
-
-<p align="center">
-  <a href="https://getartcraft.com/"><img alt="ArtCraft" src="docs/brand/artcraft-mark.svg" width="28"></a><br>
-  <sub>Made by the <a href="https://getartcraft.com/">ArtCraft</a> team and community.</sub>
-</p>
-
-## Star history
-
-[![Star History Chart](https://api.star-history.com/svg?repos=storytold/photocraft&type=Date&legend=top-left)](https://www.star-history.com/?repos=storytold%2Fmagicpic&type=date&legend=top-left)
+Licensed under either of [Apache License 2.0](LICENSE-APACHE) or [MIT license](LICENSE-MIT),
+at your option. Third-party material keeps its own licenses: see [`NOTICE`](NOTICE) and
+[`ATTRIBUTION.md`](ATTRIBUTION.md).
