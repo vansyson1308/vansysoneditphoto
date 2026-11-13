@@ -107,14 +107,14 @@ pub fn rename_noreplace(from: &Path, to: &Path) -> io::Result<()> {
 
 /// Use fallback only when the exclusive rename primitive itself is unsupported.
 fn unsupported_rename(error: &io::Error) -> bool {
-    if error.kind() == io::ErrorKind::Unsupported {
-        return true;
-    }
+    // One expression per platform: on Windows a trailing `if … { return true } false` is what
+    // clippy's needless_bool refuses.
     #[cfg(unix)]
-    if matches!(error.raw_os_error(), Some(code) if code == rustix::io::Errno::INVAL.raw_os_error() || code == rustix::io::Errno::NOSYS.raw_os_error()) {
-        return true;
-    }
-    false
+    let platform_unsupported =
+        matches!(error.raw_os_error(), Some(code) if code == rustix::io::Errno::INVAL.raw_os_error() || code == rustix::io::Errno::NOSYS.raw_os_error());
+    #[cfg(not(unix))]
+    let platform_unsupported = false;
+    error.kind() == io::ErrorKind::Unsupported || platform_unsupported
 }
 
 /// Linking claims an absent destination atomically; a later unlink failure is already published.
