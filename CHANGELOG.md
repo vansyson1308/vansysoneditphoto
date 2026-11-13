@@ -33,6 +33,43 @@ on a Windows 10 laptop and editing four photos with it.
   (shallow clone, one build for both programs, copied out of `target/`), and problems to
   `docs/agent-troubleshooting.md`.
 
+### Updating and re-registering
+
+From testing an update on Windows 10 with the Microsoft Store build of Claude Desktop.
+
+- `mcp register --restart` (and `unregister --restart`) waits until **every** Claude Desktop
+  process has quit, not just one of its Electron helpers. It reads the process list natively
+  (no PowerShell). A list that can't be read counts as "still running". It checks again 3 s
+  later before writing. After opening Claude again, it logs `reopened` only when a new main
+  process started after the write, and otherwise `wrote, but could not confirm a restart`.
+  Before, one failed or empty probe was enough to write while Claude Desktop still ran.
+- The helper waits 60 minutes by default (`--wait-minutes N`; `--timeout` in seconds still
+  works). When it gives up, or is ended, the registration stays pending
+  (`~/.magicpic/register-pending.json`). `mcp status` and `doctor` report it with the command
+  that fixes it.
+- `mcp register --restart` returns at once, also when its output is captured
+  (`... | Out-String`). On Windows, Rust starts processes with handle inheritance on, so the
+  helper inherited the caller's output pipe and kept it open. The helper, and the app that
+  `launch` and `--start-app-if-needed` start, are now started through the shell
+  (`Start-Process`) and hold none of the caller's handles.
+- `mcp status` and `doctor` report a registration that runs another `magicpic-cli` than this
+  install (with both versions), and a `magicpic-app` entry without `--start-app-if-needed`
+  (`mcp register --no-start-app` is remembered, so a deliberate choice is not flagged). `doctor`
+  also lists the MagicPic MCP server processes running now (`runningServers`) and says when any
+  was started from another binary.
+- `magicpic-cli install --from <dir>` and `install.ps1` replace the programs while they run. They
+  ask a running app to quit, and refuse, changing nothing, while it has unsaved changes. They copy
+  both programs in beside the old ones, rename one still in use (`magicpic-cli.exe`, which agent
+  clients keep running) to `<name>.old-<time>.exe`, and delete old copies on a later run.
+  `magicpic-cli quit-app` asks the app to quit on its own.
+- `setup` lists what an older guide left behind under `legacy` (`~/.cargo/bin/magicpic-cli`,
+  `start-magicpic.ps1`). `setup --migrate` re-points registrations to this install and then
+  removes what nothing uses any more. `doctor` reports leftovers.
+- The setup commands print ASCII only: menu paths use `>`, and JSON escapes non-ASCII characters
+  (`\u203a`). Windows PowerShell 5.1 no longer shows `?` in their messages and paths.
+- `install.sh` and `install.ps1` say when no release is published (HTTP 404) and point to the
+  source build. `docs/releasing.md` says how to cut the first release.
+
 ### MCP
 
 - The stdio reader drops a leading UTF-8 byte order mark (Windows PowerShell 5.1 pipes one).

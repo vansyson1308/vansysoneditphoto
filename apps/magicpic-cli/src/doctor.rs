@@ -12,8 +12,9 @@ use std::time::Duration;
 use serde_json::{Value, json};
 
 use crate::args::{Client, DoctorArgs};
-use crate::output::{JsonStyle, print_json};
-use crate::register::{SERVERS, client_status, entries};
+use crate::output::print_json_ascii;
+use crate::procs::{self, ProcessTable};
+use crate::register::{SERVERS, client_status, entries, own_version, same_file_key};
 use crate::setup::{Config, listening, magicpic_home};
 use crate::{CliError, Result};
 
@@ -157,6 +158,52 @@ pub(crate) fn doctor(a: &DoctorArgs, out: &mut dyn Write) -> Result {
                 format!("magicpic-cli mcp register --client {}", c["client"].as_str().unwrap_or("")),
             );
         }
+        // A pending Claude Desktop registration, another CLI than this one, an old flag set.
+        for p in c["problems"].as_array().into_iter().flatten() {
+            if !problems.contains(p) {
+                problems.push(p.clone());
+            }
+        }
+    }
+
+    // The MCP servers that run right now: started from an older binary, they keep serving the old
+    // tools until their client restarts, whatever the config files say now.
+    let me = same_file_key(&crate::setup::current_cli());
+    let running: Vec<Value> = procs::SystemTable::new(true)
+        .snapshot()
+        .map(|list| procs::mcp_servers(&list))
+        .unwrap_or_default()
+        .iter()
+        .map(|p| {
+            let mut v = procs::describe(p);
+            // Unknown when the system hides the path (another user's process): not counted.
+            v["thisCli"] = p.exe.as_deref().map_or(Value::Null, |e| json!(same_file_key(e) == me));
+            v
+        })
+        .collect();
+    let outdated: BTreeSet<String> = running.iter().filter(|p| p["thisCli"] == false).filter_map(|p| p["exe"].as_str().map(str::to_string)).collect();
+    if !outdated.is_empty() {
+        problem(
+            &mut problems,
+            format!(
+                "{} MagicPic MCP server process(es) still run another binary ({}) than this install ({}), so the agent client still sees the old tools",
+                running.iter().filter(|p| p["thisCli"] == false).count(),
+                outdated.into_iter().collect::<Vec<_>>().join(", "),
+                own_version()
+            ),
+            "restart the agent client so it starts the new servers (Claude Desktop: tray icon > Quit, then open it again)",
+        );
+    }
+
+    let legacy = crate::update::legacy(&home);
+    if !legacy.is_empty() {
+        let paths: Vec<&str> = legacy.iter().filter_map(|l| l["path"].as_str()).collect();
+        let how: Vec<&str> = legacy.iter().filter_map(|l| l["remove"].as_str()).collect();
+        problem(
+            &mut problems,
+            format!("an older MagicPic install is still here: {}", paths.join(", ")),
+            format!("ask the person, then run `magicpic-cli setup --migrate` (or by hand: {})", how.join("; ")),
+        );
     }
 
     // Each distinct registered server, else the ones `register` would write.
@@ -199,9 +246,11 @@ pub(crate) fn doctor(a: &DoctorArgs, out: &mut dyn Write) -> Result {
         "control": control,
         "roots": roots,
         "servers": servers,
+        "runningServers": running,
         "clients": clients,
+        "legacy": legacy,
         "problems": problems,
     });
-    print_json(out, &report, JsonStyle::Pretty)?;
+    print_json_ascii(out, &report)?;
     if report["ok"] == true { Ok(()) } else { Err(CliError::Other("doctor found problems (see `problems`)".into())) }
 }

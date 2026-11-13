@@ -68,7 +68,10 @@ fixed version (`--version v0.24.0` / `MAGICPIC_VERSION`).
 
 The installer downloads the archive for this machine and `SHA256SUMS`, refuses an archive whose
 checksum does not match, copies both programs into `~/.magicpic/bin`, and runs
-`magicpic-cli setup`. Expected: progress lines ending in `checksum ok (…)` and
+`magicpic-cli setup`. Run again later, it **updates in place**, also while MagicPic and the MCP
+servers run: it asks a running app to quit (and installs nothing while a document has unsaved
+changes, saying which), and renames a program that is still in use to `<name>.old-<time>.exe`
+before putting the new one in (deleted on a later run). Expected: progress lines ending in `checksum ok (…)` and
 `installed …`, then this JSON (Windows paths shown; yours differ):
 
 ```json
@@ -85,15 +88,24 @@ checksum does not match, copies both programs into `~/.magicpic/bin`, and runs
   "photos": "C:\\Users\\Ann\\Pictures\\MagicPic",
   "port": 7878,
   "tokenFile": "C:\\Users\\Ann\\.magicpic\\control.token",
+  "legacy": [],
   "version": "0.23.0"
 }
 ```
 
-Check `"ok": true`. Below, `<cli>` means the `cli` path from this output.
+Check `"ok": true`. Below, `<cli>` means the `cli` path from this output. Non-ASCII characters
+(a user name such as `Sơn`) come escaped (`S\u01a1n`), so Windows PowerShell's console code page
+can't garble them; any JSON reader turns them back.
+
+`"legacy"` lists what an older setup guide left behind: a `magicpic-cli` installed with `cargo
+install` (`~/.cargo/bin`) and the old launcher `start-magicpic.ps1`. If it is not empty, ask the
+person, then run `<cli> setup --migrate`: it points registrations that still run the old program
+at this one, then removes what nothing uses any more (and says why it kept the rest).
 
 On a fast connection this takes well under a minute: the archives are tens of megabytes, and no
-compiler runs. If the download fails with **404**, no release has been published yet (or none for
-this machine): follow [`agent-setup-source.md`](agent-setup-source.md), then come back to step 2.
+compiler runs. If the installer says **`no MagicPic release at … (HTTP 404)`**, no release has been published yet
+(or not that version): follow [`agent-setup-source.md`](agent-setup-source.md), then come back to
+step 2.
 
 The binaries are not code-signed yet. Windows SmartScreen or Smart App Control, or macOS
 Gatekeeper, may stop them: see [Unsigned binaries](agent-troubleshooting.md#unsigned-binaries).
@@ -151,17 +163,22 @@ written while it is open is lost. So:
 
 - If Claude Desktop is not running, it writes the file at once (`"status": "written"`) and opens
   Claude Desktop.
-- If it is running (it is, when you are Claude Desktop), the reply is `"status": "waiting"` with a
-  `message`. A helper keeps running in the background: it waits for Claude Desktop to quit, writes
-  the file, and opens Claude Desktop again (the Microsoft Store build through its app id). **Tell
-  the person to quit Claude Desktop completely** (tray or menu-bar icon › **Quit**, not only
-  closing the window) and that it reopens by itself in a few seconds with MagicPic connected. The
-  helper writes what it did to `~/.magicpic/register.log`.
+- If it is running (it is, when you are Claude Desktop), the command returns at once with
+  `"status": "waiting"` and a `message`; nothing is written yet. A helper keeps running in the
+  background. It waits (up to 60 minutes; `--wait-minutes N` changes that) until **every** Claude
+  Desktop process is gone, not just one of its windows or helper processes, checks again 3
+  seconds later, then writes the file, opens Claude Desktop again (the Microsoft Store build
+  through its app id) and checks that a new Claude Desktop process really started. Tell the
+  person what step 5 says.
+- If the helper gives up (the person never quit Claude Desktop), the registration stays
+  **pending**: `mcp status` and `doctor` report it with the command that fixes it.
 - Without `--restart`, while it runs, nothing is written and the command says why (exit 1).
 
-`<cli> mcp status` shows, for every client, whether both servers are registered and whether every
-path they name still exists (`"pathsOk": true`). `<cli> mcp unregister --client <client>` removes
-them again.
+`<cli> mcp status` shows, for every client, whether both servers are registered, whether every
+path they name still exists (`"pathsOk": true`), and its `problems`: a pending Claude Desktop
+registration, servers that run another `magicpic-cli` than this one (an older install), or a
+`magicpic-app` entry from an older version without `--start-app-if-needed`.
+`<cli> mcp unregister --client <client>` removes them again.
 
 ## 4. Verify
 
@@ -185,9 +202,12 @@ Expected (shortened):
 ```
 
 `doctor` starts each registered server and checks that it answers `initialize` and `tools/list`,
-and authenticates to the open app with the token file, without printing it. When `"ok"` is
-false, every entry of `problems` names the problem and the `fix` command. Run `doctor` again
-whenever something fails later, too.
+and authenticates to the open app with the token file, without printing it. It also reports what
+`mcp status` reports, the MagicPic MCP server processes running right now (`runningServers`,
+with `"thisCli": false` for one started from an older binary: the client still shows the old
+tools until it restarts), and an older install left behind. When `"ok"` is false, every entry of
+`problems` names the problem and the `fix` command. Run `doctor` again whenever something fails
+later, too: it, not `register.log`, says whether a registration took effect.
 
 ## 5. Tell the person
 
@@ -196,7 +216,14 @@ Report, briefly and in their language:
 - that MagicPic is installed in `~/.magicpic`, where the photo folder is, and that the app window
   is open;
 - that they must **restart you** so the two servers load (Claude Code: quit and reopen, or `/mcp`;
-  Codex: quit and reopen; Claude Desktop: it reopens by itself after they quit it);
+  Codex: quit and reopen; Claude Desktop: see below);
+- **when you are running inside Claude Desktop** and `mcp register` answered `"waiting"`, say
+  this, in their language, as the last thing before they act: *"Quit Claude Desktop from the tray
+  icon now (right-click the Claude icon by the clock, then Quit). It opens again by itself. If it
+  doesn't open again within a minute, open it yourself and tell me."* Quitting ends this
+  conversation. In the next one, run `<cli> doctor` and check that `problems` is empty, that
+  `claude-desktop` is registered with `"thisCli": true`, and that every entry of `runningServers`
+  has `"thisCli": true`. Don't rely on `register.log`;
 - how to open the app later: the launcher (or the desktop shortcut, if they asked for one). The
   `magicpic-app` server also starts it when needed;
 - what to say after the restart. For example: *"Mở ảnh mới nhất trong thư mục MagicPic trong app
@@ -204,7 +231,8 @@ Report, briefly and in their language:
   me."). More example requests, in Vietnamese: [`docs/vi/art-of-seeing-va-mcp.md`](vi/art-of-seeing-va-mcp.md)
   and [`docs/vi/cai-dat-va-ket-noi.md`](vi/cai-dat-va-ket-noi.md);
 - that to update later, they paste the same setup prompt again: the installer replaces the
-  programs, `setup` and `mcp register` keep their settings.
+  programs (also while they run), and `setup` and `mcp register` keep their settings. After an
+  update, `doctor` says whether a client still runs the old servers.
 
 ## After the restart: using MagicPic
 
@@ -240,3 +268,5 @@ The servers' own instructions explain the tools. The ones agents need most:
   Control and Gatekeeper accept them without a prompt. It needs the publisher's certificates.
 - A real `.lnk` desktop shortcut on Windows (the shortcut is a `.cmd` file for now).
 - Prebuilt archives for Linux on ARM and Windows on ARM (Windows ARM64 runs the x64 build).
+- A Windows toast or macOS notification when the `--restart` helper gives up or has restarted
+  Claude Desktop. Until then `mcp status` and `doctor` report a pending registration.

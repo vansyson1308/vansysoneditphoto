@@ -11,6 +11,10 @@
 # `magicpic-cli setup`, which writes the photo folder, the launcher and config.json. Progress goes
 # to stderr; stdout is setup's JSON with the absolute paths.
 #
+# Running it again updates in place while MagicPic and the MCP servers run: a running app is asked
+# to quit first (never with unsaved changes: then nothing is installed), and a program still in
+# use is renamed aside and replaced. It succeeds, or refuses before changing anything.
+#
 # Written for Windows PowerShell 5.1 in Constrained Language Mode: no New-Object, no .NET
 # property setters or encodings, no script-written files. curl.exe and tar.exe (built into
 # Windows 10 1803 and later) do the transfer and the unpacking; core cmdlets are the fallback.
@@ -62,6 +66,11 @@ try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::S
 $system32 = Join-Path $env:SystemRoot 'System32'
 $curl = Get-Item -LiteralPath (Join-Path $system32 'curl.exe') -ErrorAction SilentlyContinue
 
+# No release is published yet (or not that version): say what to do instead.
+function NoRelease([string]$Url) {
+    "no MagicPic release at $Url (HTTP 404): none is published yet, or not that version. Build from source instead: https://github.com/$Repo/blob/main/docs/agent-setup-source.md"
+}
+
 function Fetch([string]$Name) {
     $target = Join-Path $work $Name
     if ($From) {
@@ -74,10 +83,14 @@ function Fetch([string]$Name) {
     else { $url = "https://github.com/$Repo/releases/download/$Version/$Name" }
     Say "downloading $url"
     if ($curl) {
-        & $curl.FullName -fsSL --retry 3 -o $target $url
-        if ($LASTEXITCODE -ne 0) { Fail "download failed: $url" }
+        $code = & $curl.FullName -sSL --retry 3 -w '%{http_code}' -o $target $url
+        if ($code -eq '404') { Fail (NoRelease $url) }
+        if ($LASTEXITCODE -ne 0 -or $code -notmatch '^2') { Fail "download failed: $url (HTTP $code)" }
     } else {
-        try { Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $target } catch { Fail "download failed: $url ($_)" }
+        try { Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $target } catch {
+            if ("$_" -match '404') { Fail (NoRelease $url) }
+            Fail "download failed: $url ($_)"
+        }
     }
     return $target
 }
@@ -108,16 +121,93 @@ if (-not $unpackedOk) {
 }
 if (-not $unpackedOk) { Fail "could not unpack $archive" }
 
-foreach ($name in @('magicpic.exe', 'magicpic-cli.exe')) {
-    $source = Join-Path $unpacked $name
-    if (-not (Test-Path $source)) { Fail "$archive has no $name" }
+$names = @('magicpic.exe', 'magicpic-cli.exe')
+foreach ($name in $names) {
+    if (-not (Test-Path (Join-Path $unpacked $name))) { Fail "$archive has no $name" }
+}
+
+# Old copies an earlier run moved aside because they were running then.
+Get-ChildItem -LiteralPath $bin -Filter '*.old-*.exe' -ErrorAction SilentlyContinue | ForEach-Object {
+    Remove-Item -Force -LiteralPath $_.FullName -ErrorAction SilentlyContinue
+}
+
+# A running app is asked to quit, so it restarts on the new version. The new magicpic-cli asks it
+# over the control channel and refuses while a document has unsaved changes: then nothing is
+# installed. An app it can't ask keeps running the old version until it restarts.
+$appExe = Join-Path $bin 'magicpic.exe'
+$appRunning = @(Get-Process -Name 'magicpic' -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $appExe })
+if ($appRunning.Count -gt 0) {
+    $quit = $null
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
     try {
-        Copy-Item -Force $source (Join-Path $bin $name)
-    } catch {
-        Fail "could not replace $(Join-Path $bin $name): quit MagicPic (and any agent using it), then run the installer again ($_)"
+        $text = & (Join-Path $unpacked 'magicpic-cli.exe') quit-app 2>$null | Out-String
+        $quit = $text | ConvertFrom-Json
+    } catch { }
+    $ErrorActionPreference = $previous
+    if ($quit -and $quit.unsaved) {
+        Fail "MagicPic has unsaved changes in $($quit.unsaved -join ', '): nothing was installed. Save or close them in MagicPic, then run the installer again"
     }
+    if ($quit -and $quit.stopped) { Say 'asked MagicPic to quit; it starts again on the new version' }
+    else { Say 'MagicPic is running and could not be asked to quit: it keeps the old version until it restarts' }
+}
+
+# Copy both in beside first, so a failure here changes nothing.
+$staged = @()
+foreach ($name in $names) {
+    $temp = Join-Path $bin ".$name.new"
+    try {
+        Copy-Item -Force -LiteralPath (Join-Path $unpacked $name) -Destination $temp
+    } catch {
+        foreach ($t in $staged) { Remove-Item -Force -LiteralPath $t -ErrorAction SilentlyContinue }
+        Remove-Item -Force -LiteralPath $temp -ErrorAction SilentlyContinue
+        Fail "could not copy $name into ${bin}: $_. Nothing was replaced"
+    }
+    $staged += $temp
+}
+
+# Then swap. A running program (the app, or magicpic-cli.exe that an agent client keeps running as
+# its MCP servers) can be renamed but not overwritten, so the old file moves aside as
+# <name>.old-<time>.exe and is deleted now if it isn't running, else on the next run.
+$stamp = Get-Date -Format 'yyyyMMddTHHmmss'
+$doneTargets = @()
+$doneOld = @()
+function Undo {
+    for ($i = $doneTargets.Count - 1; $i -ge 0; $i--) {
+        if ($doneOld[$i]) { Move-Item -Force -LiteralPath $doneOld[$i] -Destination $doneTargets[$i] -ErrorAction SilentlyContinue }
+    }
+    foreach ($t in $staged) { Remove-Item -Force -LiteralPath $t -ErrorAction SilentlyContinue }
+}
+$inUse = @()
+foreach ($name in $names) {
+    $target = Join-Path $bin $name
+    $temp = Join-Path $bin ".$name.new"
+    $old = ''
+    if (Test-Path -LiteralPath $target) {
+        $old = Join-Path $bin ($name -replace '\.exe$', ".old-$stamp.exe")
+        try { Move-Item -Force -LiteralPath $target -Destination $old } catch {
+            Undo
+            Fail "could not move $target aside ($_): nothing was replaced. Quit MagicPic and the agent client using it, then run the installer again"
+        }
+    }
+    try { Move-Item -Force -LiteralPath $temp -Destination $target } catch {
+        if ($old) { Move-Item -Force -LiteralPath $old -Destination $target -ErrorAction SilentlyContinue }
+        Undo
+        Fail "could not put the new $name in place ($_): nothing was replaced"
+    }
+    $doneTargets += $target
+    $doneOld += $old
     # A file downloaded by a browser carries the internet zone; ours shouldn't, but be sure.
-    Unblock-File -Path (Join-Path $bin $name) -ErrorAction SilentlyContinue
+    Unblock-File -Path $target -ErrorAction SilentlyContinue
+}
+for ($i = 0; $i -lt $doneOld.Count; $i++) {
+    if ($doneOld[$i]) {
+        Remove-Item -Force -LiteralPath $doneOld[$i] -ErrorAction SilentlyContinue
+        if (Test-Path -LiteralPath $doneOld[$i]) { $inUse += $doneOld[$i] }
+    }
+}
+if ($inUse.Count -gt 0) {
+    Say "an old copy is still running (an agent client's MCP servers): $($inUse -join ', '). It is deleted on a later run; restart that client to load the new servers"
 }
 foreach ($name in @('LICENSE-MIT', 'LICENSE-APACHE', 'NOTICE')) {
     $source = Join-Path $unpacked $name

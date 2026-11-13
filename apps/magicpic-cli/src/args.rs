@@ -41,6 +41,12 @@ pub(crate) enum Command {
     Setup(SetupArgs),
     Launch(LaunchArgs),
     Doctor(DoctorArgs),
+    Install(InstallArgs),
+    QuitApp(QuitAppArgs),
+    /// Start a program detached and write its pid; what `mcp register --restart` and `launch` use
+    /// on Windows. Not for direct use
+    #[command(hide = true)]
+    SpawnDetached(SpawnDetachedArgs),
 }
 
 // How an image is written: shared by `convert`, `run` and `batch`.
@@ -346,12 +352,18 @@ pub(crate) struct ClientArgs {
     /// Claude Desktop: write even though it is running (it may overwrite the change)
     #[arg(long, conflicts_with = "restart")]
     pub(crate) force: bool,
-    /// Seconds `--restart` waits for Claude Desktop to quit (default 600)
-    #[arg(long, value_name = "SECONDS")]
+    /// Minutes `--restart` waits for every Claude Desktop process to quit (default 60)
+    #[arg(long, value_name = "MINUTES", value_parser = clap::value_parser!(u64).range(1..=1440), conflicts_with = "timeout")]
+    pub(crate) wait_minutes: Option<u64>,
+    /// The same in seconds (older spelling of --wait-minutes)
+    #[arg(long, value_name = "SECONDS", hide = true)]
     pub(crate) timeout: Option<u64>,
     /// The detached helper `--restart` starts; not for direct use
     #[arg(long, hide = true)]
     pub(crate) detached_wait: bool,
+    /// Which pending registration the helper owns; not for direct use
+    #[arg(long, hide = true, requires = "detached_wait")]
+    pub(crate) pending_id: Option<String>,
 }
 
 /// Add the `magicpic` (files) and `magicpic-app` (open window) servers to a client's config
@@ -413,6 +425,51 @@ pub(crate) struct SetupArgs {
     /// Seconds --start waits for the app (default 30)
     #[arg(long, value_name = "SECONDS")]
     pub(crate) wait: Option<u64>,
+    /// Clean up an older install that `legacy` lists: point registrations that still run an older
+    /// magicpic-cli at this one, then remove the old programs and launcher. Ask the person first
+    #[arg(long)]
+    pub(crate) migrate: bool,
+}
+
+/// Copy magicpic and magicpic-cli from a folder (a release archive or `target/release`) into
+/// ~/.magicpic/bin, while they may be running
+///
+/// Asks a running app to quit first and refuses, changing nothing, while it has unsaved documents.
+/// A program still in use (magicpic-cli held by an agent client's MCP servers) is renamed to
+/// `<name>.old-<time>` and replaced; the old copies are deleted on a later run. Prints JSON
+#[derive(Args)]
+pub(crate) struct InstallArgs {
+    /// The folder with the new magicpic and magicpic-cli
+    #[arg(long, value_name = "DIR")]
+    pub(crate) from: PathBuf,
+    /// Don't ask the running app to quit (it keeps running the old version until restarted)
+    #[arg(long)]
+    pub(crate) keep_app_running: bool,
+}
+
+/// Ask the running app to quit over its control channel; refuses while a document has unsaved
+/// changes. Prints JSON
+#[derive(Args)]
+pub(crate) struct QuitAppArgs {
+    /// Seconds to wait for the app to close (default 20)
+    #[arg(long, value_name = "SECONDS")]
+    pub(crate) wait: Option<u64>,
+}
+
+#[derive(Args)]
+pub(crate) struct SpawnDetachedArgs {
+    /// Write the started program's pid here
+    #[arg(long, value_name = "FILE")]
+    pub(crate) pid_file: Option<PathBuf>,
+    /// Append its output here (else it is dropped)
+    #[arg(long, value_name = "FILE")]
+    pub(crate) log: Option<PathBuf>,
+    /// Its working folder
+    #[arg(long, value_name = "DIR")]
+    pub(crate) cwd: Option<PathBuf>,
+    /// The program and its arguments, after `--`
+    #[arg(required = true, num_args = 1.., last = true, value_name = "PROGRAM")]
+    pub(crate) command: Vec<OsString>,
 }
 
 /// Start the app with its control channel (what the launcher runs); print JSON
