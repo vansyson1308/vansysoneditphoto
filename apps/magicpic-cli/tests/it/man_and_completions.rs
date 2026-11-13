@@ -45,8 +45,24 @@ fn the_example_writes_the_files_the_packages_install() {
     let mut written: Vec<String> = std::fs::read_dir(&dir).unwrap().map(|e| e.unwrap().file_name().into_string().unwrap()).collect();
     written.sort();
     let completions = ["magicpic-cli.bash", "_magicpic-cli", "magicpic-cli.fish", "magicpic-cli.elv", "_magicpic-cli.ps1"];
-    let subcommands =
-        ["convert", "info", "run", "batch", "droplet", "commands", "mcp", "mcp-register", "mcp-unregister", "mcp-status", "serve", "setup", "launch", "doctor"];
+    let subcommands = [
+        "convert",
+        "info",
+        "run",
+        "batch",
+        "droplet",
+        "commands",
+        "mcp",
+        "mcp-register",
+        "mcp-unregister",
+        "mcp-status",
+        "serve",
+        "setup",
+        "launch",
+        "doctor",
+        "install",
+        "quit-app",
+    ];
     let mut expected: Vec<String> = completions.map(String::from).into();
     expected.push("magicpic-cli.1".into());
     expected.extend(subcommands.iter().map(|s| format!("magicpic-cli-{s}.1")));

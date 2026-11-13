@@ -63,8 +63,16 @@ fetch() {
   if [ "$version" = latest ]; then url=https://github.com/$repo/releases/latest/download/$1
   else url=https://github.com/$repo/releases/download/$version/$1; fi
   say "downloading $url"
-  if command -v curl >/dev/null 2>&1; then curl -fsSL --retry 3 -o "$work/$1" "$url" || die "download failed: $url"
-  elif command -v wget >/dev/null 2>&1; then wget -q -O "$work/$1" "$url" || die "download failed: $url"
+  no_release="no MagicPic release at $url (HTTP 404): none is published yet, or not that version. Build from source instead: https://github.com/$repo/blob/main/docs/agent-setup-source.md"
+  if command -v curl >/dev/null 2>&1; then
+    code=$(curl -sSL --retry 3 -w '%{http_code}' -o "$work/$1" "$url") || die "download failed: $url"
+    [ "$code" = 404 ] && die "$no_release"
+    case $code in 2*) ;; *) die "download failed: $url (HTTP $code)" ;; esac
+  elif command -v wget >/dev/null 2>&1; then
+    if ! wget -nv -O "$work/$1" "$url" 2> "$work/wget.err"; then
+      grep -q 404 "$work/wget.err" 2>/dev/null && die "$no_release"
+      die "download failed: $url"
+    fi
   else die "needs curl or wget"; fi
 }
 

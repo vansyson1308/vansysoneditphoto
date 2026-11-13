@@ -68,8 +68,18 @@ Agent xong việc thì:
 
 Codex có thể xin phép truy cập mạng để tải file: hãy đồng ý. Với **Claude Desktop** (ứng dụng
 chat), agent chạy `mcp register --client claude-desktop --restart` rồi nhờ bạn **thoát hẳn**
-Claude Desktop (biểu tượng ở khay hệ thống › Quit): MagicPic ghi cấu hình rồi tự mở lại Claude
-sau vài giây. Claude Desktop ghi đè cấu hình khi đang chạy, nên không sửa file lúc nó đang mở.
+Claude Desktop (biểu tượng ở khay hệ thống › Quit, không chỉ đóng cửa sổ). Claude Desktop ghi đè
+cấu hình khi đang chạy, nên MagicPic chờ đến khi **mọi** tiến trình của Claude Desktop đã tắt
+(tối đa 60 phút), rồi mới ghi cấu hình, tự mở lại Claude và kiểm tra Claude đã thật sự khởi động
+lại. Nếu sau một phút Claude chưa mở lại, bạn tự mở và báo agent. Ở cuộc trò chuyện mới, agent
+chạy `magicpic-cli doctor` để kiểm tra. Nếu bạn chưa thoát Claude, `doctor` báo "registration
+pending" kèm lệnh cần chạy lại.
+
+**Cập nhật khi app đang chạy:** trình cài đặt và `magicpic-cli install` hỏi app thoát trước. Nếu
+có ảnh chưa lưu, chúng dừng và không thay đổi gì. Chương trình đang chạy (ví dụ server MCP mà
+Claude Desktop giữ) được đổi tên thành `magicpic-cli.old-<giờ>.exe` rồi thay bằng bản mới. Bản cũ
+được xoá ở lần cài sau. Nếu còn bản cài cũ (`~/.cargo/bin/magicpic-cli`, `start-magicpic.ps1`),
+`setup` liệt kê chúng trong `legacy`; agent hỏi bạn rồi chạy `setup --migrate` để dọn.
 
 ## 3. Tự cài bằng tay
 

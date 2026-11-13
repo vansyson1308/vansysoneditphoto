@@ -17,8 +17,11 @@ mod document;
 mod error;
 mod gpu;
 mod output;
+mod pending;
+mod procs;
 mod register;
 mod setup;
+mod update;
 
 pub use actions::{ActionsError, Steps, load_actions, load_actions_file, parse_actions};
 use args::{Command, parse};
@@ -70,6 +73,9 @@ where
         Command::Setup(a) => setup::setup(a, out, err),
         Command::Launch(a) => setup::launch(a, out, err),
         Command::Doctor(a) => doctor::doctor(a, out),
+        Command::Install(a) => update::install(a, out, err),
+        Command::QuitApp(a) => update::quit_app(a, out),
+        Command::SpawnDetached(a) => setup::spawn_detached_cmd(a),
     };
     match result {
         Ok(()) => 0,

@@ -69,3 +69,45 @@ pub(crate) fn print_json(out: &mut dyn Write, v: &Value, style: JsonStyle) -> Re
     }?;
     Ok(writeln!(out, "{s}")?)
 }
+
+/// [`print_json`] (pretty) with every non-ASCII character escaped (`\u203a`), for what agents
+/// read through a console: Windows PowerShell 5.1 decodes a native program's output in the
+/// console's code page, which turns UTF-8 paths and punctuation into `?`. JSON readers decode
+/// the escapes back.
+pub(crate) fn print_json_ascii(out: &mut dyn Write, v: &Value) -> Result {
+    let s = serde_json::to_string_pretty(v)?;
+    Ok(writeln!(out, "{}", ascii_json(&s))?)
+}
+
+/// `json` with non-ASCII characters as `\uXXXX` escapes (UTF-16, so astral ones become a
+/// surrogate pair). Only valid for serialized JSON, where such characters are inside strings.
+pub(crate) fn ascii_json(json: &str) -> String {
+    let mut out = String::with_capacity(json.len());
+    for c in json.chars() {
+        if c.is_ascii() {
+            out.push(c);
+        } else {
+            let mut units = [0u16; 2];
+            for u in c.encode_utf16(&mut units) {
+                out.push_str(&format!("\\u{u:04x}"));
+            }
+        }
+    }
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn agent_json_is_ascii_and_reads_back_the_same() {
+        let v = serde_json::json!({"message": "tray icon \u{203a} Quit", "path": "C:\\Users\\S\u{01a1}n\\\u{1f4f7}.png"});
+        let mut out = Vec::new();
+        print_json_ascii(&mut out, &v).unwrap();
+        let text = String::from_utf8(out).unwrap();
+        assert!(text.is_ascii(), "{text}");
+        assert!(text.contains("\\u203a") && text.contains("\\ud83d\\udcf7"), "{text}");
+        assert_eq!(serde_json::from_str::<Value>(&text).unwrap(), v);
+    }
+}

@@ -47,6 +47,19 @@ If it exists but is something else, ask the person where to put the checkout.
 
 ## 3. Build both programs in one go
 
+**Updating?** On Windows a running program's file can't be replaced, and an older setup ran the
+app straight from `target/release`. Ask the running app to quit first:
+
+```sh
+~/.magicpic/bin/magicpic-cli quit-app
+```
+
+(Windows: `& "$HOME\.magicpic\bin\magicpic-cli.exe" quit-app`.) Expected: `{"ok": true,
+"running": false, "stopped": true}` (or `"stopped": false` when it was not running). While a
+document has unsaved changes it refuses (exit 1, `"unsaved": ["Beach.psd"]`) and the app keeps
+running: ask the person to save or close those, then run it again. A CLI older than this command
+says `unrecognized subcommand`: then ask the person to quit MagicPic (File > Exit).
+
 In the checkout:
 
 ```sh
@@ -60,20 +73,41 @@ On Windows 11, *An Application Control policy has blocked this file (os error 45
 Control or a managed policy blocking the build: see
 [Smart App Control](agent-troubleshooting.md#unsigned-binaries). Do not try to switch it off.
 
-## 4. Copy the programs out of `target/`
+## 4. Install the programs out of `target/`
 
-So the person can delete the build folder later, copy both programs to `~/.magicpic/bin`. Use the
-file tools you have (no script needed):
+So the person can delete the build folder later, the new CLI copies both programs into
+`~/.magicpic/bin`. In the checkout:
 
-| From (in the checkout) | To |
-|---|---|
-| `target/release/magicpic` (Windows: `magicpic.exe`) | `~/.magicpic/bin/` |
-| `target/release/magicpic-cli` (Windows: `magicpic-cli.exe`) | `~/.magicpic/bin/` |
+```sh
+target/release/magicpic-cli install --from target/release
+```
 
-For example `mkdir -p ~/.magicpic/bin && cp target/release/magicpic target/release/magicpic-cli
-~/.magicpic/bin/`, or on Windows `New-Item -ItemType Directory -Force "$HOME\.magicpic\bin"`
-followed by `Copy-Item target\release\magicpic.exe, target\release\magicpic-cli.exe
-"$HOME\.magicpic\bin\"` (both work in Constrained Language Mode).
+(Windows: `.\target\release\magicpic-cli.exe install --from target\release`.) Don't copy them
+by hand: on Windows, `Copy-Item` over a running `magicpic-cli.exe` fails with *The process cannot
+access the file because it is being used by another process*. Agent clients keep it running as
+their MCP servers. `install` does this instead:
+
+- It asks a running app to quit, and changes nothing while a document has unsaved changes.
+- It copies both programs in beside the old ones.
+- It renames a program that is still running to `<name>.old-<time>.exe` and puts the new one in
+  its place. The renamed copy is deleted on a later run.
+
+Expected:
+
+```json
+{
+  "ok": true,
+  "bin": "C:\\Users\\Ann\\.magicpic\\bin",
+  "installed": ["…\\magicpic.exe", "…\\magicpic-cli.exe"],
+  "appStopped": false,
+  "oldCopiesInUse": ["…\\magicpic-cli.old-20261113T165633Z.exe"],
+  "note": "an old copy is still running (an agent client's MCP servers): …",
+  "next": ["…\\magicpic-cli.exe setup", "…\\magicpic-cli.exe doctor"]
+}
+```
+
+`oldCopiesInUse` is empty when nothing ran. If it is not, the agent client still runs the old
+servers until it restarts. `doctor` shows that under `runningServers`.
 
 ## 5. Setup, then continue with the quick path
 
@@ -85,6 +119,18 @@ followed by `Copy-Item target\release\magicpic.exe, target\release\magicpic-cli.
 creates the photo folder and the launcher, and prints the same JSON as the installer (expected
 output: [agent-setup.md, step 1](agent-setup.md#1-install)). Then go on with
 [step 2](agent-setup.md#2-open-the-app) of the quick path.
+
+**After an update:**
+
+- **`legacy` is not empty** (for example `~/.cargo/bin/magicpic-cli.exe` from an older guide's
+  `cargo install`, or `~/.magicpic/start-magicpic.ps1`): ask the person, then run
+  `~/.magicpic/bin/magicpic-cli setup --migrate`. By hand it is `cargo uninstall magicpic-cli`
+  and deleting the old launcher. Do that only once no client is registered with the old program,
+  or its servers stop working.
+- **A client was registered before:** run `mcp register` for it again, so it runs
+  `~/.magicpic/bin/magicpic-cli`. For Claude Desktop use `--restart` (step 3 of the quick path).
+  Then check with `doctor`: no `problems`, and `"thisCli": true` for every registered server and
+  every entry of `runningServers`.
 
 Afterwards the person may free the space with `cargo clean` in the checkout: nothing registered
 points into `target/`. Keep the checkout if they want to update by pulling and rebuilding.

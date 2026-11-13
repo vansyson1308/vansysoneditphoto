@@ -13,6 +13,7 @@
 //! | `control.token` | written by the app when it starts; never read aloud |
 //! | `app.log` | the app's output when started by `launch` |
 
+use std::ffi::{OsStr, OsString};
 use std::io::Write;
 use std::net::{Ipv4Addr, SocketAddr, TcpStream};
 use std::path::{Path, PathBuf};
@@ -22,8 +23,8 @@ use std::time::{Duration, Instant};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-use crate::args::{LaunchArgs, SetupArgs};
-use crate::output::{JsonStyle, print_json};
+use crate::args::{LaunchArgs, SetupArgs, SpawnDetachedArgs};
+use crate::output::print_json_ascii;
 use crate::{CliError, Result};
 
 /// The control port the guide uses.
@@ -43,10 +44,18 @@ pub(crate) struct Config {
     pub(crate) port: u16,
     pub(crate) token_file: PathBuf,
     pub(crate) launcher: PathBuf,
+    /// Whether `magicpic-app` may start the app itself (`mcp register --no-start-app` records
+    /// false), so `doctor` can tell a deliberate choice from an outdated registration.
+    #[serde(default = "yes")]
+    pub(crate) start_app: bool,
 }
 
 fn one() -> u32 {
     1
+}
+
+fn yes() -> bool {
+    true
 }
 
 /// The person's home folder: `USERPROFILE` on Windows, `HOME` elsewhere.
@@ -110,7 +119,15 @@ impl Config {
             port: DEFAULT_PORT,
             token_file: home.join(TOKEN_FILE),
             launcher: home.join(if cfg!(windows) { "start-magicpic.cmd" } else { "start-magicpic.sh" }),
+            start_app: true,
         })
+    }
+
+    /// Write `config.json` in `home`.
+    pub(crate) fn save(&self, home: &Path) -> Result {
+        let mut text = serde_json::to_string_pretty(self).map_err(|e| CliError::Other(e.to_string()))?;
+        text.push('\n');
+        write_atomic(&home.join(CONFIG_FILE), text.as_bytes())
     }
 
     /// The recorded config, if `setup` ran.
@@ -289,11 +306,15 @@ pub(crate) fn setup(a: &SetupArgs, out: &mut dyn Write, err: &mut dyn Write) -> 
     }
     write_atomic(&config.launcher, launcher_script(&config.cli).as_bytes())?;
     make_executable(&config.launcher)?;
-    let mut text = serde_json::to_string_pretty(&config).map_err(|e| CliError::Other(e.to_string()))?;
-    text.push('\n');
-    write_atomic(&home.join(CONFIG_FILE), text.as_bytes())?;
+    config.save(&home)?;
     let shortcut = if a.desktop_shortcut { Some(write_desktop_shortcut(&config.launcher, &config.app)?) } else { None };
     let app_exists = config.app.is_file();
+    let migrated = a.migrate.then(|| crate::update::migrate(&home, &config));
+    let legacy = crate::update::legacy(&home);
+    let mut next = vec!["magicpic-cli mcp register --client <claude-desktop|claude-code|codex>".to_string(), "magicpic-cli doctor".to_string()];
+    if !legacy.is_empty() {
+        next.push("an older install is still here (see `legacy`): ask the person, then run `magicpic-cli setup --migrate`".into());
+    }
     let mut report = json!({
         "ok": app_exists,
         "version": env!("CARGO_PKG_VERSION"),
@@ -307,18 +328,19 @@ pub(crate) fn setup(a: &SetupArgs, out: &mut dyn Write, err: &mut dyn Write) -> 
         "tokenFile": config.token_file,
         "launcher": config.launcher,
         "desktopShortcut": shortcut,
-        "next": [
-            "magicpic-cli mcp register --client <claude-desktop|claude-code|codex>",
-            "magicpic-cli doctor",
-        ],
+        "legacy": legacy,
+        "next": next,
     });
+    if let Some(m) = migrated {
+        report["migrated"] = m;
+    }
     if !app_exists {
         report["error"] = json!(format!("the app is not at {}: pass --app <path to magicpic>", config.app.display()));
     }
     if a.start && app_exists {
         report["launch"] = launch_app(&config, Duration::from_secs(a.wait.unwrap_or(30)), err)?;
     }
-    print_json(out, &report, JsonStyle::Pretty)?;
+    print_json_ascii(out, &report)?;
     if app_exists { Ok(()) } else { Err(CliError::Other("setup wrote its files, but the app was not found (see `error`)".into())) }
 }
 
@@ -353,6 +375,164 @@ pub(crate) fn spawn_detached(cmd: &mut Command) -> std::io::Result<std::process:
     cmd.spawn()
 }
 
+/// `program args` with its output appended to `log` (or dropped), started by [`spawn_detached`].
+fn start_logged(program: &OsStr, args: &[OsString], cwd: Option<&Path>, log: Option<&Path>) -> std::io::Result<std::process::Child> {
+    let mut cmd = Command::new(program);
+    cmd.args(args);
+    if let Some(dir) = cwd {
+        cmd.current_dir(dir);
+    }
+    match log {
+        Some(path) => {
+            let f = std::fs::OpenOptions::new().create(true).append(true).open(path)?;
+            let f2 = f.try_clone()?;
+            cmd.stdout(f).stderr(f2);
+        }
+        None => {
+            cmd.stdout(Stdio::null()).stderr(Stdio::null());
+        }
+    }
+    spawn_detached(&mut cmd)
+}
+
+/// Start `program args` in the background so that it outlives this process and holds none of
+/// its handles, with its output appended to `log` (or dropped). Returns its pid when known.
+///
+/// On Windows a child inherits every inheritable handle of its parent, whatever its own stdio
+/// is set to: Rust starts processes with handle inheritance on, and the pipe a caller gave this
+/// program as its output is inheritable. A helper holding that pipe keeps it open, so a caller
+/// that reads our output to the end (`... | Out-String`, an agent's tool call) waits until the
+/// helper exits, not until we do. So on Windows the shell starts it (`Start-Process`, which never
+/// passes handles on) through `magicpic-cli spawn-detached`, which sets up the log and starts it.
+pub(crate) fn spawn_unattached(program: &Path, args: &[String], cwd: Option<&Path>, log: Option<&Path>) -> Result<Option<u32>> {
+    #[cfg(windows)]
+    if let Some(pid) = spawn_through_shell(program, args, cwd, log)? {
+        return Ok(pid);
+    }
+    let args: Vec<OsString> = args.iter().map(OsString::from).collect();
+    let child = start_logged(program.as_os_str(), &args, cwd, log).map_err(|e| CliError::Other(format!("could not start {}: {e}", program.display())))?;
+    Ok(Some(child.id()))
+}
+
+/// Windows PowerShell, by its full path when the system folder is known.
+#[cfg(windows)]
+fn powershell() -> PathBuf {
+    std::env::var_os("SystemRoot")
+        .map(|root| PathBuf::from(root).join("System32").join("WindowsPowerShell").join("v1.0").join("powershell.exe"))
+        .filter(|p| p.is_file())
+        .unwrap_or_else(|| PathBuf::from("powershell.exe"))
+}
+
+/// [`spawn_unattached`] on Windows: `Some(pid)` once started (the pid when it reported back),
+/// `None` when PowerShell could not be used (the caller then starts it directly).
+#[cfg(windows)]
+fn spawn_through_shell(program: &Path, args: &[String], cwd: Option<&Path>, log: Option<&Path>) -> Result<Option<Option<u32>>> {
+    let home = magicpic_home()?;
+    std::fs::create_dir_all(&home).map_err(|e| CliError::Other(format!("{}: {e}", home.display())))?;
+    let pid_file = home.join(format!("spawn-{}.pid", crate::pending::new_id()));
+    let mut inner: Vec<String> = vec!["spawn-detached".into(), "--pid-file".into(), pid_file.to_string_lossy().into_owned()];
+    if let Some(l) = log {
+        inner.extend(["--log".to_string(), l.to_string_lossy().into_owned()]);
+    }
+    if let Some(d) = cwd {
+        inner.extend(["--cwd".to_string(), d.to_string_lossy().into_owned()]);
+    }
+    inner.push("--".into());
+    inner.push(program.to_string_lossy().into_owned());
+    inner.extend(args.iter().cloned());
+    let script = start_process_script(&current_cli(), &inner);
+    use std::os::windows::process::CommandExt;
+    // No console window for PowerShell when this process has none (an MCP server, the helper).
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    let status = Command::new(powershell())
+        .args(["-NoProfile", "-NonInteractive", "-Command", script.as_str()])
+        .creation_flags(CREATE_NO_WINDOW)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status();
+    if !matches!(status, Ok(s) if s.success()) {
+        return Ok(None);
+    }
+    let t = Instant::now();
+    while t.elapsed() < Duration::from_secs(10) {
+        if let Some(pid) = std::fs::read_to_string(&pid_file).ok().and_then(|t| t.trim().parse::<u32>().ok()) {
+            let _ = std::fs::remove_file(&pid_file);
+            return Ok(Some(Some(pid)));
+        }
+        std::thread::sleep(Duration::from_millis(100));
+    }
+    Ok(Some(None))
+}
+
+/// A PowerShell string literal: single quotes, with every kind of single quote PowerShell
+/// accepts doubled.
+#[cfg_attr(not(windows), allow(dead_code))]
+pub(crate) fn ps_quote(text: &str) -> String {
+    let mut out = String::from("'");
+    for c in text.chars() {
+        if matches!(c, '\'' | '\u{2018}' | '\u{2019}' | '\u{201a}' | '\u{201b}') {
+            out.push(c);
+        }
+        out.push(c);
+    }
+    out.push('\'');
+    out
+}
+
+/// One argument as the Windows C runtime reads a command line back.
+#[cfg_attr(not(windows), allow(dead_code))]
+pub(crate) fn quote_windows_arg(arg: &str) -> String {
+    if !arg.is_empty() && !arg.contains([' ', '\t', '\n', '\u{b}', '"']) {
+        return arg.to_string();
+    }
+    let mut out = String::from('"');
+    let mut backslashes = 0usize;
+    for c in arg.chars() {
+        match c {
+            '\\' => backslashes += 1,
+            '"' => {
+                out.push_str(&"\\".repeat(backslashes * 2 + 1));
+                out.push('"');
+                backslashes = 0;
+            }
+            _ => {
+                out.push_str(&"\\".repeat(backslashes));
+                out.push(c);
+                backslashes = 0;
+            }
+        }
+    }
+    out.push_str(&"\\".repeat(backslashes * 2));
+    out.push('"');
+    out
+}
+
+/// The PowerShell that starts `exe args` hidden through the shell. Double quotes never pass
+/// through this program's own command line to PowerShell (Windows PowerShell mangles them):
+/// PowerShell rebuilds them from `[char]34`. Core cmdlets only, so it runs in Constrained
+/// Language Mode.
+#[cfg_attr(not(windows), allow(dead_code))]
+pub(crate) fn start_process_script(exe: &Path, args: &[String]) -> String {
+    let line = args.iter().map(|a| quote_windows_arg(a)).collect::<Vec<_>>().join(" ");
+    let quoted = line.split('"').map(ps_quote).collect::<Vec<_>>().join(" + $q + ");
+    format!("$q = [char]34; Start-Process -FilePath {} -ArgumentList ({quoted}) -WindowStyle Hidden", ps_quote(&exe.to_string_lossy()))
+}
+
+/// `magicpic-cli spawn-detached` (hidden): what [`spawn_unattached`] runs on Windows. Starts
+/// the program detached, with its output in the log, writes its pid, and exits.
+pub(crate) fn spawn_detached_cmd(a: &SpawnDetachedArgs) -> Result {
+    let Some((program, rest)) = a.command.split_first() else {
+        return Err(CliError::Other("spawn-detached: no program".into()));
+    };
+    let child = start_logged(program, rest, a.cwd.as_deref(), a.log.as_deref())
+        .map_err(|e| CliError::Other(format!("could not start {}: {e}", Path::new(program).display())))?;
+    if let Some(p) = &a.pid_file {
+        write_atomic(p, child.id().to_string().as_bytes())?;
+    }
+    Ok(())
+}
+
 /// Start the app with the control channel unless it already listens; wait for its token.
 pub(crate) fn launch_app(config: &Config, wait: Duration, err: &mut dyn Write) -> Result<Value> {
     if listening(config.port) {
@@ -363,21 +543,13 @@ pub(crate) fn launch_app(config: &Config, wait: Duration, err: &mut dyn Write) -
     }
     let home = config.token_file.parent().map(Path::to_path_buf).unwrap_or_else(|| PathBuf::from("."));
     let log_path = home.join("app.log");
-    let log = std::fs::File::create(&log_path).map_err(|e| CliError::Other(format!("{}: {e}", log_path.display())))?;
-    let log_err = log.try_clone().map_err(|e| CliError::Other(e.to_string()))?;
-    let mut cmd = Command::new(&config.app);
-    cmd.args(config.app_args()).stdout(log).stderr(log_err);
-    if let Some(dir) = config.app.parent() {
-        cmd.current_dir(dir);
-    }
-    let child = spawn_detached(&mut cmd).map_err(|e| CliError::Other(format!("could not start {}: {e}", config.app.display())))?;
-    let _ = writeln!(err, "magicpic-cli: started {} (pid {})", config.app.display(), child.id());
+    std::fs::File::create(&log_path).map_err(|e| CliError::Other(format!("{}: {e}", log_path.display())))?;
+    let pid = spawn_unattached(&config.app, &config.app_args(), config.app.parent(), Some(&log_path))?;
+    let _ = writeln!(err, "magicpic-cli: started {}{}", config.app.display(), pid.map(|p| format!(" (pid {p})")).unwrap_or_default());
     let t = Instant::now();
     while t.elapsed() < wait {
         if listening(config.port) && config.token_file.is_file() {
-            return Ok(
-                json!({"running": true, "started": true, "pid": child.id(), "port": config.port, "log": log_path, "seconds": t.elapsed().as_secs_f64()}),
-            );
+            return Ok(json!({"running": true, "started": true, "pid": pid, "port": config.port, "log": log_path, "seconds": t.elapsed().as_secs_f64()}));
         }
         std::thread::sleep(Duration::from_millis(250));
     }
@@ -394,7 +566,7 @@ pub(crate) fn launch(a: &LaunchArgs, out: &mut dyn Write, err: &mut dyn Write) -
     let home = magicpic_home()?;
     let config = Config::load(&home)?.ok_or_else(|| CliError::Other(format!("{} has no config.json: run `magicpic-cli setup` first", home.display())))?;
     let report = launch_app(&config, Duration::from_secs(a.wait.unwrap_or(30)), err)?;
-    print_json(out, &report, JsonStyle::Pretty)
+    print_json_ascii(out, &report)
 }
 
 /// The bridge's "app is not running" hint and, with `--start-app-if-needed`, its starter.
@@ -445,6 +617,21 @@ mod tests {
     }
 
     #[test]
+    fn windows_command_lines_and_powershell_literals_quote_everything() {
+        assert_eq!(quote_windows_arg("plain"), "plain");
+        assert_eq!(quote_windows_arg(""), r#""""#);
+        assert_eq!(quote_windows_arg(r"C:\My Photos\"), r#""C:\My Photos\\""#);
+        assert_eq!(quote_windows_arg(r#"say "hi""#), r#""say \"hi\"""#);
+        assert_eq!(ps_quote("O'Neil\u{2019}s"), "'O''Neil\u{2019}\u{2019}s'");
+        let script = start_process_script(Path::new(r"C:\Users\A B\.magicpic\bin\magicpic-cli.exe"), &["mcp".into(), r"C:\My Photos".into()]);
+        assert_eq!(
+            script,
+            r"$q = [char]34; Start-Process -FilePath 'C:\Users\A B\.magicpic\bin\magicpic-cli.exe' -ArgumentList ('mcp ' + $q + 'C:\My Photos' + $q + '') -WindowStyle Hidden"
+        );
+        assert!(!script.contains('"'), "no double quote reaches PowerShell's command line");
+    }
+
+    #[test]
     fn the_app_command_line_names_one_photo_folder() {
         let c = Config {
             version: 1,
@@ -454,6 +641,7 @@ mod tests {
             port: 7879,
             token_file: "/h/control.token".into(),
             launcher: "/h/l".into(),
+            start_app: true,
         };
         assert_eq!(
             c.app_args(),

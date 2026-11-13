@@ -23,6 +23,15 @@ maintainer publishes it.
 
 User-facing names say **MagicPic**. Files, binaries and ids stay lowercase (`magicpic-<version>-<platform>-<arch>.<ext>`, `io.github.vansyson1308.magicpic`).
 
+## Agent archives (the quick path in `agent-setup.md`)
+
+`install.sh` and `install.ps1` download from the latest **published** release, so until one exists
+they answer *no MagicPic release … (HTTP 404)* and every agent install is a 20-minute source
+build. **To cut the first one:** bump the version on `main` (`cargo xtask version set 0.24.0`,
+through a pull request), then `git tag v0.24.0 && git push origin v0.24.0`. The
+`agent-binaries` workflow builds and tests the four archives and attaches them, `SHA256SUMS` and
+both installers to that tag's release (a draft when it has none). Then publish the draft.
+
 ## In-app update checks
 
 The native desktop app checks the public GitHub latest-release endpoint in a background
