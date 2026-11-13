@@ -209,6 +209,11 @@ pub enum PolarMode {
     PolarToRectangular,
 }
 
+/// Serde default for a flag that is on unless stored params say otherwise.
+fn default_true() -> bool {
+    true
+}
+
 /// A filter and its parameters, in Photoshop's dialog units (pixels,
 /// percent, degrees, levels 0–255).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -442,12 +447,15 @@ pub enum FilterParams {
         foreground: [f32; 4],
         background: [f32; 4],
     },
-    /// Brightness 10–300 %, centre as a fraction of the bounds.
+    /// Brightness 10–300 %, centre as a fraction of the bounds. `ghosts` false draws the core only
+    /// (no reflections along the axis); absent in stored params, it is true.
     LensFlare {
         brightness: f32,
         center_x: f32,
         center_y: f32,
         lens: LensType,
+        #[serde(default = "default_true")]
+        ghosts: bool,
     },
     /// Gloss/metallic/exposure/ambience −100…100; bump height 0–100.
     LightingEffects {
@@ -962,7 +970,9 @@ pub fn kernel(params: &FilterParams, src: &Image, out: Rect, ctx: &Ctx) -> Vec<f
         FilterParams::Fibers { variance, strength, seed, foreground, background } => {
             render::fibers(src, out, ctx, *variance, *strength, *seed, (*foreground, *background))
         }
-        FilterParams::LensFlare { brightness, center_x, center_y, lens } => lens_flare::lens_flare(src, out, ctx, *brightness, (*center_x, *center_y), *lens),
+        FilterParams::LensFlare { brightness, center_x, center_y, lens, ghosts } => {
+            lens_flare::lens_flare(src, out, ctx, *brightness, (*center_x, *center_y), *lens, *ghosts)
+        }
         FilterParams::LightingEffects { lights, gloss, metallic, exposure, ambience, texture, height, white_is_high } => render::lighting(
             src,
             out,

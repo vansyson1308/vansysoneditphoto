@@ -34,7 +34,11 @@ pub struct Listed {
     pub path: String,
     /// The same file by its full path below that root. A relative path is looked up in the
     /// roots in launch order, so this is what names the file when two roots hold the same path.
+    /// On Windows it is the ordinary `C:\…` spelling, which other programs (and `doc_open`) take.
     pub absolute_path: String,
+    /// The Windows extended-length (`\\?\…`) spelling of the same path, only when it differs.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub extended_path: Option<String>,
     /// `file` or `dir`.
     pub kind: &'static str,
     pub bytes: u64,
@@ -175,9 +179,11 @@ impl AuthorizedWorkspace {
                 if relative_path(&path).is_err() {
                     continue;
                 }
-                let absolute = root.path.join(&path).to_string_lossy().into_owned();
+                let extended = path.split('/').fold(root.path.clone(), |p, part| p.join(part)).to_string_lossy().into_owned();
+                let absolute = ordinary_spelling(&extended);
                 out.push(Listed {
                     path,
+                    extended_path: (absolute != extended).then_some(extended),
                     absolute_path: absolute,
                     kind,
                     bytes: if kind == "file" { meta.len() } else { 0 },
@@ -617,6 +623,19 @@ fn open_plain_dir(parent: &Dir, name: &Path, ancestor: &Path) -> std::io::Result
 fn request_path(raw: &str, root: Option<&RootCapability>) -> Result<PathBuf, AutomationError> {
     let Some(root) = root else { return relative_path(raw) };
     scoped_path(raw, root)?.ok_or_else(|| path_error(raw, "absolute paths must be inside the automation root"))
+}
+
+/// `\\?\C:\x` as `C:\x` and `\\?\UNC\host\share` as `\\host\share`: `canonicalize` returns the
+/// extended-length form on Windows, which many programs (and people) mis-read. Other paths,
+/// such as `\\?\Volume{…}`, keep their prefix: without it they mean something else.
+pub(crate) fn ordinary_spelling(path: &str) -> String {
+    if let Some(rest) = path.strip_prefix(r"\\?\UNC\") {
+        return format!(r"\\{rest}");
+    }
+    match path.strip_prefix(r"\\?\") {
+        Some(rest) if rest.as_bytes().get(1) == Some(&b':') && rest.as_bytes().first().is_some_and(u8::is_ascii_alphabetic) => rest.to_string(),
+        _ => path.to_string(),
+    }
 }
 
 /// An absolute prefix mismatch is a noncandidate, whereas a malformed path

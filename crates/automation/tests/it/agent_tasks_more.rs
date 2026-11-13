@@ -47,7 +47,13 @@ async fn tool(c: &Conn, name: &str, args: Value) -> Value {
     }
     let r = c.call_tool(p).await.expect("call_tool transport");
     assert_ne!(r.is_error, Some(true), "{name} failed: {}", text(&r));
-    serde_json::from_str(&text(&r)).unwrap_or(Value::String(text(&r)))
+    // The first text block is the tool's result; `command_run` adds a second naming the document.
+    let first = first_text(&r);
+    serde_json::from_str(&first).unwrap_or(Value::String(text(&r)))
+}
+
+fn first_text(r: &CallToolResult) -> String {
+    r.content.iter().find_map(|c| c.as_text()).map(|t| t.text.clone()).unwrap_or_default()
 }
 
 async fn run(c: &Conn, id: &str, params: Value) -> Value {

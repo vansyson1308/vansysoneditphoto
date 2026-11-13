@@ -496,7 +496,7 @@ fn smooth(x: f32) -> f32 {
 }
 
 /// Generated looks shipped with MagicPic (procedural, CC0): `(id, label)`.
-pub const BUILTIN: [(&str, &str); 8] = [
+pub const BUILTIN: [(&str, &str); 9] = [
     ("warm", "Warm Filter"),
     ("cool", "Cool Filter"),
     ("tealOrange", "Teal & Orange"),
@@ -505,6 +505,7 @@ pub const BUILTIN: [(&str, &str); 8] = [
     ("dayForNight", "Day for Night"),
     ("monoContrast", "Mono High Contrast"),
     ("crossProcess", "Cross Process"),
+    ("dreamy", "Dreamy Fantasy"),
 ];
 
 /// A built-in look by id (33³), or None.
@@ -542,6 +543,19 @@ pub fn builtin(id: &str) -> Option<LutFile> {
             [l * 0.35, l * 0.45 + c[1] * 0.05, l * 0.65 + c[2] * 0.15]
         }),
         "monoContrast" => Box::new(|c: [f32; 3]| [smooth(smooth(luma(c))); 3]),
+        "dreamy" => Box::new(|c: [f32; 3]| {
+            // Fantasy grade: shadows toward deep blue-violet, highlights toward pink, lifted
+            // blacks and a softer contrast; colours stay recognisable.
+            let l = luma(c);
+            let t = smooth(l);
+            let shadow = [0.32, 0.22, 0.62];
+            let light = [1.0, 0.72, 0.9];
+            std::array::from_fn(|k| {
+                let tint = shadow[k] * (1.0 - t) + light[k] * t;
+                let soft = c[k] * 0.85 + 0.06;
+                (soft * 0.72 + tint * (0.12 + 0.88 * l) * 0.28).clamp(0.0, 1.0)
+            })
+        }),
         _ /* crossProcess */ => Box::new(|c: [f32; 3]| [smooth(c[0]) * 1.05, c[1] * 1.1 - 0.03, c[2] * 0.7 + 0.15]),
     };
     Some(LutFile::from_fn(label, 33, f))
@@ -1135,5 +1149,17 @@ DOMAIN_MAX 0.5 1 1
             assert!(l.data.iter().all(|v| (0.0..=1.0).contains(v)), "{id}");
         }
         assert!(builtin("nope").is_none());
+    }
+
+    /// The fantasy look: blue-violet shadows, pink highlights, lifted blacks (agent report P2.18).
+    #[test]
+    fn dreamy_tints_shadows_violet_and_highlights_pink() {
+        let l = builtin("dreamy").unwrap();
+        let dark = sample(&l, [0.12; 3]);
+        assert!(dark[2] > dark[0] && dark[0] > dark[1], "violet shadows: {dark:?}");
+        let light = sample(&l, [0.88; 3]);
+        assert!(light[0] > light[2] && light[2] > light[1], "pink highlights: {light:?}");
+        assert!(sample(&l, [0.0; 3]).iter().all(|v| *v > 0.03), "lifted blacks");
+        assert!(sample(&l, [1.0; 3]).iter().all(|v| *v < 1.0 && *v > 0.8), "soft, not clipped, highlights");
     }
 }

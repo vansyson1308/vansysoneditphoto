@@ -107,8 +107,8 @@ Setup for Claude Code, Claude Desktop and Codex, and example prompts, are in
 ### With an agent
 
 On a new machine, paste this into Claude Code or Codex. The agent installs what is missing
-(asking first), builds MagicPic, opens it and connects it to itself; pasting it again later
-updates.
+(asking first), installs MagicPic (a prebuilt release when one is published, else a source
+build), opens it and connects it to itself; pasting it again later updates.
 
 ```text
 Install and open MagicPic on this machine, then connect it to yourself over MCP so I can edit
@@ -117,7 +117,7 @@ photos by talking to you.
 Source: https://github.com/vansyson1308/vansysoneditphoto
 Follow the agent instructions exactly:
 https://raw.githubusercontent.com/vansyson1308/vansysoneditphoto/main/docs/agent-setup.md
-If you cannot read that page, clone the repository as in step 2 there and read
+If you cannot read that page, run `git clone --depth 1` on the source above and read
 docs/agent-setup.md in the clone.
 
 Ask me before installing system software or using administrator rights. Grant only one photo

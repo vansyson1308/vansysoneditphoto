@@ -326,10 +326,37 @@ fn max_side_param(cmd: &str, p: &Value, default: u32) -> Result<u32> {
     count_param(cmd, p, "maxSide", default, MIN_SIDE, MAX_SIDE)
 }
 
+/// A copy of `doc` that shows the layer at `path` alone (`solo`), or it and every layer below it.
+/// Groups around the layer stay visible; the layer itself is shown even if it is hidden, and a
+/// clipped layer seen alone is unclipped (its base is hidden). Only the copy changes: no
+/// visibility, history step or revision of the document.
+pub(crate) fn isolate(doc: &Document, path: &[usize], solo: bool) -> Document {
+    fn rec(layers: &mut [Layer], path: &[usize], solo: bool) {
+        let Some((&at, rest)) = path.split_first() else { return };
+        for (i, l) in layers.iter_mut().enumerate() {
+            if i == at {
+                l.visible = true;
+                if rest.is_empty() && solo {
+                    l.clipped = false;
+                }
+                if let Some(children) = l.children_mut() {
+                    rec(children, rest, solo);
+                }
+            } else if solo || i > at {
+                // Layers are stored bottom-to-top: a higher index is above.
+                l.visible = false;
+            }
+        }
+    }
+    let mut out = doc.clone();
+    rec(&mut out.layers, path, solo);
+    out
+}
+
 /// `seeing.view`: an image of a document through a view. A query: the document is not touched.
 fn view(s: &mut Session, p: &Value) -> Result<Value> {
     const CMD: &str = "seeing.view";
-    known(CMD, p, &["view", "maxSide", "region", "strength", "levels", "format", "quality", "document"])?;
+    known(CMD, p, &["view", "maxSide", "region", "strength", "levels", "format", "quality", "document", "layer", "solo"])?;
     let st = match p.get("document") {
         None | Some(Value::Null) => s.active().ok_or(EngineError::NoDocument)?,
         Some(v) => {
@@ -337,7 +364,26 @@ fn view(s: &mut Session, p: &Value) -> Result<Value> {
             s.documents().get(i).ok_or_else(|| bad(CMD, format!("no document at index {i} ({} open)", s.documents().len())))?
         }
     };
-    let doc = &st.doc;
+    let solo = match p.get("solo") {
+        None | Some(Value::Null) => None,
+        Some(Value::Bool(b)) => Some(*b),
+        Some(_) => return Err(bad(CMD, "`solo` must be true or false")),
+    };
+    let isolated = match p.get("layer") {
+        None | Some(Value::Null) if solo.is_some() => return Err(bad(CMD, "`solo` needs `layer`")),
+        None | Some(Value::Null) => None,
+        Some(v) => {
+            let id = v.as_u64().ok_or_else(|| bad(CMD, "`layer` must be a layer id (from document.inspect)"))?;
+            let path = st.doc.path_of(magicpic_doc::LayerId(id)).ok_or_else(|| bad(CMD, format!("no layer with id {id} in this document")))?;
+            let solo = solo.unwrap_or(true);
+            let name = st.doc.layer(magicpic_doc::LayerId(id)).map(|l| l.name.clone()).unwrap_or_default();
+            Some((isolate(&st.doc, &path, solo), json!({"id": id, "name": name, "solo": solo})))
+        }
+    };
+    let (doc, layer_note) = match &isolated {
+        Some((doc, note)) => (doc, note.clone()),
+        None => (&*st.doc, Value::Null),
+    };
     let view = view_param(CMD, p)?;
     let params = view_params(CMD, p)?;
     let max_side = max_side_param(CMD, p, 1024)?;
@@ -383,7 +429,172 @@ fn view(s: &mut Session, p: &Value) -> Result<Value> {
         // A view is something to look through. It is not an edit and is not in the document.
         "analysisOnly": view.is_some(),
         "region": region,
+        "layer": layer_note,
         "document": {"id": doc.id.0, "name": doc.name, "width": doc.size.width, "height": doc.size.height, "revision": st.revision},
+    }))
+}
+
+/// The most pixels `document.histogram` counts in one call (about a 400 MP canvas).
+const MAX_HISTOGRAM_PIXELS: u64 = 400 << 20;
+/// Rows composited at a time by `document.histogram`, so memory stays bounded at full resolution.
+const HISTOGRAM_BAND_ROWS: u32 = 256;
+const HISTOGRAM_CHANNELS: [&str; 5] = ["luminosity", "red", "green", "blue", "alpha"];
+
+/// 256 bins of one channel, on the 0–255 levels scale Levels and Threshold use, plus exact sums.
+struct Channel {
+    bins: [u64; 256],
+    count: u64,
+    sum: f64,
+    sum_sq: f64,
+    min: f64,
+    max: f64,
+}
+
+impl Channel {
+    fn new() -> Self {
+        Channel { bins: [0; 256], count: 0, sum: 0.0, sum_sq: 0.0, min: f64::INFINITY, max: f64::NEG_INFINITY }
+    }
+
+    fn add(&mut self, v: f32) {
+        let level = f64::from(v.clamp(0.0, 1.0)) * 255.0;
+        let bin = (level + 0.5) as usize;
+        if let Some(b) = self.bins.get_mut(bin.min(255)) {
+            *b = b.saturating_add(1);
+        }
+        self.count = self.count.saturating_add(1);
+        self.sum += level;
+        self.sum_sq += level * level;
+        self.min = self.min.min(level);
+        self.max = self.max.max(level);
+    }
+
+    /// The smallest level at or below which a fraction `q` of the counted pixels lie.
+    fn percentile(&self, q: f64) -> Option<u32> {
+        if self.count == 0 {
+            return None;
+        }
+        let want = ((self.count as f64) * q).ceil().max(1.0) as u64;
+        let mut seen = 0u64;
+        for (level, n) in self.bins.iter().enumerate() {
+            seen = seen.saturating_add(*n);
+            if seen >= want {
+                return u32::try_from(level).ok();
+            }
+        }
+        Some(255)
+    }
+
+    fn report(&self) -> Value {
+        if self.count == 0 {
+            return json!({"bins": self.bins.to_vec(), "count": 0, "min": null, "max": null, "mean": null, "stdDev": null, "median": null,
+                "percentiles": {"p50": null, "p90": null, "p99": null, "p99.9": null}});
+        }
+        let n = self.count as f64;
+        let mean = self.sum / n;
+        let var = (self.sum_sq / n - mean * mean).max(0.0);
+        let round = |v: f64| (v * 100.0).round() / 100.0;
+        json!({
+            "bins": self.bins.to_vec(),
+            "count": self.count,
+            "min": round(self.min),
+            "max": round(self.max),
+            "mean": round(mean),
+            "stdDev": round(var.sqrt()),
+            "median": self.percentile(0.5),
+            "percentiles": {"p50": self.percentile(0.5), "p90": self.percentile(0.9), "p99": self.percentile(0.99), "p99.9": self.percentile(0.999)},
+        })
+    }
+}
+
+/// `document.histogram`: counts of the composite (or one layer, or a region) at full resolution.
+/// A query: the document is not touched.
+fn histogram(s: &mut Session, p: &Value) -> Result<Value> {
+    const CMD: &str = "document.histogram";
+    known(CMD, p, &["document", "layer", "solo", "channel", "region"])?;
+    let st = match p.get("document") {
+        None | Some(Value::Null) => s.active().ok_or(EngineError::NoDocument)?,
+        Some(v) => {
+            let i = v.as_u64().and_then(|i| usize::try_from(i).ok()).ok_or_else(|| bad(CMD, "`document` must be a document index"))?;
+            s.documents().get(i).ok_or_else(|| bad(CMD, format!("no document at index {i} ({} open)", s.documents().len())))?
+        }
+    };
+    let channel = match p.get("channel") {
+        None | Some(Value::Null) => None,
+        Some(Value::String(c)) if c == "all" => None,
+        Some(Value::String(c)) if HISTOGRAM_CHANNELS.contains(&c.as_str()) => Some(c.clone()),
+        Some(_) => return Err(bad(CMD, "`channel` must be luminosity, red, green, blue, alpha or all")),
+    };
+    let solo = match p.get("solo") {
+        None | Some(Value::Null) => None,
+        Some(Value::Bool(b)) => Some(*b),
+        Some(_) => return Err(bad(CMD, "`solo` must be true or false")),
+    };
+    let isolated = match p.get("layer") {
+        None | Some(Value::Null) if solo.is_some() => return Err(bad(CMD, "`solo` needs `layer`")),
+        None | Some(Value::Null) => None,
+        Some(v) => {
+            let id = v.as_u64().ok_or_else(|| bad(CMD, "`layer` must be a layer id (from document.inspect)"))?;
+            let path = st.doc.path_of(magicpic_doc::LayerId(id)).ok_or_else(|| bad(CMD, format!("no layer with id {id} in this document")))?;
+            let solo = solo.unwrap_or(true);
+            let name = st.doc.layer(magicpic_doc::LayerId(id)).map(|l| l.name.clone()).unwrap_or_default();
+            Some((isolate(&st.doc, &path, solo), json!({"id": id, "name": name, "solo": solo})))
+        }
+    };
+    let (doc, layer_note) = match &isolated {
+        Some((doc, note)) => (doc, note.clone()),
+        None => (&*st.doc, Value::Null),
+    };
+    if doc.size.width == 0 || doc.size.height == 0 {
+        return Err(bad(CMD, "the document has no pixels"));
+    }
+    let frame = match p.get("region") {
+        None | Some(Value::Null) => Frame { x: 0, y: 0, width: doc.size.width, height: doc.size.height },
+        Some(v) => frame_of(CMD, "region", v, doc)?,
+    };
+    if u64::from(frame.width) * u64::from(frame.height) > MAX_HISTOGRAM_PIXELS {
+        return Err(bad(CMD, format!("more than {MAX_HISTOGRAM_PIXELS} pixels; pass a `region`")));
+    }
+    let mut channels: Vec<Channel> = HISTOGRAM_CHANNELS.iter().map(|_| Channel::new()).collect();
+    let mut transparent = 0u64;
+    let mut y = 0;
+    while y < frame.height {
+        let rows = HISTOGRAM_BAND_ROWS.min(frame.height - y);
+        let band = Frame { x: frame.x, y: frame.y + y, width: frame.width, height: rows };
+        let rect = frame_rect(band).ok_or_else(|| bad(CMD, "`region` is outside the coordinate range"))?;
+        let buf = magicpic_compose::render_reduced_rect(doc, rect, frame.width, rows);
+        for q in buf.into_px() {
+            if !q.iter().all(|v| v.is_finite()) {
+                continue;
+            }
+            if let Some(a) = channels.get_mut(4) {
+                a.add(q[3]);
+            }
+            if q[3] <= 0.0 {
+                transparent = transparent.saturating_add(1);
+                continue;
+            }
+            // Photoshop's luminosity weights.
+            let lum = 0.30 * q[0] + 0.59 * q[1] + 0.11 * q[2];
+            for (c, v) in channels.iter_mut().zip([lum, q[0], q[1], q[2]]) {
+                c.add(v);
+            }
+        }
+        y += rows;
+    }
+    let report: serde_json::Map<String, Value> = HISTOGRAM_CHANNELS
+        .iter()
+        .zip(&channels)
+        .filter(|(name, _)| channel.as_deref().is_none_or(|c| c == **name))
+        .map(|(name, c)| ((*name).to_string(), c.report()))
+        .collect();
+    Ok(json!({
+        "document": {"id": doc.id.0, "name": doc.name, "revision": st.revision, "mode": format!("{:?}", doc.mode)},
+        "layer": layer_note,
+        "region": frame,
+        "pixels": u64::from(frame.width) * u64::from(frame.height),
+        "transparent": transparent,
+        "scale": "levels 0-255 (bin n holds values that round to n); transparent pixels are left out of the colour channels",
+        "channels": report,
     }))
 }
 
@@ -676,10 +887,18 @@ macro_rules! spec {
 pub fn specs() -> Vec<CommandSpec> {
     vec![
         spec!(
+            "document.histogram",
+            "Document Histogram",
+            [],
+            r##"{"document":index?=the active document,"layer":layerId?,"solo":bool=true,"channel":"luminosity|red|green|blue|alpha|all"="all","region":{"x":px,"y":px,"width":px,"height":px}?} → {document:{id,name,revision,mode},layer,region,pixels,transparent,channels:{<name>:{bins:[256],count,min,max,mean,stdDev,median,percentiles:{p50,p90,p99,p99.9}}}} (counts every pixel at full resolution, on the 0-255 levels scale Levels and Threshold use; `layer` counts that layer alone, or with the layers below it (solo false); a query: changes nothing)"##,
+            false,
+            histogram
+        ),
+        spec!(
             "seeing.view",
             "Seeing View",
             [],
-            r##"{"view":"normal|luminance|masses|shapes|lines|color"="normal","maxSide":16..2048=1024,"region":{"x":px,"y":px,"width":px,"height":px}?,"strength":0..1=0.5,"levels":2..8=3,"format":"png|jpeg"="png","quality":1..100=85,"document":index?=the active document} → {mime,base64,bytes,width,height,view,description,analysisOnly,region,document:{id,name,width,height,revision}} (a look at a document, or a region of it, that changes nothing; jpeg is smaller and shows transparency as white: luminance = tones only; masses = strongly defocused colour areas; shapes = `levels` flat tones of the picture's own range, figure against space; lines = outlines on white; color = hue and saturation at equal luminosity; strength = how far masses/shapes/lines abstract. Views are for looking only and are never part of the document or an export)"##,
+            r##"{"view":"normal|luminance|masses|shapes|lines|color"="normal","maxSide":16..2048=1024,"region":{"x":px,"y":px,"width":px,"height":px}?,"strength":0..1=0.5,"levels":2..8=3,"format":"png|jpeg"="png","quality":1..100=85,"document":index?=the active document,"layer":layerId?,"solo":bool=true} → {mime,base64,bytes,width,height,view,description,analysisOnly,region,layer:{id,name,solo}|null,document:{id,name,width,height,revision}} (a look at a document, or a region of it, that changes nothing; `layer` shows that layer alone on transparency (solo) or with every layer below it (solo false), without touching its visibility, blend mode or the history; jpeg is smaller and shows transparency as white: luminance = tones only; masses = strongly defocused colour areas; shapes = `levels` flat tones of the picture's own range, figure against space; lines = outlines on white; color = hue and saturation at equal luminosity; strength = how far masses/shapes/lines abstract. Views are for looking only and are never part of the document or an export)"##,
             false,
             view
         ),

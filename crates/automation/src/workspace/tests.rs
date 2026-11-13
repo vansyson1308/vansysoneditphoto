@@ -1576,3 +1576,14 @@ fn csh_import_with_inline_data_ignores_an_unreadable_path() {
     assert_eq!(result["names"], serde_json::json!(["Inline"]), "{result}");
     assert_eq!(result["group"], "Inline Set", "{result}");
 }
+
+/// `files_list` returned `\\?\C:\…` on Windows (canonicalized roots), which agents passed on to
+/// other programs that mis-read it. The ordinary spelling is what `absolutePath` holds now.
+#[test]
+fn listed_absolute_paths_use_the_ordinary_windows_spelling() {
+    assert_eq!(super::ordinary_spelling(r"\\?\C:\Users\A B\Pictures\MagicPic\x.png"), r"C:\Users\A B\Pictures\MagicPic\x.png");
+    assert_eq!(super::ordinary_spelling(r"\\?\UNC\nas\photos\x.png"), r"\\nas\photos\x.png");
+    assert_eq!(super::ordinary_spelling(r"\\?\Volume{0b1}\x.png"), r"\\?\Volume{0b1}\x.png");
+    assert_eq!(super::ordinary_spelling("/home/a/Pictures/x.png"), "/home/a/Pictures/x.png");
+    assert_eq!(super::ordinary_spelling(r"C:\x.png"), r"C:\x.png");
+}

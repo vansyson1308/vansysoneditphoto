@@ -39,12 +39,43 @@ pub struct MagicpicMcp {
 // Parameters
 // ---------------------------------------------------------------------------
 
+/// Which open document a tool works on: its tab `index` (a number, or `{"index": n}`) or its
+/// `id` (`{"id": n}`), both from `session_list` or `doc_open`. An id stays the same while the
+/// document is open; an index changes when tabs close or move.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, JsonSchema)]
+#[serde(untagged)]
+pub enum DocRef {
+    Index(usize),
+    Selector(DocSelector),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DocSelector {
+    #[serde(default)]
+    pub index: Option<usize>,
+    #[serde(default)]
+    pub id: Option<u64>,
+}
+
 #[derive(Debug, Default, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct DocIndex {
     /// Document index from `session_list` (default: the active document).
     #[serde(default)]
     pub index: Option<usize>,
+    /// The document by index or `{"id": n}` (instead of `index`).
+    #[serde(default)]
+    pub document: Option<DocRef>,
+}
+
+#[derive(Debug, Default, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SessionListParams {
+    /// The full state instead of the documents: in bridge mode the whole UI (`ui.inspect`: tools,
+    /// panels, dock, memory; about 10k tokens), headless the session's colours and history options.
+    #[serde(default)]
+    pub verbose: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -234,6 +265,10 @@ pub struct SaveParams {
     pub maximize_compatibility: Option<bool>,
     #[serde(default)]
     pub index: Option<usize>,
+    /// The document to save, by index or `{"id": n}` (default: the active one). In bridge mode
+    /// its tab comes to the front first.
+    #[serde(default)]
+    pub document: Option<DocRef>,
 }
 
 /// A rectangle of the document, in document pixels.
@@ -253,6 +288,17 @@ pub struct PreviewParams {
     /// `region` or `format`) renders that document instead of capturing the app window.
     #[serde(default)]
     pub index: Option<usize>,
+    /// The document by index or `{"id": n}` (instead of `index`).
+    #[serde(default)]
+    pub document: Option<DocRef>,
+    /// Render only this layer (its id from `doc_inspect`), with `solo` (default true) alone on a
+    /// transparent canvas, or with `solo: false` together with every layer below it. Changes nothing:
+    /// no visibility, blend mode or history step.
+    #[serde(default)]
+    pub layer: Option<u64>,
+    /// With `layer`: true (the default) shows the layer alone; false shows it and the layers below.
+    #[serde(default)]
+    pub solo: Option<bool>,
     /// Longest side of the preview (default 1024, maximum 2048).
     /// Zero requests full size within that ceiling.
     #[serde(default)]
@@ -284,7 +330,13 @@ pub struct PreviewParams {
 impl PreviewParams {
     /// Whether the call asks for a document view (`seeing.view`) rather than the plain preview.
     fn wants_view(&self) -> bool {
-        self.view.is_some() || self.region.is_some() || self.strength.is_some() || self.levels.is_some() || self.format.is_some() || self.quality.is_some()
+        self.view.is_some()
+            || self.region.is_some()
+            || self.strength.is_some()
+            || self.levels.is_some()
+            || self.format.is_some()
+            || self.quality.is_some()
+            || self.layer.is_some()
     }
 
     /// The `seeing.view` parameters of this call.
@@ -314,8 +366,32 @@ impl PreviewParams {
         if let Some(v) = self.quality {
             m.insert("quality".into(), json!(v));
         }
+        if let Some(v) = self.layer {
+            m.insert("layer".into(), json!(v));
+            m.insert("solo".into(), json!(self.solo.unwrap_or(true)));
+        }
         Value::Object(m)
     }
+}
+
+#[derive(Debug, Default, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct HistogramParams {
+    /// The document by index or `{"id": n}` (default: the active one).
+    #[serde(default)]
+    pub document: Option<DocRef>,
+    /// Count only this layer (an id from `doc_inspect`): alone (`solo`, the default) or with the
+    /// layers below it (`solo: false`).
+    #[serde(default)]
+    pub layer: Option<u64>,
+    #[serde(default)]
+    pub solo: Option<bool>,
+    /// `luminosity`, `red`, `green`, `blue`, `alpha` or `all` (the default).
+    #[serde(default)]
+    pub channel: Option<String>,
+    /// Count only this rectangle, in document pixels.
+    #[serde(default)]
+    pub region: Option<RegionParams>,
 }
 
 #[derive(Debug, Default, Deserialize, JsonSchema)]
@@ -341,7 +417,12 @@ pub struct ScreenshotParams {
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SelectParams {
-    pub index: usize,
+    /// The tab index from `session_list`.
+    #[serde(default)]
+    pub index: Option<usize>,
+    /// Or the document's `id` (from `session_list` or `doc_open`).
+    #[serde(default)]
+    pub id: Option<u64>,
 }
 
 #[derive(Debug, Default, Deserialize, JsonSchema)]
@@ -353,6 +434,16 @@ pub struct ListParams {
     /// Only commands that can run right now.
     #[serde(default)]
     pub enabled_only: Option<bool>,
+    /// Rows of just `{id, label, enabled}` (no params docs, menus or shortcuts): a short overview.
+    #[serde(default)]
+    pub brief: Option<bool>,
+    /// Skip this many matching rows (paging; with `offset` or `limit` the reply is
+    /// `{total, offset, next, commands}`, where `next` is the next page's offset or null).
+    #[serde(default)]
+    pub offset: Option<usize>,
+    /// At most this many rows.
+    #[serde(default)]
+    pub limit: Option<usize>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -379,6 +470,10 @@ pub struct RunParams {
     /// person may have switched tabs. Like `expect_revision`, it makes the command run to the end.
     #[serde(default)]
     pub expect_document: Option<u64>,
+    /// Run on this document (index, or `{"id": n}`): it becomes the active one first (in the app,
+    /// its tab comes to the front) and stays active. Not with `wait: false`.
+    #[serde(default)]
+    pub document: Option<DocRef>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -414,6 +509,10 @@ pub struct BatchParams {
     /// `doc_inspect` or `session_list`); otherwise nothing runs.
     #[serde(default)]
     pub expect_document: Option<u64>,
+    /// Run every step on this document (index, or `{"id": n}`), made active first. With `atomic`
+    /// the transaction also refuses to run if another document became active meanwhile.
+    #[serde(default)]
+    pub document: Option<DocRef>,
 }
 
 /// One `ui_pointer` event, for the tool schema only: events are forwarded to `ui.pointer` as JSON.
@@ -833,8 +932,12 @@ fn downscale_png(png: &[u8], max_side: u32) -> Result<Option<Vec<u8>>, Automatio
 
 #[tool_router]
 impl MagicpicMcp {
-    #[tool(description = "List open documents (index, name, size, dirty) and the active index.")]
-    async fn session_list(&self) -> Result<CallToolResult, McpError> {
+    #[tool(description = "List open documents: {active, documents: [{index, id, name, path, width, height, dirty, revision}]}. \
+        `verbose: true` returns the full state instead (bridge mode: the whole UI, about 10k tokens).")]
+    async fn session_list(&self, Parameters(p): Parameters<SessionListParams>) -> Result<CallToolResult, McpError> {
+        if p.verbose != Some(true) {
+            return to_result(self.session_compact().await);
+        }
         if let Some(r) = self.headless_op(|h| Ok(h.session_list())).await {
             return to_result(r);
         }
@@ -844,7 +947,8 @@ impl MagicpicMcp {
         to_result(b.call_read("ui.inspect", json!({})).await)
     }
 
-    #[tool(description = "Open an image or document file and make it active. Returns index, size and import warnings.")]
+    #[tool(description = "Open an image or document file and make it active. Returns its `index` (tab) and `id` (stable while \
+        open; pass either as `document` to other tools), size and import warnings.")]
     async fn doc_open(&self, Parameters(p): Parameters<OpenParams>) -> Result<CallToolResult, McpError> {
         let path = PathBuf::from(&p.path);
         let approve = p.approve_high_memory;
@@ -858,7 +962,12 @@ impl MagicpicMcp {
         if approve {
             params["approveHighMemory"] = json!(true);
         }
-        to_result(b.call("app.open", params).await)
+        let opened = match b.call("app.open", params).await {
+            Ok(v) => v,
+            Err(e) => return to_result(Err(e)),
+        };
+        // The app answers with the name only; the opened document is the active one now.
+        to_result(Ok(merge_active(opened, &self.session_state().await.unwrap_or(Value::Null))))
     }
 
     #[tool(
@@ -1006,7 +1115,7 @@ impl MagicpicMcp {
     }
 
     #[tool(description = "Save the document. `.pcraft` is the lossless native format (incremental); other extensions \
-        (psd, png, jpg, tif, webp, exr, …) export. Without `path` only a PSD, PSB or .pcraft document is written back to its own file. `pcraftFullComposite` requests `composite/full.png`, which may be omitted; check the manifest's `full_composite` member. Returns warnings about anything the format cannot hold.")]
+        (psd, png, jpg, tif, webp, exr, …) export. Without `path` only a PSD, PSB or .pcraft document is written back to its own file. `pcraftFullComposite` requests `composite/full.png`, which may be omitted; check the manifest's `full_composite` member. `document` (index or {id}) picks the document. `quality` and the other options apply to this save only, in both modes; preferences are not changed. Returns warnings about anything the format cannot hold.")]
     async fn doc_save(&self, Parameters(p): Parameters<SaveParams>) -> Result<CallToolResult, McpError> {
         self.save_impl(p).await
     }
@@ -1021,6 +1130,10 @@ impl MagicpicMcp {
 
     #[tool(description = "Document state as JSON: layer tree (top to bottom), history, selection, active layer.")]
     async fn doc_inspect(&self, Parameters(p): Parameters<DocIndex>) -> Result<CallToolResult, McpError> {
+        let p = match self.index_of(p.index, p.document).await {
+            Ok(index) => DocIndex { index, document: None },
+            Err(e) => return to_result(Err(e)),
+        };
         if let Some(r) = self
             .headless_op(move |h| {
                 if p.index.is_none() && h.session.active_index().is_none() {
@@ -1042,9 +1155,17 @@ impl MagicpicMcp {
 
     #[tool(description = "Look at a document: returns an image of it (the model sees it). `view` shows it as it is (`normal`) or \
         through an observation view that changes nothing (`luminance`, `masses`, `shapes`, `lines`, `color`); `region` renders one \
-        rectangle; `index` picks a document; `format: jpeg` is much smaller. With none of these, headless mode returns the \
-        flattened PNG and bridge mode a screenshot of the app window.")]
-    async fn doc_render_preview(&self, Parameters(p): Parameters<PreviewParams>) -> Result<CallToolResult, McpError> {
+        rectangle; `index` or `document` picks a document; `layer` (an id) with `solo` shows one layer alone, or with `solo: false` \
+        it and the layers below, without changing anything; `format: jpeg` is much smaller. With none of these, headless mode \
+        returns the flattened PNG and bridge mode a screenshot of the app window.")]
+    async fn doc_render_preview(&self, Parameters(mut p): Parameters<PreviewParams>) -> Result<CallToolResult, McpError> {
+        match self.index_of(p.index, p.document.take()).await {
+            Ok(index) => p.index = index,
+            Err(e) => return Ok(fail(e)),
+        }
+        if p.solo.is_some() && p.layer.is_none() {
+            return Ok(fail("`solo` needs `layer` (a layer id from doc_inspect)"));
+        }
         let max = p.max_side.unwrap_or(1024);
         // A view, a region or another format is the engine's `seeing.view`, in either backend;
         // so is naming a document in bridge mode, where the plain preview is the app window.
@@ -1073,11 +1194,48 @@ impl MagicpicMcp {
         self.screenshot(b, Some(max)).await
     }
 
-    #[tool(description = "Look at a document (same as doc_render_preview): an image of it as it is, of one `region`, or through an \
-        observation `view` (`luminance`, `masses`, `shapes`, `lines`, `color`) that changes nothing. Bridge mode without \
-        `view`, `region`, `index` or `format` returns the app window screenshot.")]
+    #[tool(description = "Look at a document (same as doc_render_preview): an image of it as it is, of one `region`, of one `layer` \
+        (`solo`: alone, default; false: with the layers below), or through an observation `view` (`luminance`, `masses`, `shapes`, \
+        `lines`, `color`); none of these change the document or its history. Bridge mode without `view`, `region`, `layer`, \
+        `index`, `document` or `format` returns the app window screenshot.")]
     async fn render_preview(&self, p: Parameters<PreviewParams>) -> Result<CallToolResult, McpError> {
         self.doc_render_preview(p).await
+    }
+
+    #[tool(description = "Read-only: the histogram of a document (its composite), of one `layer` (alone, or with the layers below \
+        when `solo` is false) and/or a `region`, at full resolution: per channel (luminosity, red, green, blue, alpha) 256 bins on \
+        the 0-255 levels scale plus count, min, max, mean, stdDev, median and percentiles p50/p90/p99/p99.9. Use it to choose \
+        Levels or Threshold values from numbers. Changes nothing.")]
+    async fn doc_histogram(&self, Parameters(p): Parameters<HistogramParams>) -> Result<CallToolResult, McpError> {
+        let index = match self.index_of(None, p.document).await {
+            Ok(i) => i,
+            Err(e) => return to_result(Err(e)),
+        };
+        let mut params = serde_json::Map::new();
+        if let Some(i) = index {
+            params.insert("document".into(), json!(i));
+        }
+        if let Some(l) = p.layer {
+            params.insert("layer".into(), json!(l));
+        }
+        if let Some(solo) = p.solo {
+            params.insert("solo".into(), json!(solo));
+        }
+        if let Some(c) = p.channel {
+            params.insert("channel".into(), json!(c));
+        }
+        if let Some(r) = p.region {
+            params.insert("region".into(), json!({"x": r.x, "y": r.y, "width": r.width, "height": r.height}));
+        }
+        let params = Value::Object(params);
+        let headless_params = params.clone();
+        if let Some(r) = self.headless_op(move |h| h.command_run("document.histogram", headless_params)).await {
+            return to_result(r);
+        }
+        let Some(b) = self.bridge_client() else {
+            return Ok(no_backend());
+        };
+        to_result(b.call_read("engine.execute", json!({"command": "document.histogram", "params": params})).await)
     }
 
     #[tool(description = "Headless mode: list the files and folders in a read root (or in `dir` below one), newest first, \
@@ -1094,12 +1252,17 @@ impl MagicpicMcp {
         }
     }
 
-    #[tool(description = "Make the document at `index` active.")]
+    #[tool(description = "Make a document active, by `index` or `id` (from session_list or doc_open). In bridge mode its tab \
+        comes to the front, as Window › <document> does. Returns the compact session.")]
     async fn doc_select(&self, Parameters(p): Parameters<SelectParams>) -> Result<CallToolResult, McpError> {
-        match self.headless_op(move |h| h.select(p.index)).await {
-            Some(r) => to_result(r),
-            None => bridge_only_headless("doc_select"),
+        let r = match (p.index, p.id) {
+            (None, None) => return Ok(fail("doc_select needs `index` or `id`")),
+            (index, id) => DocRef::Selector(DocSelector { index, id }),
+        };
+        if let Err(e) = self.bring_to_front(r).await {
+            return to_result(Err(e));
         }
+        to_result(self.session_compact().await)
     }
 
     #[tool(description = "Close a document (default: the active one) without saving.")]
@@ -1113,7 +1276,8 @@ impl MagicpicMcp {
     #[tool(description = "List engine commands. Returns a JSON array (no wrapper object) of {id, label, menu: [path], \
         shortcut: string|null, params: doc string, enabled: bool, disabledReason: string|null, needsDocument: bool}. \
         `disabledReason` says why a command is off (null when enabled); `needsDocument` is true when it is off because no \
-        document is open: create or open one first (doc_new, doc_open).")]
+        document is open: create or open one first (doc_new, doc_open). `brief: true` keeps only {id, label, enabled}; \
+        `offset` / `limit` page the rows and wrap them as {total, offset, next, commands}.")]
     async fn command_list(&self, Parameters(p): Parameters<ListParams>) -> Result<CallToolResult, McpError> {
         let all = if let Some(r) = self.headless_op(|h| Ok(h.command_list())).await {
             r
@@ -1135,23 +1299,30 @@ impl MagicpicMcp {
                 needle.as_ref().is_none_or(|n| magicpic_engine::commands::list_entry_matches(c, n))
                     && (!enabled_only || c.get("enabled").and_then(Value::as_bool).unwrap_or(true))
             })
+            .map(|c| if p.brief == Some(true) { json!({"id": c.get("id"), "label": c.get("label"), "enabled": c.get("enabled")}) } else { c })
             .collect();
-        Ok(ok_json(&Value::Array(items)))
+        Ok(ok_json(&page_rows(items, p.offset, p.limit)))
     }
 
     #[tool(description = "Run an engine command by id with JSON params (see command_list). Returns the command's JSON result. \
         Long commands (filters, Content-Aware Fill/Scale, Photomerge, brush import) wait to finish unless `wait` is false: \
         then they run as a background job and the result is {job: id} (see jobs_list, jobs_cancel). A waited long \
         command reports progress, cancelling the request cancels it, and other calls are served meanwhile. \
-        `expect_revision` and `expect_document` refuse to run if the document changed since that revision or is not the active one.")]
+        `expect_revision` and `expect_document` refuse to run if the document changed since that revision or is not the active one. \
+        `document` (index or {id}) runs it on that document, made active first. A second text block names the document the \
+        command left active: {document: id, index, name, revision, dirty}.")]
     async fn command_run(&self, Parameters(p): Parameters<RunParams>, context: RequestContext<RoleServer>) -> Result<CallToolResult, McpError> {
         if (p.expect_revision.is_some() || p.expect_document.is_some()) && p.wait == Some(false) {
             return Ok(fail("`expect_revision` and `expect_document` run the command to the end; they cannot be combined with `wait: false`"));
         }
+        if let Err(e) = self.target(p.document, p.wait, p.expect_document).await {
+            return to_result(Err(e));
+        }
         let mut waiter = Waiter::new(Some(context));
         let (id, params, guarded) = Self::guarded(p.id, p.params.unwrap_or_else(|| json!({})), p.expect_revision, p.expect_document);
         let result = self.step(id, params, p.wait.unwrap_or(true), &mut waiter, (0, 1)).await;
-        to_result(if guarded { result.map(unwrap_guarded) } else { result })
+        let result = to_result(if guarded { result.map(unwrap_guarded) } else { result });
+        Ok(self.with_document(result?).await)
     }
 
     #[tool(description = "List background jobs: running ones with progress (0-1), message and elapsed time, then the last few \
@@ -1170,9 +1341,20 @@ impl MagicpicMcp {
         results:[{ok, result|error}]}; stops at the first error unless stop_on_error is false. \
         Not an atomic transaction: earlier successful steps stay applied (no rollback). \
         With `atomic: true` it is one: a failing step rolls every earlier step back, and `expect_revision` / `expect_document` \
-        refuse to run if the document changed since that revision or is not the active one.")]
+        refuse to run if the document changed since that revision or is not the active one. `document` (index or {id}) runs the \
+        batch on that document; a step's own `document` switches before that step. The reply's `document`, `index` and \
+        `revision` say which document the batch left active and its revision.")]
     async fn command_batch(&self, Parameters(p): Parameters<BatchParams>, context: RequestContext<RoleServer>) -> Result<CallToolResult, McpError> {
         self.batch(p, Waiter::new(Some(context))).await
+    }
+
+    #[tool(description = "Apply one recipe to several open documents in one call: a saved Action (`action`, its name) or inline \
+        `steps` as in command_batch, on each of `documents` (index or {id}) in turn, each brought to the front first. `overrides` \
+        change a step's params for one document ([{document, step, params}], top-level keys replace), e.g. a different star position \
+        per photo. With `atomic` (default true) each document is all or nothing; other documents still run unless stop_on_error. \
+        Returns {completed, failed, documents:[{document, index, name, revision, ok, result|error}]}.")]
+    async fn actions_play(&self, Parameters(p): Parameters<recipes::PlayParams>, context: RequestContext<RoleServer>) -> Result<CallToolResult, McpError> {
+        Ok(self.play(p, Waiter::new(Some(context))).await)
     }
 
     // ----- live-GUI tools (bridge mode) -----
@@ -1241,6 +1423,38 @@ impl MagicpicMcp {
     }
 }
 
+/// An `app.open` reply with the opened (now active) document's `index`, `id` and size. Only when
+/// the active document carries the opened name: a preset file (brushes, gradients) opens no
+/// document, and another document's id must not be reported as the file's.
+fn merge_active(mut opened: Value, session: &Value) -> Value {
+    let active = session.get("active").and_then(Value::as_u64);
+    let doc = session
+        .get("documents")
+        .and_then(Value::as_array)
+        .and_then(|d| d.iter().find(|d| d.get("index").and_then(Value::as_u64) == active))
+        .filter(|d| opened.get("name").is_some_and(|name| d.get("name") == Some(name)));
+    if let (Some(obj), Some(doc)) = (opened.as_object_mut(), doc) {
+        for key in ["index", "id", "width", "height"] {
+            if let Some(v) = doc.get(key) {
+                obj.entry(key).or_insert_with(|| v.clone());
+            }
+        }
+    }
+    opened
+}
+
+/// `command_list` rows, paged when `offset` or `limit` is given.
+fn page_rows(rows: Vec<Value>, offset: Option<usize>, limit: Option<usize>) -> Value {
+    if offset.is_none() && limit.is_none() {
+        return Value::Array(rows);
+    }
+    let total = rows.len();
+    let start = offset.unwrap_or(0).min(total);
+    let page: Vec<Value> = rows.into_iter().skip(start).take(limit.unwrap_or(usize::MAX)).collect();
+    let end = start + page.len();
+    json!({"total": total, "offset": start, "next": (end < total).then_some(end), "commands": page})
+}
+
 /// The command's own result out of a one-step `document.transaction` reply.
 fn unwrap_guarded(mut reply: Value) -> Value {
     reply.get_mut("results").and_then(Value::as_array_mut).and_then(|r| r.first_mut()).map(Value::take).unwrap_or(reply)
@@ -1251,6 +1465,43 @@ fn bridge_only_headless(name: &str) -> Result<CallToolResult, McpError> {
 }
 
 impl MagicpicMcp {
+    /// The index `index` or `document` names (at most one), or `None` for the active document.
+    async fn index_of(&self, index: Option<usize>, document: Option<DocRef>) -> Result<Option<usize>, AutomationError> {
+        match targets::one_ref(index, document)? {
+            None => Ok(None),
+            // An index is checked where it is used; only an id needs the session.
+            Some(DocRef::Index(i) | DocRef::Selector(DocSelector { index: Some(i), id: None })) => Ok(Some(i)),
+            Some(r) => self.resolve(r).await.map(|(i, _)| Some(i)),
+        }
+    }
+
+    /// Before a command: make `document` active. Checks it against `expect_document`.
+    async fn target(&self, document: Option<DocRef>, wait: Option<bool>, expect_document: Option<u64>) -> Result<(), AutomationError> {
+        let Some(r) = document else { return Ok(()) };
+        if wait == Some(false) {
+            return Err(AutomationError::BadRequest(
+                "`document` runs the command on that document to the end; it cannot be combined with `wait: false` (doc_select it first)".into(),
+            ));
+        }
+        let (_, id) = self.bring_to_front(r).await?;
+        match expect_document {
+            Some(expected) if expected != id => {
+                Err(AutomationError::BadRequest(format!("`document` names document {id} but `expect_document` is {expected}; nothing was run")))
+            }
+            _ => Ok(()),
+        }
+    }
+
+    /// A successful command result with a second text block naming the active document.
+    async fn with_document(&self, mut result: CallToolResult) -> CallToolResult {
+        if result.is_error == Some(true) {
+            return result;
+        }
+        let summary = self.active_summary().await;
+        result.content.push(Content::text(summary.to_string()));
+        bounded_tool_result(result)
+    }
+
     /// `seeing.view` of a document as image content, in either backend.
     async fn document_view(&self, p: PreviewParams) -> CallToolResult {
         let params = p.view_params();
@@ -1326,9 +1577,21 @@ impl MagicpicMcp {
         }
     }
 
-    async fn batch(&self, p: BatchParams, mut waiter: Waiter) -> Result<CallToolResult, McpError> {
+    async fn batch(&self, mut p: BatchParams, mut waiter: Waiter) -> Result<CallToolResult, McpError> {
         if p.steps.len() > MAX_BATCH_STEPS {
             return Ok(fail(format!("batch contains {} steps; maximum is {MAX_BATCH_STEPS}", p.steps.len())));
+        }
+        if let Some(r) = p.document {
+            match self.bring_to_front(r).await {
+                Ok((_, id)) if p.atomic == Some(true) => match p.expect_document {
+                    Some(expected) if expected != id => {
+                        return Ok(fail(format!("`document` names document {id} but `expect_document` is {expected}; nothing was run")));
+                    }
+                    _ => p.expect_document = Some(id),
+                },
+                Ok(_) => {}
+                Err(e) => return to_result(Err(e)),
+            }
         }
         if p.atomic == Some(true) {
             return Ok(self.atomic_batch(p, &mut waiter).await);
@@ -1351,6 +1614,8 @@ impl MagicpicMcp {
                 Err(AutomationError::BadRequest(
                     "`expect_revision` and `expect_document` run the command to the end; they cannot be combined with `wait: false`".into(),
                 ))
+            } else if let Err(e) = self.target(s.document, s.wait, s.expect_document).await {
+                Err(e)
             } else {
                 let (id, params, guarded) = Self::guarded(s.id, s.params.unwrap_or_else(|| json!({})), s.expect_revision, s.expect_document);
                 let response = self.step(id, params, s.wait.unwrap_or(true), &mut waiter, (i, total)).await;
@@ -1379,7 +1644,15 @@ impl MagicpicMcp {
             }
             waiter.report((i + 1) as f64, total as f64, "").await;
         }
-        Ok(ok_json(&json!({"completed": results.len() - failed, "failed": failed, "results": results})))
+        let after = self.active_summary().await;
+        Ok(ok_json(&json!({
+            "completed": results.len() - failed,
+            "failed": failed,
+            "results": results,
+            "document": after.get("document"),
+            "index": after.get("index"),
+            "revision": after.get("revision"),
+        })))
     }
 
     /// `command_batch {atomic: true}`: the steps as one `document.transaction`.
@@ -1387,9 +1660,10 @@ impl MagicpicMcp {
         if p.stop_on_error == Some(false) {
             return fail("an atomic batch stops and rolls back at the first error; omit `stop_on_error: false`");
         }
-        if let Some(step) = p.steps.iter().find(|s| s.wait == Some(false) || s.expect_revision.is_some() || s.expect_document.is_some()) {
+        if let Some(step) = p.steps.iter().find(|s| s.wait == Some(false) || s.expect_revision.is_some() || s.expect_document.is_some() || s.document.is_some())
+        {
             return fail(format!(
-                "step `{}`: an atomic batch runs every step to the end; `wait: false` and a step's own `expect_revision` or `expect_document` are not allowed",
+                "step `{}`: an atomic batch runs every step to the end on one document; `wait: false` and a step's own `expect_revision`, `expect_document` or `document` are not allowed (give the batch a `document`)",
                 step.id
             ));
         }
@@ -1408,7 +1682,8 @@ impl MagicpicMcp {
             Ok(v) => {
                 let results: Vec<Value> =
                     v.get("results").and_then(Value::as_array).map(|r| r.iter().map(|x| json!({"ok": true, "result": x})).collect()).unwrap_or_default();
-                let reply = json!({"completed": total, "failed": 0, "atomic": true, "outcome": "applied", "revision": v.get("revision"), "document": v.get("document"), "results": results});
+                let index = self.active_summary().await.get("index").cloned();
+                let reply = json!({"completed": total, "failed": 0, "atomic": true, "outcome": "applied", "revision": v.get("revision"), "document": v.get("document"), "index": index, "results": results});
                 match json_bytes(&reply) {
                     Ok(_) => ok_json(&reply),
                     // The edit is applied; only its results are too large to send back.
@@ -1454,7 +1729,11 @@ impl MagicpicMcp {
         if read { to_result(b.call_read(method, params).await) } else { to_result(b.call(method, params).await) }
     }
 
-    async fn save_impl(&self, p: SaveParams) -> Result<CallToolResult, McpError> {
+    async fn save_impl(&self, mut p: SaveParams) -> Result<CallToolResult, McpError> {
+        let target = match targets::one_ref(p.index.take(), p.document.take()) {
+            Ok(t) => t,
+            Err(e) => return to_result(Err(e)),
+        };
         let tga_bits = match p.tga_bits.map(|b| (b, magicpic_io::TgaBits::from_bits(u64::from(b)))) {
             None => None,
             Some((_, Some(bits))) => Some(bits),
@@ -1478,28 +1757,44 @@ impl MagicpicMcp {
             Some((c, None)) => return Ok(fail(format!("`ddsCompression` must be none, bc1, bc2 or bc3, got {c:?}"))),
         };
         if let Some(b) = self.bridge_client() {
-            // The bridge forwards to the running app's `app.save`, which takes only an optional
-            // path (without one it writes back to the document's own layered file, as headless
-            // does), the Targa bits, the DDS options, the TIFF compression, transparency and
-            // pyramid, and Maximize Compatibility, so the other options are headless-only. Saying
-            // so beats saving with defaults while the caller believes their quality or format was
-            // applied.
-            let unsupported: Vec<&str> = [
-                p.format.is_some().then_some("format"),
-                p.quality.is_some().then_some("quality"),
-                p.tiff_layers.then_some("tiffLayers"),
-                p.pcraft_full_composite.is_some().then_some("pcraftFullComposite"),
-                dpx_bits.is_some().then_some("dpxBits"),
-                p.pdf_spot_plates.is_some().then_some("pdfSpotPlates"),
-                p.index.is_some().then_some("index"),
-            ]
-            .into_iter()
-            .flatten()
-            .collect();
+            // The bridge forwards to the running app's `app.save`. It takes an optional path
+            // (without one it writes back to the document's own layered file, as headless does)
+            // and this save's answers: quality (`exportQuality`, 1–100), the Targa bits, the DDS
+            // options, the TIFF layers, compression, transparency and pyramid, the .pcraft full
+            // composite and Maximize Compatibility. Preferences are not changed. DPX bits and PDF
+            // spot plates are headless-only: saying so beats saving with defaults while the caller
+            // believes their option was applied.
+            let unsupported: Vec<&str> =
+                [dpx_bits.is_some().then_some("dpxBits"), p.pdf_spot_plates.is_some().then_some("pdfSpotPlates")].into_iter().flatten().collect();
             if !unsupported.is_empty() {
-                return Ok(fail(format!("bridge mode saves with the app's current settings; `{}` need headless mode", unsupported.join("`, `"))));
+                return Ok(fail(format!("bridge mode cannot set `{}` on a save; it needs headless mode", unsupported.join("`, `"))));
+            }
+            // The app picks the format from the extension: a different `format` would be ignored.
+            if let Some(format) = &p.format {
+                let ext = p.path.as_deref().and_then(|path| std::path::Path::new(path).extension()).and_then(|e| e.to_str()).map(str::to_ascii_lowercase);
+                let wanted = format.trim_start_matches('.').to_ascii_lowercase();
+                let same = ext
+                    .as_deref()
+                    .is_some_and(|e| e == wanted || matches!((e, wanted.as_str()), ("jpeg", "jpg") | ("jpg", "jpeg") | ("tiff", "tif") | ("tif", "tiff")));
+                if !same {
+                    return Ok(fail(format!("in bridge mode the extension of `path` picks the format: give a path ending in .{wanted}")));
+                }
+            }
+            if let Some(r) = target
+                && let Err(e) = self.bring_to_front(r).await
+            {
+                return to_result(Err(e));
             }
             let mut params = json!({});
+            if let Some(q) = p.quality {
+                params["exportQuality"] = json!(q);
+            }
+            if p.tiff_layers {
+                params["tiffLayers"] = json!(true);
+            }
+            if let Some(full) = p.pcraft_full_composite {
+                params["pcraftFullComposite"] = json!(full);
+            }
             if let Some(path) = p.path {
                 params["path"] = json!(path);
             }
@@ -1527,6 +1822,13 @@ impl MagicpicMcp {
             }
             return to_result(b.call("app.save", params).await);
         }
+        let index = match target {
+            Some(r) => match self.resolve(r).await {
+                Ok((i, _)) => Some(i),
+                Err(e) => return to_result(Err(e)),
+            },
+            None => None,
+        };
         let Some(r) = self
             .headless_op(move |h| {
                 let mut opts = magicpic_io::ExportOptions {
@@ -1552,7 +1854,7 @@ impl MagicpicMcp {
                     opts.encode.webp_lossless = false;
                 }
                 let path = p.path.map(PathBuf::from);
-                let res = h.save(p.index, path.as_deref(), p.format.as_deref(), &opts);
+                let res = h.save(index, path.as_deref(), p.format.as_deref(), &opts);
                 for d in h.drain_diagnostics() {
                     // Ignore a failed stderr write: the completed save must still be returned.
                     let _ = writeln!(std::io::stderr(), "warning: {d}");
@@ -1567,8 +1869,12 @@ impl MagicpicMcp {
     }
 }
 
+#[cfg(test)]
+mod agent_tests;
 mod conventions;
 mod progress;
+mod recipes;
+mod targets;
 mod transport;
 
 use progress::Waiter;
@@ -1682,11 +1988,21 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn mcp_command_batch_stopped_by_the_budget_keeps_its_step_results() {
         let mcp = MagicpicMcp::headless();
-        let step = |id: &str, params: Value| RunParams { id: id.into(), params: Some(params), wait: None, expect_revision: None, expect_document: None };
+        let step = |id: &str, params: Value| RunParams {
+            id: id.into(),
+            params: Some(params),
+            wait: None,
+            expect_revision: None,
+            expect_document: None,
+            document: None,
+        };
         let mut steps: Vec<RunParams> = (0..MAX_BATCH_STEPS - 1).map(|_| step("command.list", json!({}))).collect();
         steps.push(step("file.new", json!({"width": 8, "height": 8})));
         let result = mcp
-            .batch(BatchParams { steps, stop_on_error: Some(false), atomic: None, expect_revision: None, expect_document: None }, Waiter::new(None))
+            .batch(
+                BatchParams { steps, stop_on_error: Some(false), atomic: None, expect_revision: None, expect_document: None, document: None },
+                Waiter::new(None),
+            )
             .await
             .unwrap();
         assert_ne!(result.is_error, Some(true), "{:?}", result.content.first().and_then(|c| c.as_text()).map(|t| &t.text[..200.min(t.text.len())]));

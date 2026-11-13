@@ -283,6 +283,12 @@ impl FakeApp {
     fn sent(app: &Mutex<FakeApp>, method: &str) -> Vec<Value> {
         app.lock().unwrap().log.iter().filter(|r| r["method"] == method).map(|r| r["params"].clone()).collect()
     }
+
+    /// The commands sent with `engine.execute`, without the `session.inspect` reads `command_run`
+    /// makes after a command to name the document it left active.
+    fn edits(app: &Mutex<FakeApp>) -> Vec<Value> {
+        Self::sent(app, "engine.execute").into_iter().filter(|p| p["command"] != "session.inspect").collect()
+    }
 }
 
 /// An MCP server bridged to `addr` whose every call times out after 300ms.
@@ -300,7 +306,7 @@ async fn a_bridged_job_that_outlives_the_reply_timeout_returns_its_result_with_p
     assert!((0.0..1.0).contains(&progress), "{progress}");
     assert_eq!(wire.reply(5, None).await, json!({"blurred": true}));
     // Before #8130 the edit was sent waiting, and the call failed after the timeout.
-    assert_eq!(FakeApp::sent(&app, "engine.execute"), [json!({"command": "filter.blur.gaussianBlur", "params": {"radius": 9}, "wait": false})]);
+    assert_eq!(FakeApp::edits(&app), [json!({"command": "filter.blur.gaussianBlur", "params": {"radius": 9}, "wait": false})]);
     assert!(FakeApp::sent(&app, "jobs.list").len() > 1);
     assert!(FakeApp::sent(&app, "jobs.cancel").is_empty());
 
@@ -308,7 +314,7 @@ async fn a_bridged_job_that_outlives_the_reply_timeout_returns_its_result_with_p
     assert!(magicpic_engine::commands::find("view.zoomIn").is_none());
     wire.call(6, "command_run", json!({"id": "view.zoomIn"}), None).await;
     wire.reply(6, None).await;
-    assert_eq!(FakeApp::sent(&app, "engine.execute").last(), Some(&json!({"command": "view.zoomIn", "params": {}, "wait": true})));
+    assert_eq!(FakeApp::edits(&app).last(), Some(&json!({"command": "view.zoomIn", "params": {}, "wait": true})));
 
     // So does every waited step of a batch, which reports the steps around the job's progress.
     let steps = json!([{"id": "filter.blur.gaussianBlur", "params": {"radius": 9}}, {"id": "layer.new.layer"}]);
@@ -334,7 +340,7 @@ async fn cancelling_a_bridged_wait_cancels_the_apps_job() {
         tokio::time::sleep(Duration::from_millis(10)).await;
     }
     assert_eq!(FakeApp::sent(&app, "jobs.cancel"), [json!({"job": 7})]);
-    assert_eq!(FakeApp::sent(&app, "engine.execute").len(), 1, "the edit is sent once");
+    assert_eq!(FakeApp::edits(&app).len(), 1, "the edit is sent once");
     wire.finish().await;
 }
 
@@ -354,7 +360,7 @@ async fn a_failed_bridge_cancel_keeps_cleanup_armed() {
         tokio::time::sleep(Duration::from_millis(10)).await;
     }
     assert_eq!(FakeApp::sent(&app, "jobs.cancel"), [json!({"job": 7}), json!({"job": 7})]);
-    assert_eq!(FakeApp::sent(&app, "engine.execute").len(), 1, "the edit is never resent");
+    assert_eq!(FakeApp::edits(&app).len(), 1, "the edit is never resent");
     wire.finish().await;
 }
 
@@ -392,7 +398,7 @@ async fn a_lost_start_reply_is_reported_and_never_resent() {
     let (error, is_error) = wire.outcome(5, None).await;
     assert!(is_error && error.contains("may have completed"), "{error}");
     // No resend of the edit, and no polling for a job whose id never arrived.
-    assert_eq!(FakeApp::sent(&app, "engine.execute").len(), 1);
+    assert_eq!(FakeApp::edits(&app).len(), 1);
     assert!(FakeApp::sent(&app, "jobs.list").is_empty());
     wire.finish().await;
 }

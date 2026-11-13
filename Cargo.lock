@@ -4286,6 +4286,7 @@ dependencies = [
 name = "magicpic-cli"
 version = "0.23.0"
 dependencies = [
+ "chrono",
  "clap",
  "clap_complete",
  "clap_mangen",
@@ -4304,6 +4305,7 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.21",
  "tokio",
+ "toml_edit",
  "winresource",
  "xtask",
 ]
@@ -8145,6 +8147,7 @@ dependencies = [
  "indexmap",
  "toml_datetime",
  "toml_parser",
+ "toml_writer",
  "winnow",
 ]
 

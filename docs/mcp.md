@@ -2,6 +2,27 @@
 
 ## Install and register
 
+The agent setup ([`agent-setup.md`](agent-setup.md)) installs a release into `~/.magicpic/bin` and
+registers both servers with one command per client, without editing any file by hand:
+
+```sh
+magicpic-cli setup                                   # photo folder, launcher, ~/.magicpic/config.json
+magicpic-cli mcp register --client claude-code       # or codex, or claude-desktop --restart
+magicpic-cli mcp status                              # what is registered, and whether its paths exist
+magicpic-cli doctor                                  # JSON health report; never prints the token
+```
+
+`mcp register` merges only the `magicpic` and `magicpic-app` entries into the client's own file
+(`~/.claude.json` at user scope, `~/.codex/config.toml`, or Claude Desktop's
+`claude_desktop_config.json`), backs the file up as `<name>.magicpic-backup-<UTC time>`, keeps
+every other entry and setting (JSON key order may change; Codex's TOML keeps its comments and
+layout), and writes UTF-8 without a byte order mark. A file that is not valid JSON/TOML is left
+unchanged and reported. `--config <file>` edits another file. `mcp unregister` removes the two
+entries. The paths come from `setup`'s `config.json`; `--photos` and `--port` override them, and
+`--no-start-app` leaves `--start-app-if-needed` off the bridge entry.
+
+To install the CLI by hand from a checkout instead:
+
 From the repository root, with the [source-build prerequisites](development.md#prerequisites)
 installed, install the CLI independently of the build directory:
 
@@ -87,7 +108,11 @@ directory-bundle access; desktop directory `.pcraft` reads remain scoped to the 
 Bridge mode uses `--bridge` and `--control-token-file` as described in
 [development.md](development.md). Configure all roots on the desktop process; passing root flags
 to `magicpic-cli mcp --bridge` is a usage error because the bridge cannot grant them.
-UI tools require a running desktop app. The desktop environment variable
+UI tools require a running desktop app. The token file is read on the first call, not at startup,
+and read again when the app refuses the token it held (the app restarted), so the server may start
+before the app. Until the app runs, calls fail with "MagicPic app is not running on …" and nothing
+is sent. `--start-app-if-needed` makes the bridge start the app with the settings
+`magicpic-cli setup` recorded (`~/.magicpic/config.json`) when nothing listens, then connect. The desktop environment variable
 `MAGICPIC_AUTOMATION_READ_ROOT` supplies one fallback directory only when no explicit read-root
 flags are present; explicit flags replace it, preserving CLI order. Similarly, one explicit
 write-root flag overrides `MAGICPIC_AUTOMATION_WRITE_ROOT`. These variables do not grant
@@ -123,15 +148,43 @@ protocol messages. For `serve`, explicit credential flags require `--port` (or
 
 ## Tools and resources
 
+- **Which document.** `command_run`, `command_batch`, `doc_inspect`, `render_preview`,
+  `doc_render_preview`, `doc_histogram`, `doc_save` and `doc_export` take `document`: a tab index
+  (`1`, or `{"index": 1}`) or a document id (`{"id": 12}`), both from `session_list` or
+  `doc_open`. The id stays the same while the document is open; an index moves when tabs close.
+  In bridge mode the tab comes to the front first, as Window › <document> does (`doc_select`
+  does only that), and it stays active. `document` cannot be combined with `wait: false`.
+  `doc_open` returns `index` and `id` in both modes.
+- `session_list`: `{active, documents: [{index, id, name, path, width, height, dirty,
+  revision}]}`. `verbose: true` returns the full state (bridge mode: `ui.inspect`, about 10k
+  tokens; headless: the engine session with colours and history options).
 - `command_list`: discover engine ids, parameter docs and current enabled state; accepts
   `filter` and `enabled_only`. Returns a bare JSON array of
   `{id, label, menu, shortcut, params, enabled, disabledReason, needsDocument}` objects (see
-  [Command list replies](control-protocol.md#command-list-replies)).
+  [Command list replies](control-protocol.md#command-list-replies)). `brief: true` keeps
+  `{id, label, enabled}` only; `offset` and `limit` page the rows and wrap them as
+  `{total, offset, next, commands}` (`next` is the next page's offset, or null).
 - `command_run`: `id`, optional `params` and `wait`. Command parameters remain engine-defined.
+  The first text block is the command's result as before; a second text block names the
+  document the command left active: `{document: id, index, name, revision, dirty}`.
 - `command_batch`: ordered `steps`, optional `stop_on_error` (default true); stops at the first
   error unless false. Not an atomic transaction: earlier successful steps stay applied, with
   no rollback. Existing per-step results and reply budgets are preserved.
   With `atomic: true` it is a transaction (see [Guarded and atomic edits](#guarded-and-atomic-edits)).
+  The reply's `document`, `index` and `revision` describe the document the batch left active.
+- `actions_play`: one recipe on several documents in one call. `action` (a saved Action's name)
+  or `steps` (as in `command_batch`), `documents` (1 to 64 references), and `overrides`
+  `[{document, step, params}]` that replace top-level params of one step for one document (a
+  star's position, a fade line). With `atomic` (default true) each document is one transaction:
+  a failing step rolls that document back and the others still run (`stop_on_error` stops).
+  Returns `{completed, failed, atomic, documents: [{document, index, name, revision, ok,
+  result|error}]}`.
+- `doc_histogram`: read-only counts at full resolution of the composite, of one `layer` (alone,
+  or with the layers below when `solo` is false) and/or a `region`: per channel (`luminosity`,
+  `red`, `green`, `blue`, `alpha`; `channel` picks one) 256 `bins` on the 0–255 levels scale,
+  `count`, `min`, `max`, `mean`, `stdDev`, `median` and `percentiles` `p50`, `p90`, `p99`,
+  `p99.9`. Transparent pixels are left out of the colour channels. The engine command is
+  `document.histogram`.
 - `doc_inspect`: layer tree, history and selection; an empty session returns `document:null`.
   Every layer (including groups and nested children) reports raster-only `hasMask`,
   `hasVectorMask` for vector mask presence, and `vectorMaskEnabled` (`true`/`false` when
@@ -141,7 +194,10 @@ protocol messages. For `serve`, explicit credential flags require `--port` (or
   nothing and is never part of the document or an export (`luminance`, `masses`, `shapes`,
   `lines`, `color`; `strength` and `levels` tune them); `region {x, y, width, height}` renders
   one rectangle at its own size (reduced only if larger than `max_side`); `format: "jpeg"`
-  (with `quality`) is far smaller than PNG.
+  (with `quality`) is far smaller than PNG. `layer` (an id from `doc_inspect`) renders that layer
+  alone on transparency (`solo`, the default; it is shown even when hidden, and unclipped) or
+  with every layer below it (`solo: false`), without changing its visibility, its blend mode or
+  the history.
   A call with any of these is the engine's `seeing.view` in both modes, with a JSON note
   beside the image (`view`, `analysisOnly`, size, `region`, the document's `id`, name, size
   and `revision`). See [Seeing](seeing.md).
@@ -151,6 +207,13 @@ protocol messages. For `serve`, explicit credential flags require `--port` (or
   and names a read request may not use are left out. `path` is relative; when two roots hold
   the same relative path it opens the first root's file, and `absolutePath` names exactly
   the listed one. It is how a client finds the picture a person just saved into the folder.
+  On Windows `absolutePath` is the ordinary `C:\…` spelling; `extendedPath` adds the `\\?\…`
+  form only when it differs.
+- `doc_save` / `doc_export` in bridge mode forward this save's options to the app's `app.save`:
+  `quality` (1–100, JPEG and lossy WebP), the TIFF, Targa, DDS, Maximize Compatibility and
+  `pcraftFullComposite` answers, and `document`. They apply to that save only; preferences are
+  not changed. `format` must agree with the path's extension (the app picks the format from
+  it). `dpxBits` and `pdfSpotPlates` stay headless-only and are refused before anything is sent.
 - `ui_inspect` and `ui_screenshot`: live app state/window in bridge mode.
 
 Existing document/session/job/UI tools remain listed, including the documented

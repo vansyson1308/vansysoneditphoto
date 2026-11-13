@@ -38,6 +38,9 @@ pub(crate) enum Command {
     Commands(CommandsArgs),
     Mcp(McpArgs),
     Serve(ServeArgs),
+    Setup(SetupArgs),
+    Launch(LaunchArgs),
+    Doctor(DoctorArgs),
 }
 
 // How an image is written: shared by `convert`, `run` and `batch`.
@@ -276,11 +279,18 @@ pub(crate) struct CommandsArgs {
 /// Prefer absolute root paths in MCP client configurations. Bridge: set the roots on the desktop
 /// app; root flags are refused. The token flags require --bridge (or MAGICPIC_CONTROL_PORT).
 #[derive(Args)]
+#[command(args_conflicts_with_subcommands = true)]
 pub(crate) struct McpArgs {
+    #[command(subcommand)]
+    pub(crate) action: Option<McpAction>,
     /// Bridge to the MagicPic app listening here instead of a headless engine; a bare port means
     /// 127.0.0.1:<PORT>
     #[arg(long, value_name = "127.0.0.1:PORT", env = "MAGICPIC_CONTROL_PORT", value_parser = bridge)]
     pub(crate) bridge: Option<Bridge>,
+    /// Bridge: when nothing listens on the port, start the app with the launcher settings that
+    /// `magicpic-cli setup` recorded, then connect
+    #[arg(long, requires = "bridge")]
+    pub(crate) start_app_if_needed: bool,
     /// `--bridge` came from MAGICPIC_CONTROL_PORT, set by [`parse`].
     #[arg(skip)]
     pub(crate) bridge_from_env: bool,
@@ -290,6 +300,136 @@ pub(crate) struct McpArgs {
     pub(crate) control: ControlArgs,
     #[command(flatten)]
     pub(crate) automation: AutomationArgs,
+}
+
+/// Register MagicPic's MCP servers with an agent client, remove them, or show them
+#[derive(Subcommand)]
+pub(crate) enum McpAction {
+    Register(RegisterArgs),
+    Unregister(UnregisterArgs),
+    Status(StatusArgs),
+}
+
+/// An agent client whose MCP configuration `mcp register` edits.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, clap::ValueEnum)]
+pub(crate) enum Client {
+    /// Claude Desktop, the chat app (claude_desktop_config.json)
+    ClaudeDesktop,
+    /// Claude Code at user scope (~/.claude.json, or $CLAUDE_CONFIG_DIR)
+    ClaudeCode,
+    /// Codex (~/.codex/config.toml, or $CODEX_HOME)
+    Codex,
+}
+
+impl Client {
+    pub(crate) fn name(self) -> &'static str {
+        match self {
+            Client::ClaudeDesktop => "claude-desktop",
+            Client::ClaudeCode => "claude-code",
+            Client::Codex => "codex",
+        }
+    }
+}
+
+#[derive(Args)]
+pub(crate) struct ClientArgs {
+    /// Which client's configuration to change
+    #[arg(long, value_enum)]
+    pub(crate) client: Client,
+    /// Edit this file instead of the client's own (tests, unusual installs)
+    #[arg(long, value_name = "FILE")]
+    pub(crate) config: Option<PathBuf>,
+    /// Claude Desktop: if it is running, wait in the background for it to quit, then write the
+    /// file and open it again (Windows Store builds through their app id)
+    #[arg(long)]
+    pub(crate) restart: bool,
+    /// Claude Desktop: write even though it is running (it may overwrite the change)
+    #[arg(long, conflicts_with = "restart")]
+    pub(crate) force: bool,
+    /// Seconds `--restart` waits for Claude Desktop to quit (default 600)
+    #[arg(long, value_name = "SECONDS")]
+    pub(crate) timeout: Option<u64>,
+    /// The detached helper `--restart` starts; not for direct use
+    #[arg(long, hide = true)]
+    pub(crate) detached_wait: bool,
+}
+
+/// Add the `magicpic` (files) and `magicpic-app` (open window) servers to a client's config
+///
+/// Merges only those two entries: other servers and settings are kept. The file is backed up as
+/// `<name>.magicpic-backup-<time>` and written as UTF-8 without a byte order mark. Paths come from
+/// `magicpic-cli setup` (config.json); the flags override them.
+#[derive(Args)]
+pub(crate) struct RegisterArgs {
+    #[command(flatten)]
+    pub(crate) client: ClientArgs,
+    /// The one photo folder MagicPic may read and write
+    #[arg(long, value_name = "DIR")]
+    pub(crate) photos: Option<PathBuf>,
+    /// The app's control port (default: setup's, else 7878)
+    #[arg(long, value_name = "PORT")]
+    pub(crate) port: Option<u16>,
+    /// Don't let `magicpic-app` start the app when it is not running
+    #[arg(long)]
+    pub(crate) no_start_app: bool,
+}
+
+/// Remove the `magicpic` and `magicpic-app` servers from a client's config
+#[derive(Args)]
+pub(crate) struct UnregisterArgs {
+    #[command(flatten)]
+    pub(crate) client: ClientArgs,
+}
+
+/// Show which clients have the servers, and whether their paths still exist
+#[derive(Args)]
+pub(crate) struct StatusArgs {
+    /// Only this client
+    #[arg(long, value_enum)]
+    pub(crate) client: Option<Client>,
+    /// Read this file instead of the client's own (with --client)
+    #[arg(long, value_name = "FILE", requires = "client")]
+    pub(crate) config: Option<PathBuf>,
+}
+
+/// Create the photo folder, ~/.magicpic, the launcher and config.json; print the paths as JSON
+#[derive(Args)]
+pub(crate) struct SetupArgs {
+    /// The one photo folder MagicPic may read and write (default ~/Pictures/MagicPic)
+    #[arg(long, value_name = "DIR")]
+    pub(crate) photos: Option<PathBuf>,
+    /// The desktop app (default: next to this program, else ~/.magicpic/bin)
+    #[arg(long, value_name = "FILE")]
+    pub(crate) app: Option<PathBuf>,
+    /// The app's control port on 127.0.0.1 (default 7878)
+    #[arg(long, value_name = "PORT")]
+    pub(crate) port: Option<u16>,
+    /// Also put a MagicPic shortcut on the desktop
+    #[arg(long)]
+    pub(crate) desktop_shortcut: bool,
+    /// Start the app afterwards and wait until it listens
+    #[arg(long)]
+    pub(crate) start: bool,
+    /// Seconds --start waits for the app (default 30)
+    #[arg(long, value_name = "SECONDS")]
+    pub(crate) wait: Option<u64>,
+}
+
+/// Start the app with its control channel (what the launcher runs); print JSON
+#[derive(Args)]
+pub(crate) struct LaunchArgs {
+    /// Seconds to wait for the app to listen (default 30)
+    #[arg(long, value_name = "SECONDS")]
+    pub(crate) wait: Option<u64>,
+}
+
+/// Check the install and print a JSON report: versions, the app's control port, each MCP server's
+/// handshake, the photo folder, and which clients have the servers. Never prints the token
+#[derive(Args)]
+pub(crate) struct DoctorArgs {
+    /// Seconds each MCP server may take to answer (default 20)
+    #[arg(long, value_name = "SECONDS")]
+    pub(crate) timeout: Option<u64>,
 }
 
 /// Keep one headless session open and answer JSON lines on stdio, or on 127.0.0.1:<PORT>
@@ -488,6 +628,10 @@ pub(crate) fn parse(args: &[OsString]) -> Result<Cli, clap::Error> {
         (Command::Run(r), Some((_, m))) => {
             r.steps = steps(m);
             check_gpu_env(&mut cmd, m)?;
+        }
+        // `mcp register | unregister | status` take none of the server's flags.
+        (Command::Mcp(a), Some((_, m))) if a.action.is_some() || m.subcommand().is_some() => {
+            a.bridge = None;
         }
         (Command::Mcp(a), Some((name, m))) => {
             a.bridge_from_env = from_env(m, "bridge");

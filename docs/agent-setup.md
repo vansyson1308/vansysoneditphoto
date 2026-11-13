@@ -1,214 +1,242 @@
 # Setting MagicPic up for a person (instructions for an AI agent)
 
-You are an AI agent (Claude Code, Codex or similar) on a person's computer. They want to
-**use** MagicPic: edit photos by talking to you. They are not asking you to develop it.
-`AGENTS.md` and `docs/development.md` are for contributors; you do not need them, except where
-this page points to them.
+You are an AI agent (Claude Code, Codex, Claude Desktop with a shell, or similar) on a person's
+computer. They want to **use** MagicPic: edit photos by talking to you. They are not asking you to
+develop it. `AGENTS.md` and `docs/development.md` are for contributors; you do not need them.
+
+This page is the **quick path**: a prebuilt release, four commands, no Rust toolchain. Two more
+pages complete it:
+
+- [`agent-setup-source.md`](agent-setup-source.md): build from source, when there is no release
+  for this machine or the download fails.
+- [`agent-troubleshooting.md`](agent-troubleshooting.md): what to do when a step's output is not
+  what this page says it should be.
+
+Raw links, for an agent that fetches pages:
+`https://raw.githubusercontent.com/vansyson1308/vansysoneditphoto/main/docs/agent-setup-source.md`
+and `…/docs/agent-troubleshooting.md`.
 
 ## What done looks like
 
-1. The command-line server `magicpic-cli` and the desktop app `magicpic` are built from
-   <https://github.com/vansyson1308/vansysoneditphoto>.
+1. `magicpic` (the app) and `magicpic-cli` (the command line and MCP server) are in
+   `~/.magicpic/bin`.
 2. One photo folder exists, and MagicPic may read and write only inside it.
-3. Two MCP servers are registered with you:
+3. Two MCP servers are registered with the person's agent client:
    - **`magicpic`** edits files in the photo folder, without opening a window.
-   - **`magicpic-app`** drives the MagicPic window that is open on screen (bridge mode), so
-     the person watches the edits happen.
-4. The app window is open, and a launcher opens it again later.
+   - **`magicpic-app`** drives the MagicPic window on screen (bridge mode), so the person watches
+     the edits happen. It starts the app itself when it is not running.
+4. `magicpic-cli doctor` reports `"ok": true`.
 5. You told the person what you did, and what to say after restarting you.
 
 ## Rules
 
 - **Ask the person before** you install system software, use administrator rights, or change
-  anything outside the folders named on this page.
+  anything outside `~/.magicpic`, the photo folder and their agent client's MCP configuration.
+  The quick path needs none of the first two.
 - Grant MagicPic **one** photo folder. Never the whole disk, the home folder or a system folder.
 - The control token in `~/.magicpic/control.token` is a password for the open app. Never print
-  it, paste it into chat or put it in a repository. Nothing is exposed beyond `127.0.0.1`.
-- Do not upload the person's photos anywhere. Do not commit or push to the repository.
-- Check every step's result before going on. If a step fails and this page does not cover it,
-  stop and tell the person what failed. Do not work around it in ways this page does not
-  describe.
+  it, paste it into chat or put it in a repository. No command on this page prints it.
+- Do not upload the person's photos anywhere.
+- **Do not write JSON, TOML or PowerShell scripts by hand.** Every file this setup needs is
+  written by `magicpic-cli`. Run the commands below with plain arguments.
+- Check every step's output against the expected output below before going on. If it differs,
+  look the message up in [`agent-troubleshooting.md`](agent-troubleshooting.md). If it is not
+  there, stop and tell the person what failed.
 - Speak to the person in their language.
 
-## Paths
+`~` means the home folder (`%USERPROFILE%` on Windows). Every command prints JSON with
+**absolute** paths: use those paths in the later steps, not ones you build yourself.
 
-Use these unless the person asks for others. `~` means the home folder: `$HOME` in PowerShell,
-`$HOME` in sh.
+## 1. Install
 
-| What | Windows | macOS and Linux |
-|---|---|---|
-| Source checkout | `$HOME\magicpic` | `~/magicpic` |
-| Photo folder | `$HOME\Pictures\MagicPic` | `~/Pictures/MagicPic` |
-| Token and launcher | `$HOME\.magicpic\` | `~/.magicpic/` |
-| `magicpic-cli` after install | `$HOME\.cargo\bin\magicpic-cli.exe` | `~/.cargo/bin/magicpic-cli` |
-| App after build | `$HOME\magicpic\target\release\magicpic.exe` | `~/magicpic/target/release/magicpic` |
-| Control port | `7878` on `127.0.0.1` | same |
-
-Use absolute paths everywhere you register or launch something; expand `~` yourself.
-
-## 1. Prerequisites
-
-Check what is there: `git --version`, `cargo --version`, `rustc --version` (Rust **1.95 or
-newer**). Install only what is missing, after the person agrees.
-
-**Windows** (PowerShell; the third installs the C++ build tools Rust needs and takes a while):
+**Windows** (any shell; Windows PowerShell 5.1, including Constrained Language Mode, is fine):
 
 ```powershell
-winget install --id Git.Git -e
-winget install --id Rustlang.Rustup -e
-winget install --id Microsoft.VisualStudio.2022.BuildTools -e --override "--wait --quiet --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://github.com/vansyson1308/vansysoneditphoto/releases/latest/download/install.ps1 | iex"
 ```
 
-A shell that was open before the install does not see the new tools. Reload `PATH` in it:
-
-```powershell
-$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')
-```
-
-**macOS:** `xcode-select --install`, then Rust from <https://rustup.rs>.
-
-**Linux:** Rust from <https://rustup.rs>, plus the windowing and GTK development packages for
-the distribution, listed under *Prerequisites* in `docs/development.md` (Debian and Ubuntu:
-`sudo apt install libxkbcommon-dev libwayland-dev libx11-dev libxrandr-dev libxi-dev
-libgl1-mesa-dev libgtk-3-dev`).
-
-If `rustc --version` is older than 1.95, run `rustup update stable`.
-
-## 2. Get the source
-
-- **No `~/magicpic` yet:**
-  `git clone https://github.com/vansyson1308/vansysoneditphoto ~/magicpic` (Windows:
-  `git clone https://github.com/vansyson1308/vansysoneditphoto "$HOME\magicpic"`).
-- **`~/magicpic` exists** and its `git remote get-url origin` is this repository: this is an
-  update. Run `git pull --ff-only` in it. If that refuses because of local changes, stop and ask.
-- **It exists but is something else:** ask the person where to put the checkout.
-
-## 3. Build
-
-In the checkout, run both. On a 4-core Linux machine the first builds took 10 minutes for the CLI
-and 15 more for the app, with 3.4 GB in `target`; a slower machine or Windows can take longer.
-A tool call may time out before a build ends: run it in the background and check on it.
+**macOS and Linux:**
 
 ```sh
-cargo install --path apps/magicpic-cli --locked --force
-cargo build --release -p magicpic
+curl -fsSL https://github.com/vansyson1308/vansysoneditphoto/releases/latest/download/install.sh | sh
 ```
 
-Check that both files from the *Paths* table exist, then run
-`magicpic-cli --version` with its full path; it prints `magicpic-cli` and a version.
+Options, only if the person asks: another photo folder (`sh -s -- --photos "/path"`; on Windows
+set `$env:MAGICPIC_PHOTOS='D:\Photos'` before `irm`), another port (`--port 7879` /
+`MAGICPIC_PORT`), a desktop shortcut (`--desktop-shortcut` / `MAGICPIC_DESKTOP_SHORTCUT=1`), a
+fixed version (`--version v0.24.0` / `MAGICPIC_VERSION`).
 
-On Windows 11, an error *An Application Control policy has blocked this file (os error 4551)*
-is Smart App Control or a managed policy blocking the build. Do not try to switch it off.
-Tell the person, and point them to the *Windows source builds* section of
-`docs/development.md`.
-
-## 4. Photo folder and launcher
-
-Create the photo folder and `~/.magicpic/`. Then write the launcher. It starts the app with
-the control channel on `127.0.0.1:7878`. The first start creates `~/.magicpic/control.token`
-by itself, with a random token. Never write a token yourself.
-
-**Windows:** `$HOME\.magicpic\start-magicpic.ps1`. Keep the quotes, because a home folder can
-contain spaces.
-
-```powershell
-$app = "$HOME\magicpic\target\release\magicpic.exe"
-$pictures = "$HOME\Pictures\MagicPic"
-$token = "$HOME\.magicpic\control.token"
-Start-Process -FilePath $app -ArgumentList "--control 7878 --control-token-file `"$token`" --automation-read-root `"$pictures`" --automation-write-root `"$pictures`""
-```
-
-**macOS and Linux:** `~/.magicpic/start-magicpic.sh`; then run `chmod +x` on it.
-
-```sh
-#!/bin/sh
-exec >"$HOME/.magicpic/app.log" 2>&1
-nohup "$HOME/magicpic/target/release/magicpic" --control 7878 \
-  --control-token-file "$HOME/.magicpic/control.token" \
-  --automation-read-root "$HOME/Pictures/MagicPic" \
-  --automation-write-root "$HOME/Pictures/MagicPic" &
-```
-
-Run the launcher once now (Windows: `powershell -ExecutionPolicy Bypass -File "$HOME\.magicpic\start-magicpic.ps1"`, since the default policy may refuse to run a script). Then check that the app is up:
-- **Windows:** `Test-NetConnection 127.0.0.1 -Port 7878 -InformationLevel Quiet` prints `True`.
-- **macOS and Linux:** `~/.magicpic/app.log` contains `control server listening on 127.0.0.1:7878`.
-
-In both cases, `~/.magicpic/control.token` must now exist. If the port is taken (`failed to bind`),
-use another port, such as 7879, in the launcher and in step 5.
-
-The window may show a notice "Switched to CPU rendering" on a machine without a usable GPU.
-That is fine; the person can click **Keep Using CPU**.
-
-## 5. Register the MCP servers
-
-Register both servers at **user scope**, so they work in every folder. Use the absolute paths
-from the *Paths* table. If a server of the same name is already registered (an update),
-remove it first.
-
-**Claude Code:**
-
-```sh
-claude mcp add --transport stdio --scope user magicpic -- <magicpic-cli> mcp --automation-read-root <photo folder> --automation-write-root <photo folder>
-claude mcp add --transport stdio --scope user magicpic-app -- <magicpic-cli> mcp --bridge 127.0.0.1:7878 --control-token-file <home>/.magicpic/control.token
-claude mcp list
-```
-
-`claude mcp list` should show both as connected.
-
-**Codex:**
-
-```sh
-codex mcp add magicpic -- <magicpic-cli> mcp --automation-read-root <photo folder> --automation-write-root <photo folder>
-codex mcp add magicpic-app -- <magicpic-cli> mcp --bridge 127.0.0.1:7878 --control-token-file <home>/.magicpic/control.token
-codex mcp list
-```
-
-Then, in `~/.codex/config.toml`, add `tool_timeout_sec = 300` under both
-`[mcp_servers.magicpic]` and `[mcp_servers.magicpic-app]`. Codex's default of 60 seconds is
-too short for some filters on large photos.
-
-**Claude Desktop** (the chat app) reads its own file, which you cannot reliably locate or
-reload. If the person uses it, give them this to paste under **Settings › Developer › Edit
-Config**, with absolute paths and `\\` doubled on Windows. Then they quit and reopen the app.
+The installer downloads the archive for this machine and `SHA256SUMS`, refuses an archive whose
+checksum does not match, copies both programs into `~/.magicpic/bin`, and runs
+`magicpic-cli setup`. Expected: progress lines ending in `checksum ok (…)` and
+`installed …`, then this JSON (Windows paths shown; yours differ):
 
 ```json
 {
-  "mcpServers": {
-    "magicpic": { "command": "<magicpic-cli>", "args": ["mcp", "--automation-read-root", "<photo folder>", "--automation-write-root", "<photo folder>"] },
-    "magicpic-app": { "command": "<magicpic-cli>", "args": ["mcp", "--bridge", "127.0.0.1:7878", "--control-token-file", "<home>/.magicpic/control.token"] }
-  }
+  "app": "C:\\Users\\Ann\\.magicpic\\bin\\magicpic.exe",
+  "appExists": true,
+  "cli": "C:\\Users\\Ann\\.magicpic\\bin\\magicpic-cli.exe",
+  "config": "C:\\Users\\Ann\\.magicpic\\config.json",
+  "desktopShortcut": null,
+  "home": "C:\\Users\\Ann\\.magicpic",
+  "launcher": "C:\\Users\\Ann\\.magicpic\\start-magicpic.cmd",
+  "next": ["magicpic-cli mcp register --client <claude-desktop|claude-code|codex>", "magicpic-cli doctor"],
+  "ok": true,
+  "photos": "C:\\Users\\Ann\\Pictures\\MagicPic",
+  "port": 7878,
+  "tokenFile": "C:\\Users\\Ann\\.magicpic\\control.token",
+  "version": "0.23.0"
 }
 ```
 
-## 6. Tell the person
+Check `"ok": true`. Below, `<cli>` means the `cli` path from this output.
+
+On a fast connection this takes well under a minute: the archives are tens of megabytes, and no
+compiler runs. If the download fails with **404**, no release has been published yet (or none for
+this machine): follow [`agent-setup-source.md`](agent-setup-source.md), then come back to step 2.
+
+The binaries are not code-signed yet. Windows SmartScreen or Smart App Control, or macOS
+Gatekeeper, may stop them: see [Unsigned binaries](agent-troubleshooting.md#unsigned-binaries).
+
+## 2. Open the app
+
+```sh
+<cli> launch
+```
+
+Expected, within about 30 seconds:
+
+```json
+{"running": true, "started": true, "pid": 12345, "port": 7878, "log": "…/.magicpic/app.log", "seconds": 2.1}
+```
+
+`"started": false` means it was already running; that is fine. The window may show "Switched to
+CPU rendering" on a machine without a usable GPU; the person can click **Keep Using CPU**. The
+launcher in the setup output (`start-magicpic.cmd` or `.sh`) runs the same command, for the
+person to use later.
+
+## 3. Register the MCP servers
+
+Pick the client you are running in (ask the person if unsure): `claude-code`, `codex` or
+`claude-desktop` (the chat app). One command writes both servers into that client's own
+configuration, keeps every other server and setting, makes a backup next to the file first, and
+writes UTF-8 without a byte order mark.
+
+```sh
+<cli> mcp register --client claude-code
+```
+
+Expected:
+
+```json
+{
+  "client": "claude-code",
+  "files": [{"backup": "…/.claude.json.magicpic-backup-20261112T101500Z", "path": "…/.claude.json"}],
+  "next": "restart Claude Code (or run /mcp) so it loads the servers; `claude mcp list` shows them",
+  "servers": [{"name": "magicpic", "command": "…", "args": ["mcp", "--automation-read-root", "…", "--automation-write-root", "…"]},
+              {"name": "magicpic-app", "command": "…", "args": ["mcp", "--bridge", "127.0.0.1:7878", "--control-token-file", "…", "--start-app-if-needed"]}],
+  "status": "written"
+}
+```
+
+**Codex** is the same with `--client codex`; it also sets `tool_timeout_sec = 300` for both
+servers, since Codex's 60-second default is too short for some filters on large photos.
+
+**Claude Desktop rewrites its configuration while it runs and when it quits**, so an entry
+written while it is open is lost. So:
+
+```sh
+<cli> mcp register --client claude-desktop --restart
+```
+
+- If Claude Desktop is not running, it writes the file at once (`"status": "written"`) and opens
+  Claude Desktop.
+- If it is running (it is, when you are Claude Desktop), the reply is `"status": "waiting"` with a
+  `message`. A helper keeps running in the background: it waits for Claude Desktop to quit, writes
+  the file, and opens Claude Desktop again (the Microsoft Store build through its app id). **Tell
+  the person to quit Claude Desktop completely** (tray or menu-bar icon › **Quit**, not only
+  closing the window) and that it reopens by itself in a few seconds with MagicPic connected. The
+  helper writes what it did to `~/.magicpic/register.log`.
+- Without `--restart`, while it runs, nothing is written and the command says why (exit 1).
+
+`<cli> mcp status` shows, for every client, whether both servers are registered and whether every
+path they name still exists (`"pathsOk": true`). `<cli> mcp unregister --client <client>` removes
+them again.
+
+## 4. Verify
+
+```sh
+<cli> doctor
+```
+
+Expected (shortened):
+
+```json
+{
+  "ok": true,
+  "cli": {"version": "0.23.0", "path": "…"},
+  "app": {"exists": true, "launcherExists": true, "path": "…"},
+  "control": {"port": 7878, "listening": true, "tokenFileExists": true, "authenticated": true, "documents": 0},
+  "roots": [{"path": "…/Pictures/MagicPic", "exists": true, "writable": true, "read": true, "write": true}],
+  "servers": [{"name": "magicpic", "initialize": true, "tools": 29}, {"name": "magicpic-app", "initialize": true, "tools": 29}],
+  "clients": [{"client": "claude-code", "registered": true, "pathsOk": true, "…": "…"}],
+  "problems": []
+}
+```
+
+`doctor` starts each registered server and checks that it answers `initialize` and `tools/list`,
+and authenticates to the open app with the token file, without printing it. When `"ok"` is
+false, every entry of `problems` names the problem and the `fix` command. Run `doctor` again
+whenever something fails later, too.
+
+## 5. Tell the person
 
 Report, briefly and in their language:
 
-- where the checkout, the photo folder and the launcher are, and that the app window is open;
-- that they must **restart you** (quit and reopen Claude Code or Codex), so that the two
-  servers load; start the app with the launcher before you use `magicpic-app`, because its
-  server reads the token when it starts;
-- how to open the app later: run the launcher. On Windows, offer to put a desktop shortcut
-  to `powershell -ExecutionPolicy Bypass -File "<launcher>"`, and make it only if they agree;
-- what to say after the restart. For example: *"Mở ảnh mới nhất trong thư mục MagicPic trong
-  app và cho tôi xem."* ("Open the newest photo in the MagicPic folder in the app and show it
-  to me."). With `magicpic-app`, you then work in the open window. With `magicpic`, you work
-  on files without a window;
-- that to update later, they paste the same setup prompt again. Steps 2–5 then pull, rebuild
-  and re-register.
+- that MagicPic is installed in `~/.magicpic`, where the photo folder is, and that the app window
+  is open;
+- that they must **restart you** so the two servers load (Claude Code: quit and reopen, or `/mcp`;
+  Codex: quit and reopen; Claude Desktop: it reopens by itself after they quit it);
+- how to open the app later: the launcher (or the desktop shortcut, if they asked for one). The
+  `magicpic-app` server also starts it when needed;
+- what to say after the restart. For example: *"Mở ảnh mới nhất trong thư mục MagicPic trong app
+  và cho tôi xem."* ("Open the newest photo in the MagicPic folder in the app and show it to
+  me."). More example requests, in Vietnamese: [`docs/vi/art-of-seeing-va-mcp.md`](vi/art-of-seeing-va-mcp.md)
+  and [`docs/vi/cai-dat-va-ket-noi.md`](vi/cai-dat-va-ket-noi.md);
+- that to update later, they paste the same setup prompt again: the installer replaces the
+  programs, `setup` and `mcp register` keep their settings.
 
 ## After the restart: using MagicPic
 
-The server's own instructions explain the tools: `files_list`, `doc_open`, `render_preview`,
-`command_list`, `command_run` and `command_batch`, then `doc_save` and `doc_export`. In short:
+The servers' own instructions explain the tools. The ones agents need most:
 
-- `files_list` exists only on `magicpic`. To work in the open window, find the photo with
-  `magicpic`'s `files_list`, then open it in the app with `magicpic-app`'s `doc_open` and its
-  `absolutePath`.
-- Look before and after each edit.
-- Prefer adjustment layers and masks.
-- Use `command_batch` with `atomic: true` for several steps.
-- Save into the photo folder. Missing subfolders are created there.
+- `files_list` (on `magicpic`) finds a photo; `doc_open` opens it and returns its `index` and `id`.
+  To work in the open window, open the file with `magicpic-app`'s `doc_open`, passing the
+  `absolutePath` from `files_list`.
+- **With several photos open, pass `document`** (an index, or `{"id": n}`) to `command_run`,
+  `command_batch`, `doc_inspect`, `render_preview`, `doc_histogram`, `doc_save` and `doc_export`.
+  In the app its tab comes to the front first. `doc_select` switches tabs. Every `command_run`
+  reply has a second block naming the document it edited and its revision.
+- Look before and after each edit (`render_preview`). To see one layer without changing it, pass
+  `layer` (its id from `doc_inspect`): `solo: true` alone, `false` with the layers below.
+- Choose Levels or Threshold values from `doc_histogram` (bins and p50/p90/p99/p99.9 on the 0–255
+  scale), not by trial.
+- Select layers with `command_run layer.select {"layer": id}` or `{"name": "Stars"}`; undo with
+  `edit.undo` (check `doc_inspect`'s history first).
+- Prefer adjustment layers and masks; use `command_batch` with `atomic: true` for several steps.
+- Ready-made dreamy elements: `filter.render.starfield`, `filter.render.starburst`,
+  `filter.render.bokeh`, `filter.render.lensFlare {"ghosts": false}`, and the Color Lookup look
+  `dreamy` (`layer.newAdjustmentLayer.colorLookup {"lut": "dreamy"}`). `actions_play` applies one
+  recipe to several open photos at once, with per-photo `overrides`.
+- `doc_export {"quality": 92}` works in both servers and changes no preference.
+- `session_list` is short; `verbose: true` gives everything. `command_list {"brief": true}`
+  lists ids only.
 
-`docs/mcp.md` documents every tool. `docs/vi/art-of-seeing-va-mcp.md` has example requests in
-Vietnamese.
+`docs/mcp.md` documents every tool.
+
+## Follow-ups (not done yet)
+
+- **Code signing and notarization** for the Windows and macOS binaries, so SmartScreen, Smart App
+  Control and Gatekeeper accept them without a prompt. It needs the publisher's certificates.
+- A real `.lnk` desktop shortcut on Windows (the shortcut is a `.cmd` file for now).
+- Prebuilt archives for Linux on ARM and Windows on ARM (Windows ARM64 runs the x64 build).

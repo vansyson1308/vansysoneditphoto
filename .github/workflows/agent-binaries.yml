@@ -1,0 +1,261 @@
+# Prebuilt binaries for the agent install path (docs/agent-setup.md): one archive per platform
+# with `magicpic` and `magicpic-cli`, a SHA256SUMS file, and the install.sh / install.ps1
+# installers, attached to the GitHub Release of a version tag.
+#
+# This sits beside release.yml (signed installers through craft-common-actions, which needs
+# secrets this repository does not have yet). The archives here are unsigned: Windows SmartScreen
+# and macOS Gatekeeper notes are in docs/agent-setup.md, signing is a follow-up there. A tag
+# without a release gets a draft one: a person publishes it.
+#
+# Pull requests that change the installers run only the installer tests (no Rust build).
+name: Agent binaries
+
+# Tags only (also those a published release creates): `release: published` as well would build
+# everything twice for one release.
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+    paths:
+      - .github/workflows/agent-binaries.yml
+      - packaging/install/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agent-binaries-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  installer-tests:
+    name: installer tests (${{ matrix.os }})
+    if: github.event_name == 'pull_request'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-15, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: install.sh (stand-in binaries)
+        if: runner.os != 'Windows'
+        run: sh packaging/install/test-installers.sh
+      - name: install.ps1 in Windows PowerShell 5.1 (stand-in binaries)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          set -eu
+          t=$(mktemp -d)
+          mkdir -p "$t/bins"
+          printf 'app' > "$t/bins/magicpic.exe"
+          printf 'cli' > "$t/bins/magicpic-cli.exe"
+          sh packaging/install/package.sh windows-x86_64 "$t/bins" "$t/release"
+          # Good archive: installed, JSON printed.
+          MAGICPIC_HOME="$t/home" powershell -NoProfile -ExecutionPolicy Bypass -File packaging/install/install.ps1 -From "$t/release" -NoSetup > "$t/out.json"
+          python -c 'import json,sys; d=json.load(open(sys.argv[1])); assert d["ok"], d' "$t/out.json"
+          test -f "$t/home/bin/magicpic.exe" && test -f "$t/home/bin/magicpic-cli.exe"
+          # Tampered archive: refused, nothing replaced.
+          printf 'x' >> "$t/release/magicpic-windows-x86_64.zip"
+          if MAGICPIC_HOME="$t/home2" powershell -NoProfile -ExecutionPolicy Bypass -File packaging/install/install.ps1 -From "$t/release" -NoSetup > "$t/err.txt" 2>&1; then
+            echo "a tampered archive was installed"; exit 1
+          fi
+          grep -q 'checksum mismatch' "$t/err.txt"
+          test ! -f "$t/home2/bin/magicpic.exe"
+
+  build:
+    name: build (${{ matrix.platform }})
+    if: github.event_name != 'pull_request'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-x86_64
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - platform: macos-aarch64
+            os: macos-15
+            target: aarch64-apple-darwin
+          - platform: macos-x86_64
+            os: macos-15
+            target: x86_64-apple-darwin
+          # The oldest supported Ubuntu runner, so the binary runs on older glibc too.
+          - platform: linux-x86_64
+            os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    env:
+      CRAFT_FONTS_DIR: ${{ github.workspace }}/craft-fonts
+      CRAFT_FONTS_REQUIRED: "1"
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The fonts and translations release builds embed (the same pins as ci.yml and release.yml).
+      - name: Check out craft-fonts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: storytold/craft-fonts
+          ref: b076417b5880bd4154bd22f00695b1d28c6bea83
+          path: craft-fonts
+          persist-credentials: false
+      - name: Check out craft-i18n
+        uses: storytold/craft-common-actions/actions/checkout-craft-i18n@main
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          key: agent-binaries-${{ matrix.target }}
+      - name: Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxkbcommon-dev libwayland-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev libgtk-3-dev
+      - name: Build
+        shell: bash
+        run: cargo build --release --locked --target ${{ matrix.target }} -p magicpic -p magicpic-cli --features magicpic/heif,magicpic-cli/heif
+      - name: Smoke test the CLI
+        if: matrix.platform != 'macos-x86_64'
+        shell: bash
+        run: |
+          set -eu
+          cli=target/${{ matrix.target }}/release/magicpic-cli
+          "$cli" --version
+          # A BOM-prefixed, CRLF handshake, as Windows PowerShell pipes it, answers initialize.
+          printf '\357\273\277{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}\r\n' | "$cli" mcp | grep -q '"protocolVersion"'
+      - name: Package
+        shell: bash
+        run: sh packaging/install/package.sh ${{ matrix.platform }} target/${{ matrix.target }}/release dist
+      - uses: actions/upload-artifact@v7
+        with:
+          name: agent-${{ matrix.platform }}
+          path: dist/
+          if-no-files-found: error
+
+  assemble:
+    name: assemble and verify
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: agent-*
+          path: parts
+      - name: One SHA256SUMS for every archive, verified
+        run: |
+          set -eu
+          mkdir -p dist
+          cp parts/*/magicpic-* dist/
+          cat parts/*/SHA256SUMS | sort -k2 > dist/SHA256SUMS
+          cp packaging/install/install.sh packaging/install/install.ps1 dist/
+          (cd dist && sha256sum install.sh install.ps1 >> SHA256SUMS && sort -k2 -o SHA256SUMS SHA256SUMS && sha256sum -c SHA256SUMS)
+          for p in windows-x86_64.zip macos-aarch64.tar.gz macos-x86_64.tar.gz linux-x86_64.tar.gz; do
+            grep -q "  magicpic-$p\$" dist/SHA256SUMS || { echo "missing magicpic-$p"; exit 1; }
+          done
+          cat dist/SHA256SUMS
+      - uses: actions/upload-artifact@v7
+        with:
+          name: agent-release
+          path: dist/
+          if-no-files-found: error
+
+  install-test:
+    name: install from the artifacts (${{ matrix.os }})
+    needs: assemble
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+      - uses: actions/download-artifact@v8
+        with:
+          name: agent-release
+          path: release
+      - name: install.sh, then status and doctor
+        if: runner.os != 'Windows'
+        run: |
+          set -eu
+          export HOME="$RUNNER_TEMP/home" && mkdir -p "$HOME"
+          sh release/install.sh --from release > out.json
+          cat out.json
+          python3 -c 'import json; d=json.load(open("out.json")); assert d["ok"] and d["appExists"], d'
+          cli="$HOME/.magicpic/bin/magicpic-cli"
+          "$cli" mcp register --client claude-code
+          "$cli" mcp status --client claude-code
+          # The app is not running here, so doctor reports that (exit 1); both servers must still initialize.
+          "$cli" doctor > doctor.json || true
+          python3 -c 'import json; d=json.load(open("doctor.json")); assert all(s["initialize"] for s in d["servers"]), d["servers"]'
+      - name: install.ps1 in Windows PowerShell 5.1, then status and doctor
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $env:MAGICPIC_HOME = Join-Path $env:RUNNER_TEMP 'magicpic-home'
+          $out = & powershell -NoProfile -ExecutionPolicy Bypass -File release\install.ps1 -From release -Photos (Join-Path $env:RUNNER_TEMP 'Photos')
+          $out
+          $setup = ($out | Out-String) | ConvertFrom-Json
+          if (-not $setup.ok -or -not $setup.appExists) { throw 'setup did not report ok' }
+          $cli = Join-Path $env:MAGICPIC_HOME 'bin\magicpic-cli.exe'
+          & $cli mcp register --client claude-code
+          & $cli mcp status --client claude-code
+          $doctor = (& $cli doctor | Out-String) | ConvertFrom-Json
+          foreach ($s in $doctor.servers) { if (-not $s.initialize) { throw "server $($s.name) did not initialize" } }
+
+  publish:
+    name: attach to the release
+    needs: [assemble, install-test]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+      - uses: actions/download-artifact@v8
+        with:
+          name: agent-release
+          path: dist
+      - name: Upload (a tag without a release gets a draft)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -eu
+          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --title "MagicPic $TAG" --notes "Agent install archives. See docs/agent-setup.md."
+          fi
+          gh release upload "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --clobber

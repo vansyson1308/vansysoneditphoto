@@ -90,7 +90,7 @@ nói chuyện với bạn.
 Mã nguồn: https://github.com/vansyson1308/vansysoneditphoto
 Làm đúng theo hướng dẫn dành cho agent:
 https://raw.githubusercontent.com/vansyson1308/vansysoneditphoto/main/docs/agent-setup.md
-Nếu không đọc được trang đó, hãy clone repo theo bước 2 của hướng dẫn rồi đọc
+Nếu không đọc được trang đó, hãy chạy `git clone --depth 1` với mã nguồn ở trên rồi đọc
 docs/agent-setup.md trong bản clone.
 
 Hỏi tôi trước khi cài phần mềm hệ thống hoặc dùng quyền quản trị. Chỉ cấp quyền cho một thư mục
